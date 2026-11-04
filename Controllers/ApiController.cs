@@ -1089,7 +1089,127 @@ ORDER BY nama_perusahaan";
 
             return Ok(new { message = $"{tipeLabel} berhasil dihapus." });
         }
-    }
+    
+        #region Mobile Incidents & Safety Updates API
+
+        [AllowAnonymous]
+        [HttpGet("/api/incidents")]
+        public async Task<IActionResult> GetIncidents(
+            [FromQuery] int limit = 50,
+            [FromQuery] string? category = null,
+            [FromQuery] string? search = null,
+            [FromQuery] bool? is_banner = null,
+            [FromQuery] bool? is_update = null,
+            [FromQuery] int? since_id = null)
+        {
+            var query = _context.IncidentNewsList.Where(i => i.IsPublished &&
+                                                             i.NikPembuat != "SYSTEM" &&
+                                                             !i.DibuatOleh.Contains("System Import Excel"));
+
+            if (since_id.HasValue && since_id.Value > 0)
+            {
+                query = query.Where(i => i.Id > since_id.Value);
+            }
+
+            if (is_banner.HasValue)
+            {
+                query = query.Where(i => i.IsBanner == is_banner.Value);
+            }
+
+            if (is_update.HasValue && is_update.Value)
+            {
+                query = query.Where(i => i.IsUpdate || i.IsBanner || (i.Kategori != null && i.Kategori.Contains("Banner")));
+            }
+
+            if (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "Semua", StringComparison.OrdinalIgnoreCase))
+            {
+                var catLower = category.ToLower().Trim();
+                query = query.Where(i => i.Kategori != null && (i.Kategori.ToLower().Contains(catLower) || (catLower.Contains("banner") && i.IsBanner)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(i => i.Judul.ToLower().Contains(s) || i.Konten.ToLower().Contains(s) || (i.Lokasi != null && i.Lokasi.ToLower().Contains(s)));
+            }
+
+            var incidents = await query
+                .OrderByDescending(i => (i.Kategori != null && i.Kategori.Contains("Banner")) || i.IsBanner)
+                .ThenBy(i => i.BannerUrutan > 0 ? i.BannerUrutan : 999)
+                .ThenByDescending(i => i.TanggalKejadian ?? i.CreatedAt)
+                .ThenByDescending(i => i.Id)
+                .Take(limit)
+                .ToListAsync();
+
+            var result = incidents.Select(MapIncidentDto).ToList();
+            return Ok(new { status = true, total = result.Count, data = result });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/api/incidents/banners")]
+        public async Task<IActionResult> GetHomeBanners([FromQuery] int limit = 5)
+        {
+            var baseQuery = _context.IncidentNewsList
+                .Where(i => i.IsPublished &&
+                            i.NikPembuat != "SYSTEM" &&
+                            !i.DibuatOleh.Contains("System Import Excel"));
+
+            var banners = await baseQuery
+                .Where(i => i.IsBanner || (i.Kategori != null && i.Kategori.Contains("Banner")))
+                .OrderBy(i => i.BannerUrutan > 0 ? i.BannerUrutan : 999)
+                .ThenByDescending(i => i.TanggalKejadian ?? i.CreatedAt)
+                .Take(limit)
+                .ToListAsync();
+
+            if (banners.Count == 0)
+            {
+                banners = await baseQuery
+                    .OrderByDescending(i => i.TanggalKejadian ?? i.CreatedAt)
+                    .Take(limit)
+                    .ToListAsync();
+            }
+
+            var result = banners.Select(MapIncidentDto).ToList();
+            return Ok(new { status = true, total = result.Count, data = result });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/api/incidents/{id:int}")]
+        public async Task<IActionResult> GetIncidentDetail(int id)
+        {
+            var incident = await _context.IncidentNewsList.FindAsync(id);
+            if (incident == null)
+            {
+                return NotFound(new { status = false, message = $"Insiden ID {id} tidak ditemukan." });
+            }
+            return Ok(new { status = true, data = MapIncidentDto(incident) });
+        }
+
+        private static object MapIncidentDto(IncidentNews i)
+        {
+            return new
+            {
+                id = i.Id,
+                judul = i.Judul,
+                konten = i.Konten,
+                gambar_url = i.GambarUrl,
+                lokasi = i.Lokasi ?? "Area Operasional",
+                tanggal_kejadian = (i.TanggalKejadian ?? i.CreatedAt).ToString("yyyy-MM-dd HH:mm:ss"),
+                kategori = i.Kategori ?? "Banner Informasi",
+                dibuat_oleh = i.DibuatOleh,
+                nik_pembuat = i.NikPembuat,
+                is_published = i.IsPublished,
+                is_banner = i.IsBanner,
+                is_update = i.IsUpdate,
+                banner_urutan = i.BannerUrutan,
+                tags = i.Tags,
+                created_at = i.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+        }
+
+        #endregion
+
+}
 
     public class RosterSaveRequest
     {

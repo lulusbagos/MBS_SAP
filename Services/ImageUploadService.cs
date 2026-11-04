@@ -76,5 +76,74 @@ namespace MBS_SAP.Services
 
             return $"/uploads/{category}/{monthFolder}/{uniqueFileName}";
         }
+
+        /// <summary>
+        /// Khusus Banner Informasi & Berita Keselamatan Mobile:
+        /// Otomatis memformat & memotong (crop) gambar dengan rasio 16:9 (1280x720) centered,
+        /// agar tampilan di banner carousel & kartu mobile selalu presisi, proporsional, dan tidak terdistorsi.
+        /// </summary>
+        public async Task<string?> UploadBannerImageAsync(IFormFile? file, string prefix = "bnr")
+        {
+            if (file == null || file.Length == 0) return null;
+
+            var monthFolder = DateTime.Now.ToString("yyyy-MM");
+            var uploadsFolder = Path.Combine(_basePath, "banners", monthFolder);
+
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            bool isImage = extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".webp" || extension == ".bmp";
+            var uniqueFileName = (string.IsNullOrEmpty(prefix) ? "bnr" : prefix) + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+
+            if (isImage)
+            {
+                uniqueFileName += ".jpg";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                try
+                {
+                    using (var stream = file.OpenReadStream())
+                    {
+                        using (var image = await Image.LoadAsync(stream))
+                        {
+                            // Otomatis sesuaikan rasio Mobile Banner (16:9 / 1280x720) dengan mode Crop di tengah
+                            image.Mutate(x => x.Resize(new ResizeOptions
+                            {
+                                Size = new Size(1280, 720),
+                                Mode = ResizeMode.Crop,
+                                Position = AnchorPositionMode.Center
+                            }));
+
+                            var encoder = new JpegEncoder { Quality = 85 };
+                            await image.SaveAsync(filePath, encoder);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    uniqueFileName = uniqueFileName.Replace(".jpg", extension);
+                    var fallbackPath = Path.Combine(uploadsFolder, uniqueFileName);
+                    using (var fileStream = new FileStream(fallbackPath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
+                    }
+                }
+            }
+            else
+            {
+                uniqueFileName += extension;
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+            }
+
+            return $"/uploads/banners/{monthFolder}/{uniqueFileName}";
+        }
+
     }
 }

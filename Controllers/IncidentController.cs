@@ -716,6 +716,249 @@ namespace MBS_SAP.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+
+        #region MBSI Banner Informasi & Mobile Safety Updates Management
+
+        [HttpGet]
+        public async Task<IActionResult> Banner(string? q = null, int page = 1, int pageSize = 15)
+        {
+            if (!IsAdmin())
+            {
+                TempData["ErrorMessage"] = "Akses ditolak. Halaman manajemen Banner Informasi hanya dapat diakses oleh Administrator.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            ViewData["ActiveTab"] = "BannerInformasi";
+            ViewData["IsAdmin"] = true;
+            ViewBag.CanManage = true;
+
+            if (page < 1) page = 1;
+            if (pageSize < 5) pageSize = 15;
+
+            var baseQuery = _context.IncidentNewsList
+                .Where(i => i.NikPembuat != "SYSTEM" && 
+                            !i.DibuatOleh.Contains("System Import Excel"));
+
+            // Filter pencarian
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var qTrim = q.Trim().ToLower();
+                baseQuery = baseQuery.Where(i => (i.Judul != null && i.Judul.ToLower().Contains(qTrim)) ||
+                                                 (i.Konten != null && i.Konten.ToLower().Contains(qTrim)) ||
+                                                 (i.Lokasi != null && i.Lokasi.ToLower().Contains(qTrim)) ||
+                                                 (i.Kategori != null && i.Kategori.ToLower().Contains(qTrim)));
+            }
+
+            // Urutkan: Banner aktif di urutan pertama (berdasarkan banner_urutan ASC), lalu update tanggal terbaru
+            var query = baseQuery
+                .OrderByDescending(i => i.IsBanner)
+                .ThenBy(i => i.BannerUrutan > 0 ? i.BannerUrutan : 999)
+                .ThenByDescending(i => i.TanggalKejadian ?? i.CreatedAt)
+                .ThenByDescending(i => i.Id);
+
+            var totalItems = await query.CountAsync();
+            var totalPages = totalItems == 0 ? 1 : (int)Math.Ceiling(totalItems / (double)pageSize);
+            if (page > totalPages) page = totalPages;
+
+            var items = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var companies = await _context.Perusahaans.AsNoTracking().ToListAsync();
+            ViewBag.CompanyLookup = companies.ToDictionary(c => c.PerusahaanId, c => c.NamaPerusahaan);
+            await SetCompanyOptionsAsync();
+            SetIncidentCategoryOptions("Banner Informasi");
+
+            ViewBag.ActiveBannerCount = await _context.IncidentNewsList.CountAsync(i => i.IsBanner && i.IsPublished);
+            ViewBag.ActiveUpdateCount = await _context.IncidentNewsList.CountAsync(i => i.IsUpdate && i.IsPublished);
+            ViewBag.TotalBannerInfoCount = await _context.IncidentNewsList.CountAsync(i => i.Kategori != null && i.Kategori.Contains("Banner"));
+            ViewBag.SearchQuery = q ?? "";
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.TotalPages = totalPages;
+
+            return View(items);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateBanner(
+            string judul,
+            string konten,
+            string? lokasi,
+            DateTime? tanggalKejadian,
+            string? kategori,
+            int? perusahaanId,
+            IFormFile? gambar,
+            bool isBanner = true,
+            bool isUpdate = true,
+            int bannerUrutan = 0)
+        {
+            if (!IsAdmin()) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(judul) || string.IsNullOrWhiteSpace(konten))
+            {
+                TempData["ErrorMessage"] = "Judul dan pesan konten wajib diisi!";
+                return RedirectToAction(nameof(Banner));
+            }
+
+            string? gambarUrl = null;
+            if (gambar != null && gambar.Length > 0)
+            {
+                gambarUrl = await _imageUploadService.UploadBannerImageAsync(gambar, "banner");
+            }
+
+            var chosenCategory = string.IsNullOrWhiteSpace(kategori) ? "Banner Informasi" : CanonicalizeIncidentCategory(kategori) ?? "Banner Informasi";
+
+            var banner = new IncidentNews
+            {
+                Judul = Truncate(judul.Trim(), 300),
+                Konten = konten.Trim(),
+                GambarUrl = gambarUrl,
+                Lokasi = string.IsNullOrWhiteSpace(lokasi) ? "Area Operasional" : Truncate(lokasi.Trim(), 150),
+                TanggalKejadian = tanggalKejadian ?? DateTime.Now,
+                Kategori = chosenCategory,
+                PerusahaanId = perusahaanId,
+                IsBanner = isBanner,
+                IsUpdate = isUpdate,
+                BannerUrutan = bannerUrutan,
+                IsPublished = true,
+                DibuatOleh = User.Identity?.Name ?? "Administrator",
+                NikPembuat = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "ADMIN",
+                CreatedAt = DateTime.Now
+            };
+
+            _context.IncidentNewsList.Add(banner);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Informasi '{banner.Judul}' berhasil dipublikasikan untuk tampilan Mobile!";
+            return RedirectToAction(nameof(Banner));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditBanner(
+            int id,
+            string judul,
+            string konten,
+            string? lokasi,
+            DateTime? tanggalKejadian,
+            string? kategori,
+            int? perusahaanId,
+            IFormFile? gambar,
+            bool isBanner = true,
+            bool isUpdate = true,
+            int bannerUrutan = 0,
+            bool isPublished = true)
+        {
+            if (!IsAdmin()) return Forbid();
+
+            var banner = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (banner == null)
+            {
+                TempData["ErrorMessage"] = "Data Banner/Informasi tidak ditemukan.";
+                return RedirectToAction(nameof(Banner));
+            }
+
+            if (string.IsNullOrWhiteSpace(judul) || string.IsNullOrWhiteSpace(konten))
+            {
+                TempData["ErrorMessage"] = "Judul dan konten wajib diisi.";
+                return RedirectToAction(nameof(Banner));
+            }
+
+            if (gambar != null && gambar.Length > 0)
+            {
+                banner.GambarUrl = await _imageUploadService.UploadBannerImageAsync(gambar, "banner");
+            }
+
+            banner.Judul = Truncate(judul.Trim(), 300);
+            banner.Konten = konten.Trim();
+            banner.Lokasi = string.IsNullOrWhiteSpace(lokasi) ? "Area Operasional" : Truncate(lokasi.Trim(), 150);
+            banner.TanggalKejadian = tanggalKejadian ?? banner.TanggalKejadian ?? DateTime.Now;
+            banner.Kategori = string.IsNullOrWhiteSpace(kategori) ? banner.Kategori : CanonicalizeIncidentCategory(kategori) ?? "Banner Informasi";
+            banner.PerusahaanId = perusahaanId;
+            banner.IsBanner = isBanner;
+            banner.IsUpdate = isUpdate;
+            banner.BannerUrutan = bannerUrutan;
+            banner.IsPublished = isPublished;
+            banner.UpdatedAt = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Data Banner #{banner.Id} berhasil diperbarui.";
+            return RedirectToAction(nameof(Banner));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleBannerAjax(int id)
+        {
+            if (!IsAdmin()) return Json(new { success = false, message = "Unauthorized" });
+
+            var item = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (item == null) return Json(new { success = false, message = "Data tidak ditemukan" });
+
+            item.IsBanner = !item.IsBanner;
+            item.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, is_banner = item.IsBanner, message = $"Status Banner Utama: {(item.IsBanner ? "AKTIF" : "NONAKTIF")}" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleUpdateAjax(int id)
+        {
+            if (!IsAdmin()) return Json(new { success = false, message = "Unauthorized" });
+
+            var item = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (item == null) return Json(new { success = false, message = "Data tidak ditemukan" });
+
+            item.IsUpdate = !item.IsUpdate;
+            item.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, is_update = item.IsUpdate, message = $"Status Safety Updates: {(item.IsUpdate ? "AKTIF" : "NONAKTIF")}" });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateBannerUrutan(int id, int urutan)
+        {
+            if (!IsAdmin()) return Json(new { success = false, message = "Unauthorized" });
+
+            var item = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (item == null) return Json(new { success = false, message = "Data tidak ditemukan" });
+
+            item.BannerUrutan = urutan;
+            item.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Nomor urut diubah menjadi {urutan}" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteBanner(int id)
+        {
+            if (!IsAdmin())
+            {
+                TempData["ErrorMessage"] = "Anda tidak memiliki akses.";
+                return RedirectToAction(nameof(Banner));
+            }
+
+            var banner = await _context.IncidentNewsList.FindAsync(id);
+            if (banner != null)
+            {
+                _context.IncidentNewsList.Remove(banner);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Informasi banner berhasil dihapus.";
+            }
+
+            return RedirectToAction(nameof(Banner));
+        }
+
+        #endregion
+
         public async Task<IActionResult> Delete(int id)
         {
             if (!IsAdmin())

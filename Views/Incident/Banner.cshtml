@@ -1,0 +1,998 @@
+@using System.Text.Encodings.Web
+@model IEnumerable<MBS_SAP.Models.IncidentNews>
+@{
+    ViewData["Title"] = "MBSI Banner Informasi & Pesan Keselamatan";
+    var items = Model.ToList();
+    int activeBannerCount = ViewBag.ActiveBannerCount as int? ?? 0;
+    int activeUpdateCount = ViewBag.ActiveUpdateCount as int? ?? 0;
+    int totalCount = ViewBag.TotalItems as int? ?? items.Count;
+    int currentPage = ViewBag.CurrentPage as int? ?? 1;
+    int totalPages = ViewBag.TotalPages as int? ?? 1;
+    string searchQuery = ViewBag.SearchQuery as string ?? "";
+    var companyLookup = ViewBag.CompanyLookup as Dictionary<int, string?>;
+}
+
+<style>
+    .banner-page { animation: fadeInPage 0.35s ease-out; }
+    @@keyframes fadeInPage {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .banner-hero-card {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%);
+        border-bottom-left-radius: 26px;
+        border-bottom-right-radius: 26px;
+        padding: 34px 24px 28px;
+        color: #fff;
+        margin: -20px -20px 24px -20px;
+        box-shadow: 0 12px 28px -6px rgba(2, 132, 199, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .banner-hero-card::after {
+        content: '';
+        position: absolute;
+        top: -60px;
+        right: -40px;
+        width: 220px;
+        height: 220px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .kpi-mini-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.03);
+        transition: transform 0.2s;
+    }
+    .kpi-mini-card:hover { transform: translateY(-2px); }
+
+    .kpi-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    /* Mobile Phone Simulator Container */
+    .mobile-simulator-wrapper {
+        position: sticky;
+        top: 20px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+
+    .mobile-screen-mockup {
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+        background: #0b1329;
+        border-radius: 36px;
+        border: 6px solid #1e293b;
+        box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+        padding: 14px 12px 20px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mobile-notch {
+        width: 100px;
+        height: 14px;
+        background: #1e293b;
+        border-radius: 10px;
+        margin: 0 auto 10px;
+    }
+
+    /* Mobile Carousel Banner Preview (Exact Mobile UI replicate) */
+    .mobile-banner-card {
+        width: 100%;
+        height: 185px;
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        background: #10233F;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 14px;
+    }
+
+    .mobile-banner-bg {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        transition: all 0.3s ease;
+    }
+
+    .mobile-banner-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to right, rgba(16, 35, 63, 0.96) 0%, rgba(16, 35, 63, 0.72) 58%, rgba(16, 35, 63, 0.22) 100%);
+    }
+
+    .mobile-banner-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        justify-content: space-between;
+    }
+
+    .mobile-cat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 9.5px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .mobile-banner-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1.35;
+        margin-top: 6px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .mobile-banner-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mobile-loc-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10.5px;
+        color: rgba(255,255,255,0.85);
+        font-weight: 500;
+        max-width: 80%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mobile-arrow-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #fff;
+        color: #10233F;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* Mobile Safety Update Card Preview */
+    .mobile-update-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 10px;
+        color: #1e293b;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .mobile-update-thumb {
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+        background-color: #e2e8f0;
+    }
+
+    /* Switch styling */
+    .form-switch .form-check-input {
+        width: 2.6em;
+        height: 1.35em;
+        cursor: pointer;
+    }
+    .form-switch .form-check-input:checked {
+        background-color: #0284c7;
+        border-color: #0284c7;
+    }
+</style>
+
+<div class="banner-page pb-5">
+
+    <!-- Top Hero Banner -->
+    <div class="banner-hero-card">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); font-size: 11px; padding: 4px 10px; border-radius: 20px;">
+                        <i class="bi bi-phone-fill me-1 text-warning"></i> MOBILE APP INTEGRATION
+                    </span>
+                    <span class="badge" style="background: #10b981; font-size: 11px; padding: 4px 10px; border-radius: 20px;">
+                        <i class="bi bi-check-circle-fill me-1"></i> LIVE AUTO-SYNC
+                    </span>
+                </div>
+                <h3 class="fw-bold mb-1" style="letter-spacing: -0.5px;">MBSI BANNER INFORMASI & PESAN KESELAMATAN</h3>
+                <p class="mb-0 text-white-50" style="font-size: 13px; max-width: 680px;">
+                    Kelola pesan keselamatan, pengumuman operasional, dan banner utama beranda aplikasi mobile Indexsafe Evolution secara instan dengan format gambar otomatis (16:9 HD).
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="#formCard" class="btn btn-light fw-bold" style="border-radius: 12px; padding: 10px 18px; font-size: 13px;">
+                    <i class="bi bi-plus-circle-fill me-1 text-primary"></i> Buat Informasi Baru
+                </a>
+                <a asp-action="Index" class="btn btn-outline-light fw-semibold" style="border-radius: 12px; padding: 10px 16px; font-size: 13px;">
+                    <i class="bi bi-newspaper me-1"></i> Semua Insiden
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: #059669; border-radius: 14px; font-size: 13px; font-weight: 600;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: #e11d48; border-radius: 14px; font-size: 13px; font-weight: 600;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- KPI Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-box" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
+                    <i class="bi bi-badge-ad-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 22px; font-weight: 800; color: var(--text-main);">@activeBannerCount</div>
+                    <div class="text-muted" style="font-size: 12px; font-weight: 600;">Banner Utama Mobile Aktif</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 22px; font-weight: 800; color: var(--text-main);">@activeUpdateCount</div>
+                    <div class="text-muted" style="font-size: 12px; font-weight: 600;">Pesan di Tab Safety Updates</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-box" style="background: rgba(168, 85, 247, 0.12); color: #a855f7;">
+                    <i class="bi bi-megaphone-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 22px; font-weight: 800; color: var(--text-main);">@totalCount</div>
+                    <div class="text-muted" style="font-size: 12px; font-weight: 600;">Total Riwayat Pesan K3</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace: Form & Live Mobile Simulator -->
+    <div class="row g-4 mb-5" id="formCard">
+        <!-- Left: Create Form -->
+        <div class="col-lg-7">
+            <div class="card-sap border-0 p-4" style="border-radius: 20px;">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0" style="color: var(--text-main); font-size: 16px;">Form Publikasi Banner & Pesan Keselamatan</h5>
+                            <span class="text-muted" style="font-size: 11px;">Isi data di bawah, pratinjau tampilan mobile akan ter-update otomatis.</span>
+                        </div>
+                    </div>
+                    <span class="badge bg-primary" style="font-size: 11px; padding: 6px 12px; border-radius: 8px;">ADMINISTRATOR</span>
+                </div>
+
+                <form asp-action="CreateBanner" method="post" enctype="multipart/form-data" id="bannerForm">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group-sap mb-3">
+                        <label class="form-label-sap">Judul Informasi / Pesan <span class="text-danger">*</span></label>
+                        <input type="text" name="judul" id="inputJudul" class="input-sap fw-semibold" placeholder="Contoh: Sosialisasi Blind Spot Area Loading Point Pit" required maxlength="150" />
+                        <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 11px;">
+                            <span>Gunakan kalimat singkat, padat, dan jelas untuk kenyamanan membaca di mobile.</span>
+                            <span id="judulCounter">0 / 150</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Kategori Penayangan</label>
+                            <div class="input-sap-wrapper">
+                                <i class="bi bi-tag input-sap-icon"></i>
+                                <select name="kategori" id="selectKategori" class="input-sap" required>
+                                    <option value="Banner Informasi" selected>BANNER INFORMASI (Pesan K3)</option>
+                                    <option value="Near Miss">NEAR MISS (Hampir Celaka)</option>
+                                    <option value="Property Damage">PROPERTY DAMAGE (Kerusakan Alat)</option>
+                                    <option value="First Aid Injury">FIRST AID INJURY (Pertolongan Pertama)</option>
+                                    <option value="Medical Treatment Injury">MEDICAL TREATMENT (Rawat Medis)</option>
+                                    <option value="Kebakaran">KEBAKARAN (Fire Alert)</option>
+                                    <option value="Fatality">FATALITY (Kejadian Fatal)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Lokasi / Area Relevan</label>
+                            <div class="input-sap-wrapper">
+                                <i class="bi bi-geo-alt input-sap-icon"></i>
+                                <input type="text" name="lokasi" id="inputLokasi" class="input-sap" placeholder="Contoh: PIT Utara • Loading Point" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Tanggal Rilis / Kejadian</label>
+                            <input type="date" name="tanggalKejadian" id="inputTanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Perusahaan / Mitra Terkait</label>
+                            <div class="input-sap-wrapper">
+                                <i class="bi bi-building input-sap-icon"></i>
+                                <select name="perusahaanId" class="input-sap">
+                                    <option value="" selected>Seluruh Perusahaan (All Site)</option>
+                                    @foreach (var comp in ViewBag.Companies as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                                    {
+                                        <option value="@comp.Value">@comp.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Display Switches -->
+                    <div class="card p-3 mb-3 border-0" style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.2) !important; border-radius: 16px;">
+                        <label class="form-label-sap mb-2 d-flex align-items-center gap-2 text-primary">
+                            <i class="bi bi-sliders2-vertical"></i> <strong>Pengaturan Penayangan Mobile</strong>
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch p-2 ps-5 d-flex align-items-center justify-content-between" style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
+                                    <label class="form-check-label mb-0" for="checkIsBanner" style="cursor: pointer;">
+                                        <span class="d-block fw-bold" style="font-size: 13px; color: var(--text-main);">Banner Carousel</span>
+                                        <span class="text-muted" style="font-size: 11px;">Tayang di slider paling atas Beranda</span>
+                                    </label>
+                                    <input class="form-check-input" type="checkbox" name="isBanner" id="checkIsBanner" value="true" checked>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch p-2 ps-5 d-flex align-items-center justify-content-between" style="background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
+                                    <label class="form-check-label mb-0" for="checkIsUpdate" style="cursor: pointer;">
+                                        <span class="d-block fw-bold" style="font-size: 13px; color: var(--text-main);">Safety Updates</span>
+                                        <span class="text-muted" style="font-size: 11px;">Tayang di tab Pembaruan K3</span>
+                                    </label>
+                                    <input class="form-check-input" type="checkbox" name="isUpdate" id="checkIsUpdate" value="true" checked>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2 g-2 align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label-sap mb-0" style="font-size: 12px;">Prioritas Urutan Banner:</label>
+                            </div>
+                            <div class="col-auto">
+                                <input type="number" name="bannerUrutan" id="inputUrutan" class="input-sap text-center" style="width: 80px; padding: 6px;" value="1" min="1" max="99" />
+                            </div>
+                            <div class="col">
+                                <span class="text-muted" style="font-size: 11px;">Angka 1 = tampil paling awal pada carousel.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group-sap mb-3">
+                        <label class="form-label-sap">Pesan Keselamatan / Detail Informasi <span class="text-danger">*</span></label>
+                        <textarea name="konten" id="inputKonten" class="input-sap" rows="4" placeholder="Tuliskan arahan keselamatan, prosedur pencegahan bahaya, atau pengumuman penting bagi seluruh pekerja..." required style="line-height: 1.6;"></textarea>
+                    </div>
+
+                    <!-- Image Upload with Auto-Format Notice -->
+                    <div class="form-group-sap mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label-sap mb-0">Upload Foto / Gambar Banner</label>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 10.5px;">
+                                <i class="bi bi-aspect-ratio me-1"></i> Auto Format 16:9 HD
+                            </span>
+                        </div>
+                        <input type="file" name="gambar" id="inputGambar" class="input-sap" accept="image/*" style="padding: 10px 12px; height: auto;" />
+                        <div class="alert alert-info border-0 p-2 mt-2 mb-0 d-flex align-items-center gap-2" style="background: rgba(2, 132, 199, 0.08); border-radius: 10px; font-size: 11.5px; color: #0284c7;">
+                            <i class="bi bi-info-circle-fill fs-6 flex-shrink-0"></i>
+                            <div><strong>Auto-Fit Mobile:</strong> Sistem secara otomatis memotong & mengompres gambar ke rasio 16:9 (1280x720) terpusat sehingga tidak akan tertarik atau terpotong saat dibuka di HP.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="reset" class="btn btn-outline-secondary px-4 py-2 fw-semibold" style="border-radius: 12px; font-size: 13px;" onclick="resetSimulator()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary flex-fill py-2 fw-bold" style="border-radius: 12px; font-size: 14px; background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+                            <i class="bi bi-send-fill me-1"></i> Publikasikan Sekarang ke Mobile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Real-time Live Mobile Simulator -->
+        <div class="col-lg-5">
+            <div class="mobile-simulator-wrapper">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-phone text-primary fs-5"></i>
+                        <span class="fw-bold" style="color: var(--text-main); font-size: 14px;">Live Mobile UI Simulator</span>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-primary btn-sm active" id="tabPreviewHome" onclick="switchSimulatorTab('home')">
+                            <i class="bi bi-badge-ad me-1"></i> Banner Utama
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="tabPreviewUpdate" onclick="switchSimulatorTab('update')">
+                            <i class="bi bi-list-ul me-1"></i> Safety Updates
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Phone Frame Mockup -->
+                <div class="mobile-screen-mockup">
+                    <div class="mobile-notch"></div>
+
+                    <!-- Mini Mobile Status Bar -->
+                    <div class="d-flex justify-content-between align-items-center px-2 mb-2" style="font-size: 10px; color: #94a3b8;">
+                        <span>08:45</span>
+                        <div class="d-flex gap-1 align-items-center">
+                            <i class="bi bi-wifi"></i>
+                            <i class="bi bi-reception-4"></i>
+                            <i class="bi bi-battery-full"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mini Header on Mobile -->
+                    <div class="d-flex justify-content-between align-items-center px-2 mb-3">
+                        <div>
+                            <div style="font-size: 9px; color: #94a3b8; font-weight: 600;">SELAMAT DATANG</div>
+                            <div style="font-size: 11px; font-weight: 800; color: #fff;">Lulus Bagos Hermawan</div>
+                        </div>
+                        <div class="badge" style="background: rgba(255,255,255,0.1); font-size: 9px;">
+                            32°C Kaubun ☀️
+                        </div>
+                    </div>
+
+                    <!-- PREVIEW MODE 1: HOME CAROUSEL BANNER -->
+                    <div id="simModeHome">
+                        <div class="mobile-banner-card">
+                            <div class="mobile-banner-bg" id="simBannerBg" style="background-image: url('/images/banner_placeholder.jpg');"></div>
+                            <div class="mobile-banner-overlay"></div>
+                            
+                            <div class="mobile-banner-content">
+                                <div>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <span class="mobile-cat-badge" id="simCatBadge" style="background: rgba(2, 132, 199, 0.25); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                                            <i class="bi bi-info-circle-fill" id="simCatIcon"></i>
+                                            <span id="simCatText">BANNER INFORMASI</span>
+                                        </span>
+                                        <span style="font-size: 9px; color: rgba(255,255,255,0.6);" id="simDateText">Hari Ini</span>
+                                    </div>
+                                    <div class="mobile-banner-title" id="simTitleText">
+                                        Sosialisasi Blind Spot Area Loading Point Pit
+                                    </div>
+                                </div>
+
+                                <div class="mobile-banner-footer">
+                                    <div class="mobile-loc-tag">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i>
+                                        <span id="simLocText">PIT Utara • Loading Point</span>
+                                    </div>
+                                    <div class="mobile-arrow-btn">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dots indicator -->
+                        <div class="d-flex justify-content-center gap-1 mt-2">
+                            <span style="width: 14px; height: 4px; border-radius: 4px; background: #38bdf8;"></span>
+                            <span style="width: 4px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.3);"></span>
+                            <span style="width: 4px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.3);"></span>
+                        </div>
+                    </div>
+
+                    <!-- PREVIEW MODE 2: SAFETY UPDATES CARD -->
+                    <div id="simModeUpdate" style="display: none;">
+                        <div style="font-size: 11px; font-weight: 800; color: #fff; margin-bottom: 6px;">Riwayat Safety Updates</div>
+                        
+                        <div class="mobile-update-card">
+                            <div class="mobile-update-thumb" id="simUpdateThumb" style="background-image: url('/images/banner_placeholder.jpg');"></div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="d-flex align-items-center gap-1 mb-1">
+                                    <span class="badge" id="simUpdateBadge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; font-size: 8.5px; padding: 2px 6px;">
+                                        BANNER INFORMASI
+                                    </span>
+                                    <span style="font-size: 8.5px; color: #64748b;" id="simUpdateDate">Hari ini</span>
+                                </div>
+                                <div style="font-size: 11px; font-weight: 800; color: #0f172a; line-height: 1.3;" class="text-truncate" id="simUpdateTitle">
+                                    Sosialisasi Blind Spot Area Loading Point Pit
+                                </div>
+                                <div style="font-size: 9.5px; color: #64748b; line-height: 1.3; margin-top: 2px;" class="text-truncate" id="simUpdateDesc">
+                                    Arahan keselamatan bagi seluruh operator dump truck...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <small style="font-size: 10px; color: #64748b;">
+                            <i class="bi bi-shield-check text-success me-1"></i> Tampilan 100% presisi dengan Mobile App
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner & Safety Updates Table -->
+    <div class="card-sap border-0 p-4" style="border-radius: 20px;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+            <div>
+                <h5 class="fw-bold mb-0" style="color: var(--text-main);">Daftar Informasi & Berita Keselamatan</h5>
+                <span class="text-muted" style="font-size: 12px;">Kelola status penayangan di Banner Carousel dan Safety Updates secara instan.</span>
+            </div>
+            <form method="get" class="d-flex align-items-center gap-2">
+                <input type="text" name="q" value="@searchQuery" class="input-sap" placeholder="Cari judul, lokasi, kategori..." style="width: 250px; padding: 8px 12px;" />
+                <button type="submit" class="btn btn-primary btn-sm px-3" style="border-radius: 10px; height: 38px;">
+                    <i class="bi bi-search"></i>
+                </button>
+                @if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    <a asp-action="Banner" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px; height: 38px; display: flex; align-items: center;">Reset</a>
+                }
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                <thead style="background: rgba(148, 163, 184, 0.08); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <tr>
+                        <th style="width: 50px;" class="text-center">Urut</th>
+                        <th style="width: 90px;">Format 16:9</th>
+                        <th>Judul & Pesan Keselamatan</th>
+                        <th>Kategori & Lokasi</th>
+                        <th class="text-center" style="width: 140px;">Banner Carousel</th>
+                        <th class="text-center" style="width: 140px;">Safety Updates</th>
+                        <th style="width: 120px;">Tanggal</th>
+                        <th class="text-end" style="width: 100px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (items.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Belum ada data informasi banner yang sesuai filter.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in items)
+                    {
+                        var hasImg = !string.IsNullOrEmpty(item.GambarUrl);
+                        var imgSrc = hasImg ? item.GambarUrl : "/images/banner_placeholder.jpg";
+                        
+                        // Badge color
+                        string catColor = "#0284c7";
+                        string catBg = "rgba(2, 132, 199, 0.12)";
+                        var catLower = (item.Kategori ?? "").ToLower();
+                        if (catLower.Contains("near miss")) { catColor = "#d97706"; catBg = "rgba(217, 119, 6, 0.12)"; }
+                        else if (catLower.Contains("property")) { catColor = "#ea580c"; catBg = "rgba(234, 88, 12, 0.12)"; }
+                        else if (catLower.Contains("first aid")) { catColor = "#0d9488"; catBg = "rgba(13, 148, 136, 0.12)"; }
+                        else if (catLower.Contains("fire") || catLower.Contains("kebakaran")) { catColor = "#dc2626"; catBg = "rgba(220, 38, 38, 0.12)"; }
+                        else if (catLower.Contains("fatal")) { catColor = "#991b1b"; catBg = "rgba(153, 27, 27, 0.12)"; }
+
+                        <tr>
+                            <td class="text-center">
+                                <input type="number" class="form-control form-control-sm text-center p-1" style="width: 48px; border-radius: 8px; font-weight: 700;" value="@item.BannerUrutan" onchange="updateUrutan(@item.Id, this.value)" min="1" max="99" />
+                            </td>
+                            <td>
+                                <div style="width: 80px; height: 45px; border-radius: 8px; overflow: hidden; background: #0f172a; position: relative; border: 1px solid var(--border-color);">
+                                    @if (hasImg)
+                                    {
+                                        <img src="@imgSrc" style="width: 100%; height: 100%; object-fit: cover;" alt="Banner" />
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="font-size: 11px;">
+                                            <i class="bi bi-image"></i>
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-main mb-1" style="font-size: 13.5px;">@item.Judul</div>
+                                <div class="text-muted text-truncate" style="max-width: 320px; font-size: 11.5px;">
+                                    @item.Konten
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge mb-1" style="background: @catBg; color: @catColor; font-size: 10.5px; border-radius: 6px;">
+                                    @(item.Kategori ?? "Banner Informasi")
+                                </span>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-geo-alt me-1 text-danger"></i>@(item.Lokasi ?? "-")
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="switchBanner_@item.Id" @(item.IsBanner ? "checked" : "") onchange="toggleBanner(@item.Id, this)">
+                                </div>
+                                <div id="bannerStatusLabel_@item.Id" style="font-size: 10px; font-weight: 700; color: @(item.IsBanner ? "#10b981" : "#94a3b8");">
+                                    @(item.IsBanner ? "TAYANG" : "NONAKTIF")
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" id="switchUpdate_@item.Id" @(item.IsUpdate ? "checked" : "") onchange="toggleUpdate(@item.Id, this)">
+                                </div>
+                                <div id="updateStatusLabel_@item.Id" style="font-size: 10px; font-weight: 700; color: @(item.IsUpdate ? "#10b981" : "#94a3b8");">
+                                    @(item.IsUpdate ? "TAYANG" : "NONAKTIF")
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 12px; font-weight: 600; color: var(--text-main);">
+                                    @((item.TanggalKejadian ?? item.CreatedAt).ToString("dd MMM yyyy"))
+                                </div>
+                                <div class="text-muted" style="font-size: 10.5px;">Oleh: @item.DibuatOleh</div>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" title="Edit" onclick="openEditModal(@item.Id, '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Judul ?? ""))', '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Konten ?? ""))', '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Lokasi ?? ""))', '@((item.TanggalKejadian ?? item.CreatedAt).ToString("yyyy-MM-dd"))', '@Html.Raw(JavaScriptEncoder.Default.Encode(item.Kategori ?? "Banner Informasi"))', @(item.PerusahaanId ?? 0), @item.BannerUrutan, @(item.IsBanner ? "true" : "false"), @(item.IsUpdate ? "true" : "false"), '@(item.GambarUrl ?? "")')">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    <form asp-action="DeleteBanner" method="post" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus informasi ini?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-outline-danger" title="Hapus">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Banner -->
+<div class="modal fade" id="modalEditBanner" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background-color: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color);">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" style="color: var(--text-main); font-size: 16px;">
+                    <i class="bi bi-pencil-square text-primary me-2"></i> Edit Informasi & Banner Mobile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="EditBanner" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editId" />
+                <div class="modal-body">
+                    <div class="form-group-sap mb-3">
+                        <label class="form-label-sap">Judul Informasi / Pesan <span class="text-danger">*</span></label>
+                        <input type="text" name="judul" id="editJudul" class="input-sap fw-semibold" required />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Kategori</label>
+                            <select name="kategori" id="editKategori" class="input-sap" required>
+                                <option value="Banner Informasi">BANNER INFORMASI (Pesan K3)</option>
+                                <option value="Near Miss">NEAR MISS (Hampir Celaka)</option>
+                                <option value="Property Damage">PROPERTY DAMAGE (Kerusakan Alat)</option>
+                                <option value="First Aid Injury">FIRST AID INJURY (Pertolongan Pertama)</option>
+                                <option value="Medical Treatment Injury">MEDICAL TREATMENT (Rawat Medis)</option>
+                                <option value="Kebakaran">KEBAKARAN (Fire Alert)</option>
+                                <option value="Fatality">FATALITY (Kejadian Fatal)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Lokasi / Area</label>
+                            <input type="text" name="lokasi" id="editLokasi" class="input-sap" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Tanggal Kejadian / Rilis</label>
+                            <input type="date" name="tanggalKejadian" id="editTanggal" class="input-sap" />
+                        </div>
+                        <div class="col-md-6 form-group-sap">
+                            <label class="form-label-sap">Prioritas Urutan</label>
+                            <input type="number" name="bannerUrutan" id="editUrutan" class="input-sap" min="1" max="99" />
+                        </div>
+                    </div>
+
+                    <div class="card p-3 mb-3 border-0" style="background: rgba(2, 132, 199, 0.05); border-radius: 14px; border: 1px solid rgba(2, 132, 199, 0.2) !important;">
+                        <label class="form-label-sap mb-2 text-primary"><strong>Target Penayangan Mobile</strong></label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch ps-5">
+                                    <input class="form-check-input" type="checkbox" name="isBanner" id="editIsBanner" value="true">
+                                    <label class="form-check-label fw-bold" for="editIsBanner" style="font-size: 13px;">Banner Utama Beranda</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch ps-5">
+                                    <input class="form-check-input" type="checkbox" name="isUpdate" id="editIsUpdate" value="true">
+                                    <label class="form-check-label fw-bold" for="editIsUpdate" style="font-size: 13px;">Tab Safety Updates</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group-sap mb-3">
+                        <label class="form-label-sap">Konten / Pesan Keselamatan <span class="text-danger">*</span></label>
+                        <textarea name="konten" id="editKonten" class="input-sap" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-group-sap mb-2">
+                        <label class="form-label-sap">Ganti Foto / Gambar (Format otomatis 16:9 HD)</label>
+                        <input type="file" name="gambar" class="input-sap" accept="image/*" style="padding: 8px 12px; height: auto;" />
+                        <div id="editCurrentImgPreview" class="mt-2" style="display: none;">
+                            <span class="text-muted" style="font-size: 11px;">Gambar saat ini:</span>
+                            <img id="editImgTag" src="" style="width: 120px; height: 67px; object-fit: cover; border-radius: 8px; display: block; margin-top: 4px; border: 1px solid var(--border-color);" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold" style="border-radius: 10px; background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+                        <i class="bi bi-save me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Live Simulator Realtime Binding
+    const inputJudul = document.getElementById('inputJudul');
+    const inputLokasi = document.getElementById('inputLokasi');
+    const selectKategori = document.getElementById('selectKategori');
+    const inputGambar = document.getElementById('inputGambar');
+    const judulCounter = document.getElementById('judulCounter');
+
+    const simTitleText = document.getElementById('simTitleText');
+    const simLocText = document.getElementById('simLocText');
+    const simCatBadge = document.getElementById('simCatBadge');
+    const simCatText = document.getElementById('simCatText');
+    const simCatIcon = document.getElementById('simCatIcon');
+    const simBannerBg = document.getElementById('simBannerBg');
+
+    const simUpdateTitle = document.getElementById('simUpdateTitle');
+    const simUpdateDesc = document.getElementById('simUpdateDesc');
+    const simUpdateBadge = document.getElementById('simUpdateBadge');
+    const simUpdateThumb = document.getElementById('simUpdateThumb');
+
+    inputJudul.addEventListener('input', function() {
+        const val = this.value.trim() || 'Judul Banner Keselamatan';
+        simTitleText.textContent = val;
+        simUpdateTitle.textContent = val;
+        judulCounter.textContent = `${this.value.length} / 150`;
+    });
+
+    inputLokasi.addEventListener('input', function() {
+        const val = this.value.trim() || 'Area Operasional';
+        simLocText.textContent = val;
+    });
+
+    document.getElementById('inputKonten').addEventListener('input', function() {
+        simUpdateDesc.textContent = this.value.trim() || 'Detail arahan keselamatan kerja...';
+    });
+
+    selectKategori.addEventListener('change', function() {
+        const cat = this.value;
+        simCatText.textContent = cat.toUpperCase();
+        simUpdateBadge.textContent = cat.toUpperCase();
+
+        let icon = 'bi-info-circle-fill';
+        let bg = 'rgba(2, 132, 199, 0.25)';
+        let color = '#38bdf8';
+
+        if (cat.includes('Near Miss')) {
+            icon = 'bi-exclamation-triangle-fill';
+            bg = 'rgba(217, 119, 6, 0.25)';
+            color = '#fbbf24';
+        } else if (cat.includes('Property')) {
+            icon = 'bi-tools';
+            bg = 'rgba(234, 88, 12, 0.25)';
+            color = '#fb923c';
+        } else if (cat.includes('First Aid')) {
+            icon = 'bi-bandaid-fill';
+            bg = 'rgba(13, 148, 136, 0.25)';
+            color = '#2dd4bf';
+        } else if (cat.includes('Kebakaran') || cat.includes('Fire')) {
+            icon = 'bi-fire';
+            bg = 'rgba(220, 38, 38, 0.25)';
+            color = '#f87171';
+        } else if (cat.includes('Fatal')) {
+            icon = 'bi-x-octagon-fill';
+            bg = 'rgba(153, 27, 27, 0.25)';
+            color = '#fca5a5';
+        }
+
+        simCatBadge.style.background = bg;
+        simCatBadge.style.color = color;
+        simCatIcon.className = `bi ${icon}`;
+    });
+
+    // Realtime image preview on upload
+    inputGambar.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const url = event.target.result;
+                simBannerBg.style.backgroundImage = `url('${url}')`;
+                simUpdateThumb.style.backgroundImage = `url('${url}')`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function switchSimulatorTab(mode) {
+        const homeDiv = document.getElementById('simModeHome');
+        const updateDiv = document.getElementById('simModeUpdate');
+        const btnHome = document.getElementById('tabPreviewHome');
+        const btnUpdate = document.getElementById('tabPreviewUpdate');
+
+        if (mode === 'home') {
+            homeDiv.style.display = 'block';
+            updateDiv.style.display = 'none';
+            btnHome.className = 'btn btn-primary btn-sm active';
+            btnUpdate.className = 'btn btn-outline-primary btn-sm';
+        } else {
+            homeDiv.style.display = 'none';
+            updateDiv.style.display = 'block';
+            btnHome.className = 'btn btn-outline-primary btn-sm';
+            btnUpdate.className = 'btn btn-primary btn-sm active';
+        }
+    }
+
+    function resetSimulator() {
+        setTimeout(() => {
+            simTitleText.textContent = 'Sosialisasi Blind Spot Area Loading Point Pit';
+            simLocText.textContent = 'PIT Utara • Loading Point';
+            simCatText.textContent = 'BANNER INFORMASI';
+            simBannerBg.style.backgroundImage = "url('/images/banner_placeholder.jpg')";
+            simUpdateThumb.style.backgroundImage = "url('/images/banner_placeholder.jpg')";
+        }, 50);
+    }
+
+    // AJAX Toggle Functions
+    function toggleBanner(id, checkbox) {
+        fetch(`/Incident/ToggleBannerAjax?id=${id}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const lbl = document.getElementById(`bannerStatusLabel_${id}`);
+                lbl.textContent = data.is_banner ? 'TAYANG' : 'NONAKTIF';
+                lbl.style.color = data.is_banner ? '#10b981' : '#94a3b8';
+            } else {
+                checkbox.checked = !checkbox.checked;
+                alert('Gagal mengubah status banner: ' + data.message);
+            }
+        })
+        .catch(err => {
+            checkbox.checked = !checkbox.checked;
+            alert('Error jaringan saat toggle banner.');
+        });
+    }
+
+    function toggleUpdate(id, checkbox) {
+        fetch(`/Incident/ToggleUpdateAjax?id=${id}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const lbl = document.getElementById(`updateStatusLabel_${id}`);
+                lbl.textContent = data.is_update ? 'TAYANG' : 'NONAKTIF';
+                lbl.style.color = data.is_update ? '#10b981' : '#94a3b8';
+            } else {
+                checkbox.checked = !checkbox.checked;
+                alert('Gagal mengubah status update: ' + data.message);
+            }
+        })
+        .catch(err => {
+            checkbox.checked = !checkbox.checked;
+            alert('Error jaringan saat toggle update.');
+        });
+    }
+
+    function updateUrutan(id, val) {
+        fetch(`/Incident/UpdateBannerUrutan?id=${id}&urutan=${val}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) alert('Gagal update urutan: ' + data.message);
+        });
+    }
+
+    function openEditModal(id, judul, konten, lokasi, tgl, kategori, compId, urutan, isBanner, isUpdate, imgUrl) {
+        document.getElementById('editId').value = id;
+        document.getElementById('editJudul').value = judul;
+        document.getElementById('editKonten').value = konten;
+        document.getElementById('editLokasi').value = lokasi;
+        document.getElementById('editTanggal').value = tgl;
+        document.getElementById('editKategori').value = kategori;
+        document.getElementById('editUrutan').value = urutan;
+        document.getElementById('editIsBanner').checked = isBanner;
+        document.getElementById('editIsUpdate').checked = isUpdate;
+
+        const prevDiv = document.getElementById('editCurrentImgPreview');
+        const imgTag = document.getElementById('editImgTag');
+        if (imgUrl && imgUrl.length > 0) {
+            prevDiv.style.display = 'block';
+            imgTag.src = imgUrl;
+        } else {
+            prevDiv.style.display = 'none';
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalEditBanner'));
+        modal.show();
+    }
+</script>

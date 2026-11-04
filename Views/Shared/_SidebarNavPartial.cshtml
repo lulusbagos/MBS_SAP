@@ -29,7 +29,7 @@
     var isSheActive = activeTab == "Hazard" || activeTab == "Inspection" || activeTab == "BBS" || activeTab == "Observation" || activeTab == "ActionPlan" || activeTab == "SafetyTalk" || activeTab == "P5m" || activeTab == "Coaching";
     var isCiActive = activeTab == "Rci" || activeTab == "Fci" || activeTab == "Dci" || activeTab == "Spi" || activeTab == "Gci";
     var isTransportActive = activeTab == "P2h" || activeTab == "Dpa";
-    var isIncidentActive = activeTab == "Incident";
+    var isIncidentActive = activeTab == "Incident" || activeTab == "BannerInformasi";
     var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword" || activeTab == "EventQrAdmin" || activeTab == "UserScanAdmin";
 
     var rawUserName = User.Identity?.IsAuthenticated == true ? (User.Identity.Name ?? "User") : "User";
@@ -702,6 +702,11 @@ body.light-theme .user-role {
             </button>
             <div class="collapse menu-sub-collapse @(isKpiActive ? "show" : "")" id="collapseKpi">
                 <div class="menu-sub-list">
+                        <a asp-controller="Incident" asp-action="Banner" class="sub-menu-item @(activeTab == "BannerInformasi" ? "active" : "")">
+                            <i class="bi bi-images" style="color: #0284c7;"></i>
+                            <span>Banner Informasi (Mobile)</span>
+                            <span class="badge ms-auto" style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">MOBILE</span>
+                        </a>
                     <a asp-controller="Performance" asp-action="Index" class="sub-menu-item @(activeTab == "Performance" ? "active" : "")">
                         <i class="bi bi-graph-up-arrow"></i>
                         <span>Pencapaian SAP</span>
@@ -871,7 +876,7 @@ body.light-theme .user-role {
         <div class="menu-section">
             <div class="menu-section-header">
                 <span class="menu-section-title">INFORMASI & INSIDEN</span>
-                <span class="menu-section-badge">1</span>
+                <span class="menu-section-badge">2</span>
             </div>
             <div class="menu-group">
                 <button class="menu-group-toggle @(isIncidentActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNews" aria-expanded="@(isIncidentActive ? "true" : "false")">
