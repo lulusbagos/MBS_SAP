@@ -226,11 +226,7 @@
                         <input type="hidden" id="departemenPja" name="departemenPja" />
                     </div>
 
-                    <!-- Recent PJAs Quick Selection -->
-                    <div id="recentPjasContainer" class="mt-2 d-none">
-                        <div class="text-white-50 mb-1" style="font-size: 10px; font-weight: 600;"><i class="bi bi-clock-history me-1"></i>PJA TERAKHIR DIGUNAKAN:</div>
-                        <div id="recentPjasList" class="d-flex flex-wrap gap-1"></div>
-                    </div>
+
 
                     <!-- Selected PJA Card -->
                     <div id="selectedPjaCard" class="d-none mt-3" style="background: var(--bg-body); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color);">
@@ -980,21 +976,9 @@
             $('#pjaSearchInput').val('');
             $('#pjaSearchInput').parent().hide();
             $('#lintasPerusahaanToggle').closest('.d-flex').hide();
-            $('#recentPjasContainer').addClass('d-none');
-            
             // Clear validation error on select
             $('#pjaSearchInput').removeClass('is-invalid');
             $('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').remove();
-            
-            // Save to localStorage
-            saveRecentPja({
-                nik: nik,
-                nama: nama,
-                jabatan: jabatan,
-                dept: dept,
-                perusahaan: perusahaan,
-                companyOnly: companyOnly
-            });
         }
 
         function cancelEditHazard() {
@@ -1082,7 +1066,6 @@
             $('#selectedPjaCard').addClass('d-none');
             $('#pjaSearchInput').parent().show();
             $('#lintasPerusahaanToggle').closest('.d-flex').show();
-            renderRecentPjas();
             $('#pjaSearchInput').focus();
         }
 
@@ -1495,51 +1478,7 @@
             $('#uploadPlaceholder').show();
         }
 
-        const RECENT_PJAS_KEY = 'mbs_sap_recent_pjas';
 
-        function saveRecentPja(pja) {
-            try {
-                let list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
-                list = list.filter(item => item.nik !== pja.nik);
-                list.unshift(pja);
-                list = list.slice(0, 3);
-                localStorage.setItem(RECENT_PJAS_KEY, JSON.stringify(list));
-                renderRecentPjas();
-            } catch (e) {
-                console.error('Error saving recent PJA', e);
-            }
-        }
-
-        function renderRecentPjas() {
-            try {
-                const list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
-                const container = $('#recentPjasContainer');
-                const listContainer = $('#recentPjasList');
-                
-                if (list.length === 0) {
-                    container.addClass('d-none');
-                    return;
-                }
-                
-                listContainer.empty();
-                list.forEach(function(item) {
-                    const badgeClass = item.companyOnly ? 'btn-outline-warning' : 'btn-outline-success';
-                    const btn = $(`
-                        <button type="button" class="btn btn-sm ${badgeClass} py-0 px-2 text-truncate" style="max-width: 130px; font-size: 9px; border-radius: 6px; color: white;" title="${item.nama}">
-                            ${item.nama}
-                        </button>
-                    `);
-                    btn.on('click', function(e) {
-                        e.preventDefault();
-                        selectPja(item.nik, item.nama, item.jabatan, item.dept, item.perusahaan, item.companyOnly);
-                    });
-                    listContainer.append(btn);
-                });
-                container.removeClass('d-none');
-            } catch (e) {
-                console.error('Error rendering recent PJAs', e);
-            }
-        }
 
         // Client-side Search and Filter logic
         let currentStatusFilter = 'all';
@@ -1587,7 +1526,7 @@
 
         $(document).ready(function() {
             loadAreas();
-            renderRecentPjas();
+            try { localStorage.removeItem('mbs_sap_recent_pjas'); } catch (e) {}
             
             // Auto fetch GPS if creating new hazard
             if (!$('#hazardId').val()) {
