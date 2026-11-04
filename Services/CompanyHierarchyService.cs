@@ -325,9 +325,12 @@ namespace MBS_SAP.Services
                 return true;
             }
 
-            var nik = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim() ?? "";
+            var nik = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim() 
+                      ?? user.FindFirst("Nrp")?.Value?.Trim() 
+                      ?? user.Identity?.Name?.Trim() ?? "";
             if (string.Equals(nik, "admin.owner", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(nik, "admin", StringComparison.OrdinalIgnoreCase))
+                string.Equals(nik, "admin", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(nik, "24051940986", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
