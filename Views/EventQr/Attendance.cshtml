@@ -218,14 +218,14 @@
         /* Layout Grid */
         .monitor-layout {
             display: grid;
-            grid-template-columns: 500px 1fr;
+            grid-template-columns: 460px minmax(0, 1fr);
             gap: 24px;
             align-items: start;
         }
 
         @@media (max-width: 1400px) {
             .monitor-layout {
-                grid-template-columns: 460px 1fr;
+                grid-template-columns: 440px minmax(0, 1fr);
             }
         }
 
@@ -275,45 +275,51 @@
             background: linear-gradient(170deg, rgba(15, 23, 42, 0.88) 0%, rgba(8, 14, 27, 0.95) 100%);
             border: 1px solid rgba(56, 189, 248, 0.22);
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            box-sizing: border-box;
+            width: 100%;
+            overflow: hidden;
         }
 
         /* Cyber Viewfinder Stage & QR Wrapper */
         .qr-stage {
             position: relative;
             padding: 12px;
-            margin-bottom: 22px;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
+            margin: 0 auto 22px auto;
+            display: inline-block;
+            box-sizing: border-box;
+            max-width: 100%;
         }
 
         .qr-wrapper {
             background: #ffffff;
-            padding: 22px;
-            border-radius: 28px;
+            padding: 16px;
+            border-radius: 24px;
             box-shadow: 
-                0 25px 60px rgba(0, 0, 0, 0.8),
-                0 0 50px rgba(56, 189, 248, 0.35),
-                0 0 90px rgba(16, 185, 129, 0.18);
-            display: inline-block;
+                0 20px 50px rgba(0, 0, 0, 0.8),
+                0 0 45px rgba(56, 189, 248, 0.35),
+                0 0 80px rgba(16, 185, 129, 0.18);
+            display: block;
             position: relative;
+            box-sizing: border-box;
             transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             border: 3.5px solid rgba(255, 255, 255, 0.95);
+            margin: 0 auto;
+            line-height: 0;
         }
 
         .qr-wrapper:hover {
-            transform: translateY(-3px) scale(1.015);
+            transform: translateY(-2px) scale(1.01);
             box-shadow: 
-                0 32px 80px rgba(0, 0, 0, 0.9),
-                0 0 65px rgba(56, 189, 248, 0.5),
-                0 0 120px rgba(0, 210, 255, 0.3);
+                0 28px 70px rgba(0, 0, 0, 0.9),
+                0 0 60px rgba(56, 189, 248, 0.5),
+                0 0 110px rgba(0, 210, 255, 0.3);
         }
 
         /* 4 Sudut Siku Cyber Viewfinder */
         .corner-bracket {
             position: absolute;
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             border-color: #38bdf8;
             border-style: solid;
             pointer-events: none;
@@ -321,10 +327,10 @@
             transition: all 0.3s ease;
             filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
         }
-        .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 14px; }
-        .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 14px; }
-        .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 14px; }
-        .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 14px; }
+        .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
+        .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 12px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
 
         .qr-stage:hover .corner-bracket {
             border-color: #00d2ff;
@@ -334,9 +340,9 @@
         /* Animated Laser Scanning Line */
         .qr-scanner-laser {
             position: absolute;
-            left: 22px;
-            right: 22px;
-            top: 22px;
+            left: 16px;
+            right: 16px;
+            top: 16px;
             height: 3px;
             background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), #00d2ff, #ffffff, #00d2ff, rgba(56, 189, 248, 0.3), transparent);
             box-shadow: 0 0 16px rgba(0, 210, 255, 0.95), 0 0 32px rgba(56, 189, 248, 0.6);
@@ -348,11 +354,11 @@
 
         @@keyframes qrScanLaser {
             0%, 100% {
-                top: 22px;
+                top: 16px;
                 opacity: 0.15;
             }
             50% {
-                top: calc(100% - 25px);
+                top: calc(100% - 20px);
                 opacity: 1;
             }
         }
@@ -363,11 +369,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 58px;
-            height: 58px;
+            width: 52px;
+            height: 52px;
             background: #0b1329;
-            border: 3.5px solid #ffffff;
-            border-radius: 16px;
+            border: 3px solid #ffffff;
+            border-radius: 14px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.5);
             display: flex;
             align-items: center;
@@ -386,14 +392,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            line-height: 0;
         }
-        #eventQrCode canvas,
+        #eventQrCode canvas {
+            display: none !important;
+        }
+        #eventQrCode canvas:only-child {
+            display: block !important;
+            margin: 0 auto;
+            border-radius: 14px;
+            width: 320px !important;
+            height: 320px !important;
+            max-width: 100% !important;
+        }
         #eventQrCode img {
             display: block !important;
             margin: 0 auto;
             border-radius: 14px;
-            width: 380px !important;
-            height: 380px !important;
+            width: 320px !important;
+            height: 320px !important;
+            max-width: 100% !important;
         }
 
         /* Scan Instruction Card */
@@ -1724,10 +1742,11 @@
         // Draw Event QR Code Extra Large & High Quality
         const qrContainer = document.getElementById('eventQrCode');
         if (qrContainer) {
+            qrContainer.innerHTML = '';
             new QRCode(qrContainer, {
                 text: '@qrUrl',
-                width: 380,
-                height: 380,
+                width: 320,
+                height: 320,
                 colorDark: '#030712',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
