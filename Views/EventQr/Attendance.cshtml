@@ -82,22 +82,75 @@
         .brand-section {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
+        }
+
+        .brand-logos-cluster {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 6px 12px;
+        }
+
+        .brand-logo-indexim {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+        }
+
+        .brand-divider-v {
+            width: 1.5px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .brand-logo {
-            width: 50px;
-            height: 50px;
+            width: 38px;
+            height: 38px;
             object-fit: contain;
             background: #ffffff;
-            border-radius: 12px;
-            padding: 6px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .brand-text {
             display: grid;
-            gap: 2px;
+            gap: 3px;
+        }
+
+        .brand-status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-beacon {
+            position: relative;
+            width: 9px;
+            height: 9px;
+            display: inline-block;
+        }
+
+        .beacon-core {
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        .beacon-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid rgba(16, 185, 129, 0.7);
+            animation: radarPingAnim 1.8s infinite;
         }
 
         .brand-subtitle {
@@ -106,14 +159,17 @@
             font-weight: 800;
             color: var(--color-primary);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
         }
 
         .brand-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 18px;
+            font-size: 19px;
             font-weight: 900;
-            line-height: 1.1;
+            line-height: 1.15;
+            background: linear-gradient(135deg, #ffffff 60%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .header-actions {
@@ -162,26 +218,37 @@
         /* Layout Grid */
         .monitor-layout {
             display: grid;
-            grid-template-columns: 420px 1fr;
-            gap: 20px;
+            grid-template-columns: 500px 1fr;
+            gap: 24px;
             align-items: start;
+        }
+
+        @media (max-width: 1400px) {
+            .monitor-layout {
+                grid-template-columns: 460px 1fr;
+            }
         }
 
         .glass-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 24px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            padding: 24px;
+            border-radius: 26px;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            padding: 26px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.25);
         }
 
         /* Panel Title */
         .panel-header {
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 12px;
+            margin-bottom: 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            padding-bottom: 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -189,13 +256,14 @@
 
         .panel-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 16px;
+            font-size: 16.5px;
             font-weight: 800;
             margin: 0;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            letter-spacing: 0.02em;
         }
 
         /* Left Column: QR & Details */
@@ -204,38 +272,222 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            background: linear-gradient(170deg, rgba(15, 23, 42, 0.88) 0%, rgba(8, 14, 27, 0.95) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        /* Cyber Viewfinder Stage & QR Wrapper */
+        .qr-stage {
+            position: relative;
+            padding: 12px;
+            margin-bottom: 22px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .qr-wrapper {
             background: #ffffff;
-            padding: 18px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(56, 189, 248, 0.15);
+            padding: 22px;
+            border-radius: 28px;
+            box-shadow: 
+                0 25px 60px rgba(0, 0, 0, 0.8),
+                0 0 50px rgba(56, 189, 248, 0.35),
+                0 0 90px rgba(16, 185, 129, 0.18);
             display: inline-block;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 3.5px solid rgba(255, 255, 255, 0.95);
         }
 
         .qr-wrapper:hover {
-            transform: scale(1.02);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 50px rgba(56, 189, 248, 0.25);
+            transform: translateY(-3px) scale(1.015);
+            box-shadow: 
+                0 32px 80px rgba(0, 0, 0, 0.9),
+                0 0 65px rgba(56, 189, 248, 0.5),
+                0 0 120px rgba(0, 210, 255, 0.3);
+        }
+
+        /* 4 Sudut Siku Cyber Viewfinder */
+        .corner-bracket {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border-color: #38bdf8;
+            border-style: solid;
+            pointer-events: none;
+            z-index: 5;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
+        }
+        .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 14px; }
+        .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 14px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 14px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 14px; }
+
+        .qr-stage:hover .corner-bracket {
+            border-color: #00d2ff;
+            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 1));
+        }
+
+        /* Animated Laser Scanning Line */
+        .qr-scanner-laser {
+            position: absolute;
+            left: 22px;
+            right: 22px;
+            top: 22px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), #00d2ff, #ffffff, #00d2ff, rgba(56, 189, 248, 0.3), transparent);
+            box-shadow: 0 0 16px rgba(0, 210, 255, 0.95), 0 0 32px rgba(56, 189, 248, 0.6);
+            pointer-events: none;
+            z-index: 4;
+            animation: qrScanLaser 4s ease-in-out infinite;
+            border-radius: 3px;
+        }
+
+        @keyframes qrScanLaser {
+            0%, 100% {
+                top: 22px;
+                opacity: 0.15;
+            }
+            50% {
+                top: calc(100% - 25px);
+                opacity: 1;
+            }
+        }
+
+        /* Center Emblem on QR */
+        .qr-center-emblem {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 58px;
+            height: 58px;
+            background: #0b1329;
+            border: 3.5px solid #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 3;
+            padding: 6px;
+        }
+        .qr-center-emblem img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #eventQrCode {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #eventQrCode canvas,
+        #eventQrCode img {
+            display: block !important;
+            margin: 0 auto;
+            border-radius: 14px;
+            width: 380px !important;
+            height: 380px !important;
+        }
+
+        /* Scan Instruction Card */
+        .scan-instruction-card {
+            width: 100%;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 18px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+            text-align: left;
+            box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.06);
+        }
+
+        .scan-radar-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: rgba(56, 189, 248, 0.16);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+        }
+
+        .radar-ping {
+            position: absolute;
+            inset: -4px;
+            border-radius: 16px;
+            border: 2px solid rgba(56, 189, 248, 0.7);
+            animation: radarPingAnim 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+            pointer-events: none;
+        }
+
+        @keyframes radarPingAnim {
+            0% { transform: scale(0.95); opacity: 1; }
+            100% { transform: scale(1.35); opacity: 0; }
+        }
+
+        .instruction-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .instruction-desc {
+            font-size: 11.5px;
+            color: #94a3b8;
+            margin-top: 1px;
+            line-height: 1.35;
+        }
+
+        .event-badge-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
         }
 
         .event-info-title {
             font-family: 'Outfit', sans-serif;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 900;
             margin: 0 0 10px;
-            line-height: 1.2;
-            background: linear-gradient(135deg, #ffffff 40%, var(--text-muted) 100%);
+            line-height: 1.25;
+            background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .event-info-desc {
-            font-size: 12px;
+            font-size: 12.5px;
             color: var(--text-muted);
-            line-height: 1.5;
+            line-height: 1.55;
             margin: 0 0 20px;
         }
 
@@ -740,10 +992,17 @@
     <!-- Top Header -->
     <header class="dashboard-header">
         <div class="brand-section">
-            <img src="/images/logo_mbs.png" alt="INDEXIM SAP" class="brand-logo" />
+            <div class="brand-logos-cluster">
+                <img src="/images/logo_indexim_putih.png" alt="PT INDEXIM COALINDO" class="brand-logo-indexim" />
+                <div class="brand-divider-v"></div>
+                <img src="/images/logo_mbs.png" alt="MBS SAP" class="brand-logo" />
+            </div>
             <div class="brand-text">
-                <span class="brand-subtitle">Safety Accountability Program</span>
-                <span class="brand-title">Live Attendance Display</span>
+                <div class="brand-status-row">
+                    <span class="live-beacon"><span class="beacon-core"></span><span class="beacon-ring"></span></span>
+                    <span class="brand-subtitle">PRESENSI EVENT RESMI &bull; PT INDEXIM COALINDO</span>
+                </div>
+                <span class="brand-title">Live Attendance Command Center</span>
             </div>
         </div>
         <div class="header-actions">
@@ -792,15 +1051,40 @@
         <!-- Column 1: QR & Event Info -->
         <section class="glass-card qr-section">
             <div class="panel-header" style="width: 100%;">
-                <h3 class="panel-title"><i class="bi bi-qr-code-scan text-primary"></i>Pindai Absensi</h3>
+                <h3 class="panel-title"><i class="bi bi-qr-code-scan text-primary"></i>Pindai Presensi Kehadiran</h3>
+                <span class="badge-status present" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); font-size: 11px;">
+                    <i class="bi bi-broadcast me-1"></i>SIAP SCAN
+                </span>
             </div>
             
-            <div class="qr-wrapper">
-                <div id="eventQrCode"></div>
+            <div class="qr-stage">
+                <div class="corner-bracket corner-tl"></div>
+                <div class="corner-bracket corner-tr"></div>
+                <div class="corner-bracket corner-bl"></div>
+                <div class="corner-bracket corner-br"></div>
+                <div class="qr-wrapper">
+                    <div class="qr-scanner-laser"></div>
+                    <div id="eventQrCode"></div>
+                    <div class="qr-center-emblem">
+                        <img src="/images/logo_indexim_putih.png" alt="INDEXIM" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="scan-instruction-card">
+                <div class="scan-radar-icon">
+                    <span class="radar-ping"></span>
+                    <i class="bi bi-qr-code-scan"></i>
+                </div>
+                <div>
+                    <div class="instruction-title">Arahkan Kamera Smartphone</div>
+                    <div class="instruction-desc">Buka kamera atau pemindai QR di HP Anda untuk konfirmasi kehadiran otomatis.</div>
+                </div>
             </div>
             
+            <div class="event-badge-tag"><i class="bi bi-calendar2-check-fill me-1"></i> SESI RESMI PRESENSI</div>
             <h1 class="event-info-title">@Model.Event.EventName</h1>
-            <p class="event-info-desc">Pindai QR Code di atas menggunakan browser/kamera HP Anda untuk mencatat kehadiran secara otomatis.</p>
+            <p class="event-info-desc">@(string.IsNullOrWhiteSpace(Model.Event.EventDescription) ? "Pastikan seluruh perwakilan perusahaan hadir dan melakukan pemindaian tepat waktu." : Model.Event.EventDescription)</p>
             
             <div class="info-meta-list">
                 <div class="info-meta-item">
@@ -1437,16 +1721,16 @@
             @:processedNiks.add('@attendee.Nik.Trim()');
         }
 
-        // Draw Event QR Code Large
+        // Draw Event QR Code Extra Large & High Quality
         const qrContainer = document.getElementById('eventQrCode');
         if (qrContainer) {
             new QRCode(qrContainer, {
                 text: '@qrUrl',
-                width: 320,
-                height: 320,
+                width: 380,
+                height: 380,
                 colorDark: '#030712',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.Q
+                correctLevel: QRCode.CorrectLevel.H
             });
         }
 
