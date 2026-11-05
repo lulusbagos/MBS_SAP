@@ -1936,6 +1936,7 @@
     }
 
     function triggerOfficeHeatAlert(temp, uv, apparent = 0, isTest = false) {
+        if (!isTest) return; // Dinonaktifkan: Suara informasi otomatis khusus Office dimatikan
         if (isSoundMuted && !isTest) return;
         const uvVal = Number(uv) || 0;
         const tempVal = Math.round(Number(temp) || 30);
@@ -2626,11 +2627,13 @@
                 siteMaxGustLocation = p.name;
             }
 
-            if (curPrecip > 0) {
-                activeNowRainPoints.push({ name: p.name, precip: curPrecip, gust: curGust });
-            }
-            if (curCode >= 95 || ptMaxCode >= 95) {
-                activeNowThunderPoints.push({ name: p.name, code: curCode });
+            if (!isOffice) {
+                if (curPrecip > 0) {
+                    activeNowRainPoints.push({ name: p.name, precip: curPrecip, gust: curGust });
+                }
+                if (curCode >= 95 || ptMaxCode >= 95) {
+                    activeNowThunderPoints.push({ name: p.name, code: curCode });
+                }
             }
 
             // Determine Severity Level according to user rules:
@@ -2656,6 +2659,8 @@
 
             if (ptCls.tier >= 3 || curCode >= 95 || curPrecip > 0) {
                 warningPointsCount++;
+            }
+            if (!isOffice && (ptCls.tier >= 3 || curCode >= 95 || curPrecip > 0)) {
                 activeAlertPoints.push({
                     name: p.name,
                     precip: curPrecip,
@@ -2891,8 +2896,14 @@
             // Hauling Road Condition
             let roadBadge = '';
             if (isOffice) {
-                const isHotOrUv = (curUv >= 8 || curTemp >= 34);
-                roadBadge = `<span class="hauling-badge hauling-normal" style="border-color:${isHotOrUv ? '#f97316' : '#38bdf8'}; color:${isHotOrUv ? '#fb923c' : '#38bdf8'};"><i class="bi ${isHotOrUv ? 'bi-sun-fill text-warning' : 'bi-shield-check'}"></i> ${isHotOrUv ? 'UV ' + curUv.toFixed(1) + ' (' + getUvCategory(curUv) + ')' : 'Akses Terbuka • Kondusif'}</span>`;
+                if (curPrecip >= 2 || curCode >= 63 || curCode >= 80 || curCode >= 95) {
+                    roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-cloud-rain-heavy-fill"></i> Hujan Lebat di Office</span>';
+                } else if (curPrecip > 0 || (curCode >= 51 && curCode <= 67)) {
+                    roadBadge = '<span class="hauling-badge hauling-caution"><i class="bi bi-cloud-rain-fill"></i> Hujan / Basah di Office</span>';
+                } else {
+                    const isHotOrUv = (curUv >= 8 || curTemp >= 34);
+                    roadBadge = `<span class="hauling-badge hauling-normal" style="border-color:${isHotOrUv ? '#f97316' : '#38bdf8'}; color:${isHotOrUv ? '#fb923c' : '#38bdf8'};"><i class="bi ${isHotOrUv ? 'bi-sun-fill text-warning' : 'bi-shield-check'}"></i> ${isHotOrUv ? 'UV ' + curUv.toFixed(1) + ' (' + getUvCategory(curUv) + ')' : 'Akses Terbuka • Kondusif'}</span>`;
+                }
             } else if (curPrecip >= 2) {
                 roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-exclamation-triangle-fill"></i> Sangat Licin / Standby</span>';
             } else if (curPrecip > 0) {
@@ -3202,25 +3213,14 @@
             kpiStatusText.innerText = 'NORMAL';
         }
 
-        // Peringatan Suara Khusus Office Jika Cuaca Terlalu Panas atau Radiasi UV Tinggi
+        // Peringatan Suara Khusus Office: DINONAKTIFKAN SESUAI PERMINTAAN USER
+        // Suara informasi cuaca khusus Office dimatikan secara permanen agar tidak bersuara otomatis.
+        /*
         const officePointItem = results.find(r => r.point && (r.point.isOffice || r.point.name.toUpperCase().includes('OFFICE')));
         if (officePointItem) {
-            const ofcHourIdx = getCurrentHourIndex(officePointItem.forecast.hourly.time);
-            const ofcHourly = officePointItem.forecast.hourly;
-            const ofcCurTemp = ofcHourly.temperature_2m ? ofcHourly.temperature_2m[ofcHourIdx] : 25;
-            const ofcCurUv = ofcHourly.uv_index ? (ofcHourly.uv_index[ofcHourIdx] || 0) : 0;
-            const ofcCurApparent = ofcHourly.apparent_temperature ? (ofcHourly.apparent_temperature[ofcHourIdx] || ofcCurTemp) : ofcCurTemp;
-
-            const isOfficeHotOrHighUv = (ofcCurUv >= 8 || ofcCurTemp >= 34 || ofcCurApparent >= 37);
-            const isOfficeHeatIntervalPassed = (nowTime - lastOfficeHeatAlertTime >= OFFICE_HEAT_ALERT_REPEAT_INTERVAL_MS);
-
-            if (isOfficeHotOrHighUv && isOfficeHeatIntervalPassed) {
-                lastOfficeHeatAlertTime = nowTime;
-                setTimeout(() => {
-                    triggerOfficeHeatAlert(ofcCurTemp, ofcCurUv, ofcCurApparent, false);
-                }, 3000);
-            }
+            // dinonaktifkan
         }
+        */
 
         // Update filter badge numbers
         const warnCountEl = document.getElementById('warnCountBadge');
