@@ -559,7 +559,7 @@ namespace MBS_SAP.Controllers
                 {
                     var rawHazards = (await _context.HazardReports
                         .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && h.Nik != null)
-                        .Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                        .Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
                         .Distinct()
                         .ToListAsync());
 
@@ -3825,7 +3825,7 @@ namespace MBS_SAP.Controllers
 
                 var allHazardsMonth = (await _context.HazardReports
                     .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
-                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
                     .Distinct()
                     .ToListAsync())
                     .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
@@ -4624,7 +4624,7 @@ namespace MBS_SAP.Controllers
 
                 var allHazardsMonth = (await _context.HazardReports
                     .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
-                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
                     .Distinct()
                     .ToListAsync())
                     .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
@@ -10124,7 +10124,7 @@ namespace MBS_SAP.Controllers
 
             var allHazardsMonth = (await _context.HazardReports
                 .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
-                .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
                 .Distinct()
                 .ToListAsync())
                 .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
@@ -10531,7 +10531,7 @@ namespace MBS_SAP.Controllers
             }
 
             var submitters = new Dictionary<string, int>();
-            var hazNiks = await hazards.Where(h => h.Nik != null).Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu }).Distinct().Select(h => h.Nik).ToListAsync();
+            var hazNiks = await hazards.Where(h => h.Nik != null).Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, Temuan = h.Temuan.Substring(0, 100) }).Distinct().Select(h => h.Nik).ToListAsync();
             var insNiks = await inspections.Where(i => i.Nik != null).Select(i => new { Nik = i.Nik.Trim(), i.Tanggal, i.Waktu }).Distinct().Select(i => i.Nik).ToListAsync();
             var rawSafNiks = await safetyTalks.Where(s => s.Nik != null).Select(s => new { Nik = s.Nik.Trim(), s.Tanggal }).ToListAsync();
             var safNiks = rawSafNiks.Select(s => s.Nik).ToList();

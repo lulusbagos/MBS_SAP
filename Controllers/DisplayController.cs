@@ -588,7 +588,7 @@ namespace MBS_SAP.Controllers
                     .ToListAsync();
 
                 var todayStart = DateTime.Today;
-                int todayHazards     = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= todayStart).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
+                int todayHazards     = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= todayStart).Select(h => new { h.Nik, h.Tanggal, h.Waktu, Temuan = h.Temuan.Substring(0, 100) }).Distinct().CountAsync();
                 int todayInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= todayStart).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
                 int todaySafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= todayStart).Select(s => new { s.Nik, s.Tanggal }).Distinct().CountAsync();
                 int todayP5ms        = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= todayStart).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
@@ -597,7 +597,7 @@ namespace MBS_SAP.Controllers
                 int todayCoachings   = await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= todayStart).Select(c => new { c.Nik, c.Tanggal, c.Waktu }).Distinct().CountAsync();
 
                 // ── Company-level monthly realization lists ─────────────────────
-                var monthHazardsByCompany    = (await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.PerusahaanId != null).Select(h => new { CompId = h.PerusahaanId!.Value, h.Nik, h.Tanggal, h.Waktu }).Distinct().ToListAsync()).Select(h => h.CompId).ToList();
+                var monthHazardsByCompany    = (await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.PerusahaanId != null).Select(h => new { CompId = h.PerusahaanId!.Value, h.Nik, h.Tanggal, h.Waktu, Temuan = h.Temuan.Substring(0, 100) }).Distinct().ToListAsync()).Select(h => h.CompId).ToList();
                 var monthInspectionsByCompany= (await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.PerusahaanId != null).Select(i => new { CompId = i.PerusahaanId!.Value, i.Nik, i.Tanggal, i.Waktu }).Distinct().ToListAsync()).Select(i => i.CompId).ToList();
                 var rawMonthSTComp           = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.PerusahaanId != null).Select(s => new { CompId = s.PerusahaanId!.Value, s.Nik, s.Tanggal, s.Waktu }).Distinct().ToListAsync();
                 var monthSafetyTalksByCompany= rawMonthSTComp.Select(s => s.CompId).ToList();
@@ -613,7 +613,7 @@ namespace MBS_SAP.Controllers
                                                         .ToList();
 
                 // ── Weekly aggregates ───────────────────────────────────────────
-                int weekHazards      = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfWeek).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
+                int weekHazards      = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfWeek).Select(h => new { h.Nik, h.Tanggal, h.Waktu, Temuan = h.Temuan.Substring(0, 100) }).Distinct().CountAsync();
                 int weekInspections  = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfWeek).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
                 int weekSafetyTalks  = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfWeek).Select(s => new { s.Nik, s.Tanggal, s.Waktu }).Distinct().CountAsync();
                 int weekP5ms         = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfWeek).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
