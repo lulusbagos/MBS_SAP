@@ -750,9 +750,12 @@
                     <div class="hdr-title">
                         <i class="bi bi-activity text-purple"></i> Monitoring Pergerakan Lereng
                     </div>
-                    <div class="hdr-sub">
+                    <div class="hdr-sub d-flex align-items-center flex-wrap gap-1">
                         <span class="spinner-grow spinner-grow-sm text-info me-1" role="status" style="width: 7px; height: 7px;"></span>
-                        Extensometer Geotechnical Command Center &bull; PT INDEXIM COALINDO
+                        <span>Extensometer Geotechnical Command Center &bull; PT INDEXIM COALINDO</span>
+                        <span id="badgeDataSource" class="badge ms-2" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 10px; font-weight: 700; letter-spacing: 0.3px;">
+                            <i class="bi bi-hdd-network-fill me-1"></i> CONNECTING...
+                        </span>
                     </div>
                 </div>
             </div>
@@ -1254,6 +1257,24 @@
         const alerts = data.recentAlerts || [];
         const hourly = data.hourlyTrends || [];
 
+        // 0. Update Data Source Badge (REST API vs SQL Server)
+        const badgeSource = document.getElementById('badgeDataSource');
+        if (badgeSource) {
+            if (data.apiConnected) {
+                badgeSource.style.background = 'rgba(16, 185, 129, 0.2)';
+                badgeSource.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                badgeSource.style.color = '#34d399';
+                badgeSource.innerHTML = '<i class="bi bi-hdd-network-fill me-1"></i> REST API (172.16.1.93:8000) LIVE';
+                badgeSource.title = 'Terhubung langsung ke REST API EWS Argatech FastAPI Server';
+            } else {
+                badgeSource.style.background = 'rgba(56, 189, 248, 0.2)';
+                badgeSource.style.borderColor = 'rgba(56, 189, 248, 0.5)';
+                badgeSource.style.color = '#38bdf8';
+                badgeSource.innerHTML = '<i class="bi bi-database-fill-check me-1"></i> DB_Xtens SQL LIVE (172.16.1.93)';
+                badgeSource.title = 'Terhubung langsung ke database SQL Server DB_Xtens (172.16.1.93:1433)';
+            }
+        }
+
         // 1. Render Top KPI Row
         const cardStatus = document.getElementById('cardOverallStatus');
         const valStatus = document.getElementById('valOverallStatus');
@@ -1416,12 +1437,13 @@
             .replace(/'/g, '&#39;');
     }
 
-    // Init Chart and Start polling every 30 seconds
+    // Init Chart and Start polling every 10 seconds for real-time monitoring
     document.addEventListener('DOMContentLoaded', () => {
         initSlopeChart();
         fetchDisplay5Data();
-        setInterval(() => fetchDisplay5Data(), 30000);
+        setInterval(() => fetchDisplay5Data(), 10000);
     });
     </script>
 </body>
 </html>
+

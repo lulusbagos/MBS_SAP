@@ -10,6 +10,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace MBS_SAP.Controllers
 {
@@ -20,17 +22,19 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
         private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
         private const string Display1PerfCacheKey = "CACHE_DISPLAY1_PERF_V1";
         private const string Display2CacheKey = "CACHE_DISPLAY2_DATA_V1";
         private const string DisplayFeedCacheKey = "CACHE_DISPLAY_FEED_V1";
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
         private const string Display5CacheKey = "CACHE_DISPLAY5_DATA_V1";
 
-        public DisplayController(AppDbContext context, IMemoryCache cache, IConfiguration configuration)
+        public DisplayController(AppDbContext context, IMemoryCache cache, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _context = context;
             _cache = cache;
             _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
 
         [Route("")]
@@ -87,17 +91,42 @@ namespace MBS_SAP.Controllers
                     return Ok(cachedData);
                 }
 
+                string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
                 string connStr = _configuration.GetConnectionString("XtensConnection")
                     ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
 
+                bool apiConnected = false;
+                string dataSource = "Direct SQL Server (DB_Xtens 172.16.1.93)";
                 var devicesDict = new Dictionary<int, SlopeDeviceDto>();
                 var rawSensors = new List<SlopeSensorRawDto>();
                 var alerts = new List<SlopeAlertDto>();
                 var hourlyTrends = new List<SlopeHourlyTrendDto>();
 
-                using (var conn = new SqlConnection(connStr))
+                // 1. Coba hubungi REST API FastAPI (http://172.16.1.93:8000)
+                try
                 {
-                    await conn.OpenAsync();
+                    var apiResult = await FetchSlopeDataFromApiAsync(apiBaseUrl);
+                    if (apiResult.success && apiResult.devices.Count > 0)
+                    {
+                        apiConnected = true;
+                        dataSource = $"REST API ({apiBaseUrl.TrimEnd('/')})";
+                        foreach (var d in apiResult.devices) devicesDict[d.DeviceId] = d;
+                        rawSensors.AddRange(apiResult.rawSensors);
+                        hourlyTrends.AddRange(apiResult.hourlyTrends);
+                        alerts.AddRange(apiResult.alerts);
+                    }
+                }
+                catch
+                {
+                    apiConnected = false;
+                }
+
+                // 2. Jika REST API tidak aktif / kosong, gunakan Direct SQL Server DB_Xtens
+                if (!apiConnected || devicesDict.Count == 0)
+                {
+                    using (var conn = new SqlConnection(connStr))
+                    {
+                        await conn.OpenAsync();
 
                     // 1. Latest slope status from view
                     using (var cmd = new SqlCommand(@"
@@ -254,6 +283,7 @@ namespace MBS_SAP.Controllers
                         }
                     }
                 }
+                }
 
                 int normalCount = rawSensors.Count(s => s.AlertStatus == "NORMAL");
                 int warningCount = rawSensors.Count(s => s.AlertStatus == "WARNING");
@@ -267,6 +297,9 @@ namespace MBS_SAP.Controllers
                 var responsePayload = new
                 {
                     success = true,
+                    dataSource,
+                    apiConnected,
+                    apiBaseUrl,
                     summary = new
                     {
                         totalDevices = devicesDict.Count,
@@ -283,7 +316,7 @@ namespace MBS_SAP.Controllers
                     hourlyTrends
                 };
 
-                _cache.Set(Display5CacheKey, responsePayload, TimeSpan.FromSeconds(20));
+                _cache.Set(Display5CacheKey, responsePayload, TimeSpan.FromSeconds(10));
                 Response.Headers["X-Cache"] = "MISS";
                 return Ok(responsePayload);
             }
@@ -291,6 +324,276 @@ namespace MBS_SAP.Controllers
             {
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
+        }
+
+        private async Task<(bool success, List<SlopeDeviceDto> devices, List<SlopeSensorRawDto> rawSensors, List<SlopeAlertDto> alerts, List<SlopeHourlyTrendDto> hourlyTrends)> FetchSlopeDataFromApiAsync(string apiBaseUrl)
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(3);
+            string latestUrl = $"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/latest";
+
+            var response = await client.GetAsync(latestUrl);
+            if (!response.IsSuccessStatusCode)
+                return (false, new(), new(), new(), new());
+
+            var jsonStr = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(jsonStr);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                return (false, new(), new(), new(), new());
+
+            var devicesDict = new Dictionary<int, SlopeDeviceDto>();
+            var rawSensors = new List<SlopeSensorRawDto>();
+
+            foreach (var elem in doc.RootElement.EnumerateArray())
+            {
+                int devId = elem.TryGetProperty("device_id", out var pDevId) && pDevId.TryGetInt32(out var vDevId) ? vDevId : 0;
+                string devCode = elem.TryGetProperty("device_code", out var pDevCode) ? pDevCode.GetString() ?? "" : "";
+                string devName = elem.TryGetProperty("device_name", out var pDevName) ? pDevName.GetString() ?? "" : "";
+                string siteLoc = elem.TryGetProperty("site_location", out var pSite) ? pSite.GetString() ?? "" : "";
+                int slot = elem.TryGetProperty("sensor_slot", out var pSlot) && pSlot.TryGetInt32(out var vSlot) ? vSlot : 0;
+                int sId = elem.TryGetProperty("sensor_id", out var pSId) && pSId.TryGetInt32(out var vSId) ? vSId : 0;
+                string sCode = elem.TryGetProperty("sensor_code", out var pSCode) ? pSCode.GetString() ?? "" : "";
+                string sName = elem.TryGetProperty("sensor_name", out var pSName) ? pSName.GetString() ?? "" : "";
+                string sType = elem.TryGetProperty("sensor_type_name", out var pSType) ? pSType.GetString() ?? "Displacement" : "Displacement";
+                string uSuffix = elem.TryGetProperty("unit_suffix", out var pUSuffix) ? pUSuffix.GetString() ?? "mm" : "mm";
+                string locDesc = elem.TryGetProperty("location_desc", out var pLoc) ? pLoc.GetString() ?? "" : "";
+                double baseline = elem.TryGetProperty("baseline_value", out var pBase) && pBase.TryGetDouble(out var vBase) ? vBase : 0.0;
+                string latestTs = elem.TryGetProperty("latest_timestamp_str", out var pTs) ? pTs.GetString() ?? "" : "";
+                double latestVal = elem.TryGetProperty("latest_value", out var pVal) && pVal.TryGetDouble(out var vVal) ? vVal : 0.0;
+                double deltaVal = elem.TryGetProperty("delta_value", out var pDelta) && pDelta.TryGetDouble(out var vDelta) ? vDelta : 0.0;
+                double accumDisp = elem.TryGetProperty("accumulative_displacement", out var pAcc) && pAcc.TryGetDouble(out var vAcc) ? vAcc : 0.0;
+                double latDisp = elem.TryGetProperty("lateral_displacement_mm", out var pLat) && pLat.TryGetDouble(out var vLat) ? vLat : 0.0;
+                double velHour = elem.TryGetProperty("velocity_per_hour", out var pVelH) && pVelH.TryGetDouble(out var vVelH) ? vVelH : 0.0;
+                double velDay = elem.TryGetProperty("velocity_per_day", out var pVelD) && pVelD.TryGetDouble(out var vVelD) ? vVelD : 0.0;
+                double? thVel = elem.TryGetProperty("threshold_velocity", out var pThV) && pThV.TryGetDouble(out var vThV) ? vThV : null;
+                double? thAcc = elem.TryGetProperty("threshold_accumulative", out var pThA) && pThA.TryGetDouble(out var vThA) ? vThA : null;
+                string aStatus = elem.TryGetProperty("alert_status", out var pStat) ? pStat.GetString() ?? "NORMAL" : "NORMAL";
+                int? minsAgo = elem.TryGetProperty("minutes_since_last_reading", out var pMins) && pMins.TryGetInt32(out var vMins) ? vMins : null;
+
+                if (!devicesDict.TryGetValue(devId, out var devDto))
+                {
+                    devDto = new SlopeDeviceDto
+                    {
+                        DeviceId = devId,
+                        DeviceCode = devCode,
+                        DeviceName = devName,
+                        SiteLocation = siteLoc,
+                        Status = "NORMAL",
+                        LastReadingTs = latestTs,
+                        Sensors = new List<SlopeSensorItemDto>()
+                    };
+                    devicesDict[devId] = devDto;
+                }
+
+                if (aStatus == "CRITICAL") devDto.Status = "CRITICAL";
+                else if (aStatus == "WARNING" && devDto.Status != "CRITICAL") devDto.Status = "WARNING";
+
+                devDto.Sensors.Add(new SlopeSensorItemDto
+                {
+                    SensorId = sId,
+                    SensorSlot = slot,
+                    SensorCode = sCode,
+                    SensorName = sName,
+                    SensorTypeName = sType,
+                    UnitSuffix = uSuffix,
+                    LocationDesc = locDesc,
+                    BaselineValue = baseline,
+                    LatestValue = latestVal,
+                    DeltaValue = deltaVal,
+                    AccumulativeDisplacement = accumDisp,
+                    LateralDisplacement = latDisp,
+                    VelocityPerHour = velHour,
+                    VelocityPerDay = velDay,
+                    ThresholdVelocity = thVel,
+                    ThresholdAccumulative = thAcc,
+                    AlertStatus = aStatus,
+                    LatestTs = latestTs,
+                    MinutesSinceLastReading = minsAgo
+                });
+
+                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo });
+            }
+
+            var hourlyTrends = new List<SlopeHourlyTrendDto>();
+            try
+            {
+                string trendUrl = $"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/hourly-trend?sensor_id=2925&hours=48";
+                var trendRes = await client.GetAsync(trendUrl);
+                if (trendRes.IsSuccessStatusCode)
+                {
+                    var trendJson = await trendRes.Content.ReadAsStringAsync();
+                    using var trendDoc = JsonDocument.Parse(trendJson);
+                    if (trendDoc.RootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in trendDoc.RootElement.EnumerateArray())
+                        {
+                            hourlyTrends.Add(new SlopeHourlyTrendDto
+                            {
+                                DeviceId = item.TryGetProperty("device_id", out var pDId) && pDId.TryGetInt32(out var vdId) ? vdId : 0,
+                                DeviceName = item.TryGetProperty("device_name", out var pDN) ? pDN.GetString() ?? "" : "",
+                                SensorId = item.TryGetProperty("sensor_id", out var pSId) && pSId.TryGetInt32(out var vsId) ? vsId : 0,
+                                SensorName = item.TryGetProperty("sensor_name", out var pSN) ? pSN.GetString() ?? "" : "",
+                                UnitSuffix = item.TryGetProperty("unit_suffix", out var pUS) ? pUS.GetString() ?? "mm" : "mm",
+                                HourStr = item.TryGetProperty("hour_str", out var pHS) ? pHS.GetString() ?? "" : "",
+                                AvgAccumulative = item.TryGetProperty("avg_accumulative_displacement", out var pAvgA) && pAvgA.TryGetDouble(out var vAvgA) ? vAvgA : (item.TryGetProperty("avg_value", out var pAvgV) && pAvgV.TryGetDouble(out var vAvgV) ? vAvgV : 0.0),
+                                MaxVelocity = item.TryGetProperty("max_abs_velocity_per_hour", out var pMaxV) && pMaxV.TryGetDouble(out var vMaxV) ? vMaxV : 0.0
+                            });
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return (true, devicesDict.Values.ToList(), rawSensors, new(), hourlyTrends);
+        }
+
+        [HttpGet("SlopeApi/Latest")]
+        public async Task<IActionResult> GetSlopeApiLatest([FromQuery] int? device_id, [FromQuery] string? alert_status)
+        {
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(3);
+                string url = $"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/latest";
+                var qList = new List<string>();
+                if (device_id.HasValue) qList.Add($"device_id={device_id.Value}");
+                if (!string.IsNullOrEmpty(alert_status)) qList.Add($"alert_status={Uri.EscapeDataString(alert_status)}");
+                if (qList.Count > 0) url += "?" + string.Join("&", qList);
+
+                var res = await client.GetAsync(url);
+                if (res.IsSuccessStatusCode)
+                {
+                    var content = await res.Content.ReadAsStringAsync();
+                    return Content(content, "application/json");
+                }
+            }
+            catch { }
+
+            // Fallback SQL
+            string connStr = _configuration.GetConnectionString("XtensConnection")
+                ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+            using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+            using var cmd = new SqlCommand(@"
+                SELECT 
+                    device_name, sensor_name, 
+                    CONVERT(VARCHAR(19), latest_timestamp, 120) AS latest_timestamp, 
+                    latest_value, velocity_per_hour, alert_status
+                FROM dbo.vw_latest_slope_status
+                ORDER BY alert_status DESC, device_id", conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            var list = new List<object>();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new
+                {
+                    device_name = reader.IsDBNull(0) ? "" : reader.GetString(0),
+                    sensor_name = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                    latest_timestamp = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    latest_value = reader.IsDBNull(3) ? 0.0 : Convert.ToDouble(reader.GetDecimal(3)),
+                    velocity_per_hour = reader.IsDBNull(4) ? 0.0 : Convert.ToDouble(reader.GetDecimal(4)),
+                    alert_status = reader.IsDBNull(5) ? "NORMAL" : reader.GetString(5)
+                });
+            }
+            return Ok(list);
+        }
+
+        [HttpGet("SlopeApi/Summary")]
+        public async Task<IActionResult> GetSlopeApiSummary()
+        {
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(3);
+                var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/summary");
+                if (res.IsSuccessStatusCode)
+                {
+                    var content = await res.Content.ReadAsStringAsync();
+                    return Content(content, "application/json");
+                }
+            }
+            catch { }
+
+            // Fallback SQL
+            string connStr = _configuration.GetConnectionString("XtensConnection")
+                ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+            using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+            using var cmd = new SqlCommand(@"
+                SELECT
+                    COUNT(*) AS total_sensors,
+                    SUM(CASE WHEN alert_status = 'NORMAL' THEN 1 ELSE 0 END) AS normal_count,
+                    SUM(CASE WHEN alert_status = 'WARNING' THEN 1 ELSE 0 END) AS warning_count,
+                    SUM(CASE WHEN alert_status = 'CRITICAL' THEN 1 ELSE 0 END) AS critical_count,
+                    SUM(CASE WHEN alert_status = 'NO_DATA' OR alert_status IS NULL THEN 1 ELSE 0 END) AS no_data_count
+                FROM dbo.vw_latest_slope_status", conn);
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                return Ok(new
+                {
+                    server = "172.16.1.93",
+                    database = "DB_Xtens",
+                    summary = new
+                    {
+                        total_sensors = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        normal_count = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
+                        warning_count = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
+                        critical_count = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
+                        no_data_count = reader.IsDBNull(4) ? 0 : reader.GetInt32(4)
+                    }
+                });
+            }
+            return Ok(new { });
+        }
+
+        [HttpGet("SlopeApi/HourlyTrend")]
+        public async Task<IActionResult> GetSlopeApiHourlyTrend([FromQuery] int sensor_id = 2925, [FromQuery] int hours = 48)
+        {
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(3);
+                var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/hourly-trend?sensor_id={sensor_id}&hours={hours}");
+                if (res.IsSuccessStatusCode)
+                {
+                    var content = await res.Content.ReadAsStringAsync();
+                    return Content(content, "application/json");
+                }
+            }
+            catch { }
+
+            // Fallback SQL
+            string connStr = _configuration.GetConnectionString("XtensConnection")
+                ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+            using var conn = new SqlConnection(connStr);
+            await conn.OpenAsync();
+            using var cmd = new SqlCommand(@"
+                SELECT TOP (@hours)
+                    sensor_id, sensor_name,
+                    CONVERT(VARCHAR(19), hour_bucket, 120) AS waktu_jam,
+                    avg_value AS nilai_mm
+                FROM dbo.vw_hourly_slope_movement
+                WHERE sensor_id = @sensor_id
+                ORDER BY hour_bucket ASC", conn);
+            cmd.Parameters.AddWithValue("@hours", hours);
+            cmd.Parameters.AddWithValue("@sensor_id", sensor_id);
+            using var reader = await cmd.ExecuteReaderAsync();
+            var list = new List<object>();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new
+                {
+                    sensor_id = reader.GetInt32(0),
+                    sensor_name = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                    waktu_jam = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    nilai_mm = reader.IsDBNull(3) ? 0.0 : Convert.ToDouble(reader.GetDecimal(3))
+                });
+            }
+            return Ok(list);
         }
 
         [HttpGet("GetDisplay3Data")]
