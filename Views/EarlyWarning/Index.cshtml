@@ -1223,10 +1223,10 @@
             <!-- Slide Indicator Widget -->
             <div class="slide-indicator-widget">
                 <div class="slide-pill">
-                    <i class="bi bi-display"></i> Slide 4 / 4
+                    <i class="bi bi-display"></i> Slide 4 / 5
                 </div>
                 <div class="slide-timer-text">
-                    <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 1 dalam: <span id="slideCountdown">05:00</span>
+                    <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 5 dalam: <span id="slideCountdown">05:00</span>
                 </div>
                 <a href="/Display" class="slide-btn" title="Pindah ke Display 1">
                     <i class="bi bi-arrow-left-right"></i> Display 1
@@ -1239,6 +1239,9 @@
                 </a>
                 <a href="/EarlyWarning" class="slide-btn active-display" title="Display 4 (Aktif)">
                     <i class="bi bi-cloud-rain-fill"></i> Display 4
+                </a>
+                <a href="/Display5" class="slide-btn" style="color:#a855f7; border-color:rgba(168,85,247,0.4);" title="Pindah ke Display 5 (Pergerakan Lereng)">
+                    <i class="bi bi-activity"></i> Display 5
                 </a>
                 <button class="slide-btn" id="togglePauseBtn" onclick="togglePauseSlide()" title="Jeda rotasi otomatis">
                     <i class="bi bi-pause-fill" id="pauseIcon"></i> <span id="pauseText">Jeda</span>
@@ -1682,7 +1685,7 @@
 
     <script>
     /* ──────────────────────────────────────────────────────────────────────────
-       1. 5-MINUTE AUTO SLIDE ROTATION (/EarlyWarning -> /Display)
+       1. 5-MINUTE AUTO SLIDE ROTATION (/EarlyWarning -> /Display5)
        ────────────────────────────────────────────────────────────────────────── */
     const SLIDE_DURATION_SECONDS = 300; // 5 minutes
     let slideTimeRemaining = SLIDE_DURATION_SECONDS;
@@ -1694,8 +1697,8 @@
         slideTimeRemaining--;
 
         if (slideTimeRemaining <= 0) {
-            // Rotate to Display 1 (continuous loop: Display 1 -> 2 -> 3 -> 4 -> 1)
-            window.location.href = '/Display';
+            // Rotate to Display 5 (continuous loop: Display 1 -> 2 -> 3 -> 4 -> 5 -> 1)
+            window.location.href = '/Display5';
             return;
         }
 

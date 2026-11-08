@@ -1,0 +1,1427 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Display 5 &mdash; Monitoring Pergerakan Lereng & Extensometer &mdash; PT INDEXIM COALINDO</title>
+    
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Chakra+Petch:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for Telemetry Trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+    :root {
+        --bg:            #040711;
+        --bg-card:       rgba(13, 20, 36, 0.75);
+        --panel:         rgba(10, 16, 29, 0.88);
+        --border:        rgba(56, 189, 248, 0.16);
+        --border-bright: rgba(56, 189, 248, 0.38);
+        --txt:           #f8fafc;
+        --muted:         #94a3b8;
+        --blue:          #38bdf8;
+        --cyan:          #00d2ff;
+        --green:         #10b981;
+        --red:           #ef4444;
+        --amber:         #f59e0b;
+        --purple:        #a855f7;
+        --r:             16px;
+    }
+
+    html { background: #040711; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        background-image: 
+            radial-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
+            radial-gradient(circle at 12% 15%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 88% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
+            radial-gradient(circle at 80% 15%, rgba(239, 68, 68, 0.06) 0%, transparent 35%);
+        background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+        font-family: 'Outfit', sans-serif;
+        color: var(--txt);
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* ── Top Global Progress Bar (5 Minutes Slide Countdown) ── */
+    .slide-progress-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        z-index: 9999;
+    }
+    .slide-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #a855f7, #38bdf8, #10b981, #f59e0b, #ef4444);
+        box-shadow: 0 0 12px rgba(168, 85, 247, 0.85);
+        transition: width 1s linear;
+    }
+
+    /* ── Main TV Layout ── */
+    .tv {
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        height: 100vh;
+        padding: 10px 14px 8px 14px;
+        gap: 8px;
+    }
+
+    /* ── Header ── */
+    .hdr {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 10px 18px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .brand-box {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .brand-logos-cluster {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 4px 10px;
+    }
+
+    .brand-logo-indexim {
+        height: 34px;
+        width: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+    }
+
+    .brand-divider-v {
+        width: 1.5px;
+        height: 24px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .brand-logo-mbs {
+        height: 32px;
+        width: 32px;
+        object-fit: contain;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 3px;
+    }
+
+    .brand-title-box {
+        display: grid;
+        gap: 2px;
+    }
+
+    .hdr-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 19px;
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #ffffff 60%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hdr-sub {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--blue);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* ── Slide Indicator & Navigation Buttons ── */
+    .slide-indicator-widget {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(168, 85, 247, 0.08);
+        border: 1px solid rgba(168, 85, 247, 0.28);
+        border-radius: 12px;
+        padding: 4px 10px;
+    }
+
+    .slide-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(168, 85, 247, 0.22);
+        color: #d8b4fe;
+        border: 1px solid rgba(168, 85, 247, 0.45);
+        border-radius: 8px;
+        padding: 3px 10px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .slide-timer-text {
+        font-size: 11px;
+        color: #cbd5e1;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .slide-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--txt);
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .slide-btn:hover {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.4);
+        color: #ffffff;
+        transform: translateY(-1px);
+    }
+
+    .slide-btn.active-display {
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+        border-color: #c084fc;
+        color: #ffffff;
+        box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+    }
+
+    .hdr-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .hdr-ctrl-btn {
+        height: 34px;
+        padding: 0 10px;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        color: var(--txt);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .hdr-ctrl-btn:hover {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: var(--border-bright);
+        color: #ffffff;
+    }
+
+    .hdr-ctrl-btn.sound-active {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+        color: #34d399;
+    }
+
+    .clock-widget {
+        text-align: right;
+        display: grid;
+        gap: 1px;
+    }
+
+    .clock-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 17px;
+        font-weight: 800;
+        color: #38bdf8;
+        letter-spacing: 1px;
+        line-height: 1;
+    }
+
+    .clock-date {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+    }
+
+    /* ── Top KPI HUD Row (5 Metrics) ── */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 1fr 1fr 1.2fr;
+        gap: 10px;
+    }
+
+    .kpi-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .kpi-card:hover {
+        border-color: var(--border-bright);
+        transform: translateY(-1px);
+    }
+
+    .kpi-info {
+        display: grid;
+        gap: 3px;
+    }
+
+    .kpi-label {
+        font-size: 10.5px;
+        font-weight: 800;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .kpi-val {
+        font-family: 'JetBrains Mono', sans-serif;
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.1;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+
+    .kpi-sub {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #94a3b8;
+    }
+
+    .kpi-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .kpi-card.status-normal .kpi-val { color: #34d399; }
+    .kpi-card.status-normal .kpi-icon-box { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399; }
+
+    .kpi-card.status-warning .kpi-val { color: #fbbf24; }
+    .kpi-card.status-warning .kpi-icon-box { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.35); color: #fbbf24; }
+
+    .kpi-card.status-critical .kpi-val { color: #f87171; }
+    .kpi-card.status-critical .kpi-icon-box { 
+        background: rgba(239, 68, 68, 0.18); 
+        border-color: rgba(239, 68, 68, 0.45); 
+        color: #f87171;
+        animation: pulseAlert 1.5s infinite alternate;
+    }
+
+    @@keyframes pulseAlert {
+        0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); transform: scale(1); }
+        100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); transform: scale(1.06); }
+    }
+
+    /* ── Main Workspace Grid (Left 63% / Right 37%) ── */
+    .workspace-grid {
+        display: grid;
+        grid-template-columns: 1.65fr 1fr;
+        gap: 10px;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .ws-col {
+        display: grid;
+        gap: 10px;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .ws-col-left {
+        grid-template-rows: 1.35fr 1fr;
+    }
+
+    .ws-col-right {
+        grid-template-rows: 1.3fr 1fr;
+    }
+
+    .panel-box {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 12px 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .panel-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        flex-shrink: 0;
+    }
+
+    .panel-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--txt);
+    }
+
+    .panel-badge {
+        font-size: 10px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        text-transform: uppercase;
+    }
+
+    /* ── Device & Sensor Cards Grid ── */
+    .devices-scroll-area {
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 4px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        align-content: start;
+    }
+
+    .devices-scroll-area::-webkit-scrollbar { width: 5px; }
+    .devices-scroll-area::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 4px; }
+
+    .device-card {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 0.25s ease, background 0.25s ease;
+    }
+
+    .device-card.critical {
+        border-color: rgba(239, 68, 68, 0.45);
+        background: rgba(239, 68, 68, 0.05);
+    }
+
+    .device-card.warning {
+        border-color: rgba(245, 158, 11, 0.45);
+        background: rgba(245, 158, 11, 0.05);
+    }
+
+    .device-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .device-name-box {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .device-name {
+        font-weight: 800;
+        font-size: 12px;
+        color: #ffffff;
+        letter-spacing: 0.3px;
+    }
+
+    .site-tag {
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 5px;
+        background: rgba(56, 189, 248, 0.12);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .status-badge {
+        font-size: 9.5px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .status-badge.normal {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #34d399;
+    }
+
+    .status-badge.warning {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        color: #fbbf24;
+    }
+
+    .status-badge.critical {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        color: #f87171;
+        animation: pulseAlert 1.5s infinite alternate;
+    }
+
+    .sensor-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+    }
+
+    .sensor-table th {
+        color: var(--muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 9px;
+        padding: 3px 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .sensor-table td {
+        padding: 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        vertical-align: middle;
+    }
+
+    .sensor-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .sensor-name-cell {
+        font-weight: 700;
+        color: #e2e8f0;
+        max-width: 130px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .disp-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 800;
+        font-size: 11px;
+    }
+
+    .disp-val.normal { color: #34d399; }
+    .disp-val.warning { color: #fbbf24; }
+    .disp-val.critical { color: #f87171; font-weight: 900; }
+
+    .vel-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #94a3b8;
+    }
+
+    /* ── Chart Container ── */
+    .chart-container-box {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+        width: 100%;
+    }
+
+    /* ── Alerts Feed Area ── */
+    .alerts-scroll-area {
+        overflow-y: auto;
+        padding-right: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .alerts-scroll-area::-webkit-scrollbar { width: 5px; }
+    .alerts-scroll-area::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 4px; }
+
+    .alert-card {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        padding: 8px 12px;
+        display: grid;
+        gap: 3px;
+        transition: border-color 0.2s;
+    }
+
+    .alert-card.critical {
+        border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .alert-card.warning {
+        border-color: rgba(245, 158, 11, 0.4);
+        background: rgba(245, 158, 11, 0.08);
+    }
+
+    .alert-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+    }
+
+    .alert-loc {
+        font-weight: 800;
+        color: #ffffff;
+    }
+
+    .alert-time {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--muted);
+        font-size: 9.5px;
+    }
+
+    .alert-desc {
+        font-size: 10.5px;
+        color: #cbd5e1;
+        line-height: 1.35;
+    }
+
+    /* ── Geotech Action Matrix ── */
+    .matrix-box {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .matrix-item {
+        border-radius: 10px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 11px;
+    }
+
+    .matrix-item.normal {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .matrix-item.warning {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .matrix-item.critical {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .matrix-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    .matrix-dot.normal { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .matrix-dot.warning { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .matrix-dot.critical { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulseAlert 1.5s infinite alternate; }
+
+    .matrix-text strong {
+        display: block;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 11px;
+        margin-bottom: 2px;
+    }
+    .matrix-item.normal .matrix-text strong { color: #34d399; }
+    .matrix-item.warning .matrix-text strong { color: #fbbf24; }
+    .matrix-item.critical .matrix-text strong { color: #f87171; }
+
+    .matrix-text p {
+        margin: 0;
+        font-size: 10px;
+        color: #94a3b8;
+        line-height: 1.3;
+    }
+
+    /* ── Bottom Footer ── */
+    .tv-bottom-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(148, 163, 184, 0.7);
+        letter-spacing: 0.4px;
+        padding: 3px 12px;
+        background: rgba(15, 23, 42, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        user-select: none;
+        text-align: center;
+        line-height: 1.3;
+    }
+    </style>
+</head>
+<body>
+    <!-- Top 5-Minute Slide Progress Bar -->
+    <div class="slide-progress-container">
+        <div class="slide-progress-bar" id="slideProgressBar"></div>
+    </div>
+
+    <div class="tv">
+        <!-- 1. HEADER -->
+        <header class="hdr">
+            <div class="brand-box">
+                <div class="brand-logos-cluster">
+                    <img src="/images/logo_indexim_putih.png" alt="PT INDEXIM COALINDO" class="brand-logo-indexim" />
+                    <div class="brand-divider-v"></div>
+                    <img src="/images/logo_mbs.png" alt="MBS SAP" class="brand-logo-mbs" />
+                </div>
+                <div class="brand-title-box">
+                    <div class="hdr-title">
+                        <i class="bi bi-activity text-purple"></i> Monitoring Pergerakan Lereng
+                    </div>
+                    <div class="hdr-sub">
+                        <span class="spinner-grow spinner-grow-sm text-info me-1" role="status" style="width: 7px; height: 7px;"></span>
+                        Extensometer Geotechnical Command Center &bull; PT INDEXIM COALINDO
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide Controller & Navigation Buttons -->
+            <div class="slide-indicator-widget">
+                <div class="slide-pill">
+                    <i class="bi bi-display"></i> Slide 5 / 5
+                </div>
+                <div class="slide-timer-text">
+                    <i class="bi bi-clock-history" style="color:#a855f7;"></i> Ganti ke Display 1 dalam: <span id="slideCountdown" style="font-family:'JetBrains Mono'; font-weight:800; color:#ffffff;">05:00</span>
+                </div>
+                <a href="/Display" class="slide-btn" title="Pindah ke Display 1 sekarang">
+                    <i class="bi bi-arrow-left-right"></i> Display 1
+                </a>
+                <a href="/Display2" class="slide-btn" title="Pindah ke Display 2 sekarang">
+                    <i class="bi bi-flag-fill"></i> Display 2
+                </a>
+                <a href="/Display3" class="slide-btn" title="Pindah ke Display 3 sekarang">
+                    <i class="bi bi-shield-check"></i> Display 3
+                </a>
+                <a href="/EarlyWarning" class="slide-btn" title="Pindah ke Display 4 (Early Warning IMORA)">
+                    <i class="bi bi-cloud-lightning-rain-fill"></i> Display 4
+                </a>
+                <a href="/Display5" class="slide-btn active-display" title="Display 5 (Pergerakan Lereng - Aktif)">
+                    <i class="bi bi-activity"></i> Display 5
+                </a>
+                <button class="slide-btn" id="togglePauseBtn" onclick="togglePauseSlide()" title="Jeda / Lanjut rotasi otomatis">
+                    <i class="bi bi-pause-fill" id="pauseIcon"></i> <span id="pauseText">Jeda</span>
+                </button>
+            </div>
+
+            <!-- Sound & Fullscreen Controls -->
+            <div class="hdr-actions">
+                <button type="button" class="hdr-ctrl-btn sound-active" id="btnToggleSound" onclick="toggleSoundAlert()" title="Aktifkan / Bisukan suara alarm lereng">
+                    <i class="bi bi-volume-up-fill" id="soundIcon"></i>
+                    <span id="soundText">Suara: ON</span>
+                </button>
+                <button type="button" class="hdr-ctrl-btn" onclick="toggleFullScreen()" title="Fullscreen Mode">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+            </div>
+
+            <!-- Clock -->
+            <div class="clock-widget">
+                <div class="clock-time" id="liveClock">00:00:00</div>
+                <div class="clock-date" id="liveDate">WITA &bull; -- --- 2026</div>
+            </div>
+        </header>
+
+        <!-- 2. TOP KPI HUD ROW (5 METRICS) -->
+        <div class="kpi-row">
+            <!-- Card 1: Overall Slope Status -->
+            <div class="kpi-card status-normal" id="cardOverallStatus">
+                <div class="kpi-info">
+                    <span class="kpi-label">Status Kondisi Lereng</span>
+                    <span class="kpi-val" id="valOverallStatus">NORMAL</span>
+                    <span class="kpi-sub" id="subOverallStatus">Seluruh lereng aman & stabil</span>
+                </div>
+                <div class="kpi-icon-box" id="iconOverallStatus">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Extensometers -->
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <span class="kpi-label">Unit Extensometer</span>
+                    <span class="kpi-val text-white"><span id="valTotalDevices">7</span> <small style="font-size: 13px; color: var(--muted);">Unit</small></span>
+                    <span class="kpi-sub">Alat telemetri terhubung</span>
+                </div>
+                <div class="kpi-icon-box" style="color: #38bdf8;">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Total Sensors -->
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <span class="kpi-label">Titik Sensor Pantau</span>
+                    <span class="kpi-val text-white"><span id="valTotalSensors">21</span> <small style="font-size: 13px; color: var(--muted);">Titik</small></span>
+                    <span class="kpi-sub"><span id="valNormalSensors" class="text-success font-monospace">19</span> Normal &bull; <span id="valCriticalSensors" class="text-danger font-monospace">2</span> Kritis</span>
+                </div>
+                <div class="kpi-icon-box" style="color: #a855f7;">
+                    <i class="bi bi-geo-alt-fill"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Max Accumulative Displacement -->
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <span class="kpi-label">Pergeseran Maksimum</span>
+                    <span class="kpi-val text-warning"><span id="valMaxDisplacement">0</span> <small style="font-size: 13px; color: var(--muted);">mm</small></span>
+                    <span class="kpi-sub" id="subMaxLocation">Lokasi: --</span>
+                </div>
+                <div class="kpi-icon-box" style="color: #fbbf24;">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+            </div>
+
+            <!-- Card 5: Last Sync / Realtime Status -->
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <span class="kpi-label">Telemetri Terakhir</span>
+                    <span class="kpi-val" style="font-size: 16px; color: #38bdf8;" id="valLastSync">--:--:-- WITA</span>
+                    <span class="kpi-sub" id="subMinutesAgo">Sinkronisasi otomatis aktif</span>
+                </div>
+                <div class="kpi-icon-box" style="color: #00d2ff;">
+                    <i class="bi bi-broadcast-pin"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. MAIN WORKSPACE GRID -->
+        <main class="workspace-grid">
+            <!-- Left Column: Devices Grid (Top) + Trends Chart (Bottom) -->
+            <div class="ws-col ws-col-left">
+                <!-- Top: Extensometer Device Cards Grid -->
+                <section class="panel-box">
+                    <div class="panel-hdr">
+                        <div class="panel-title">
+                            <i class="bi bi-grid-3x3-gap-fill text-purple"></i> Status Sensor Extensometer Per Lokasi
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
+                        </div>
+                    </div>
+                    <div class="devices-scroll-area" id="devicesContainer">
+                        <!-- Rendered dynamically by JS -->
+                        <div class="text-center p-4 text-muted w-100">
+                            <div class="spinner-border spinner-border-sm text-purple me-2"></div> Memuat data telemetri DB_Xtens...
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bottom: 24-Hour Slope Movement Trend Chart -->
+                <section class="panel-box">
+                    <div class="panel-hdr">
+                        <div class="panel-title">
+                            <i class="bi bi-graph-up text-info"></i> Tren Pergerakan Lereng 24 Jam Terakhir (mm)
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid rgba(56, 189, 248, 0.3); font-size:10px;">
+                                <i class="bi bi-clock-history me-1"></i>Hourly Aggregates
+                            </span>
+                        </div>
+                    </div>
+                    <div class="chart-container-box">
+                        <canvas id="slopeTrendChart"></canvas>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Recent Alerts (Top) + Geotech Action Matrix (Bottom) -->
+            <div class="ws-col ws-col-right">
+                <!-- Top: Alerts Feed -->
+                <section class="panel-box">
+                    <div class="panel-hdr">
+                        <div class="panel-title">
+                            <i class="bi bi-bell-fill text-danger"></i> Log Alarm & Peringatan Geoteknik
+                        </div>
+                        <span class="panel-badge" id="badgeAlertCount" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.35);">
+                            0 Peringatan
+                        </span>
+                    </div>
+                    <div class="alerts-scroll-area" id="alertsContainer">
+                        <!-- Rendered dynamically by JS -->
+                        <div class="text-center p-3 text-muted">
+                            <div class="spinner-border spinner-border-sm text-info me-2"></div> Memuat log alarm...
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bottom: Geotech Advisory & Action Protocol -->
+                <section class="panel-box">
+                    <div class="panel-hdr">
+                        <div class="panel-title">
+                            <i class="bi bi-shield-exclamation text-warning"></i> Protokol Tanggap Darurat Pergerakan Lereng
+                        </div>
+                        <span class="panel-badge" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border-color: rgba(251, 191, 36, 0.3);">
+                            SOP K3 Geoteknik
+                        </span>
+                    </div>
+                    <div class="matrix-box">
+                        <div class="matrix-item normal">
+                            <div class="matrix-dot normal"></div>
+                            <div class="matrix-text">
+                                <strong>Status Hijau &bull; Kondisi Normal & Stabil</strong>
+                                <p>Kecepatan pergerakan &lt; 1.0 mm/jam. Operasi penambangan berjalan normal. Tim Geoteknik melakukan pemantauan telemetri rutin.</p>
+                            </div>
+                        </div>
+                        <div class="matrix-item warning">
+                            <div class="matrix-dot warning"></div>
+                            <div class="matrix-text">
+                                <strong>Status Kuning &bull; Waspada / Warning</strong>
+                                <p>Pergerakan meningkat mendekati batas ambang. Pengawas pit & operator diberi notifikasi waspada. Lakukan inspeksi visual lereng segera.</p>
+                            </div>
+                        </div>
+                        <div class="matrix-item critical">
+                            <div class="matrix-dot critical"></div>
+                            <div class="matrix-text">
+                                <strong>Status Merah &bull; Kritis / Bahaya Longsor</strong>
+                                <p>Pergeseran melampaui batas ambang kritis. <strong>HENTIKAN AKTIVITAS TAMBANG</strong> dan segera evakuasi seluruh unit serta personel keluar dari radius bahaya!</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 4. BOTTOM FOOTER -->
+        <footer class="tv-bottom-footer">
+            PT INDEXIM COALINDO &bull; Departemen K3LH & Geoteknik &bull; Extensometer Ground Movement Telemetry Command Center &bull; Live Connected with DB_Xtens
+        </footer>
+    </div>
+
+    <!-- AUDIO ELEMENT & JAVASCRIPT LOGIC -->
+    <script>
+    /* ──────────────────────────────────────────────────────────────────────────
+       1. 5-MINUTE AUTO SLIDE ROTATION (/Display5 -> /Display)
+       ────────────────────────────────────────────────────────────────────────── */
+    const SLIDE_DURATION_SECONDS = 300; // 5 minutes
+    let slideTimeRemaining = SLIDE_DURATION_SECONDS;
+    let isSlidePaused = false;
+
+    function updateSlideTimer() {
+        if (isSlidePaused) return;
+
+        slideTimeRemaining--;
+
+        if (slideTimeRemaining <= 0) {
+            // Rotate back to Display 1 (continuous loop: 1 -> 2 -> 3 -> 4 -> 5 -> 1)
+            window.location.href = '/Display';
+            return;
+        }
+
+        const mins = Math.floor(slideTimeRemaining / 60);
+        const secs = slideTimeRemaining % 60;
+        const countdownEl = document.getElementById('slideCountdown');
+        if (countdownEl) {
+            countdownEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        const progressPct = ((SLIDE_DURATION_SECONDS - slideTimeRemaining) / SLIDE_DURATION_SECONDS) * 100;
+        const barEl = document.getElementById('slideProgressBar');
+        if (barEl) {
+            barEl.style.width = `${progressPct}%`;
+        }
+    }
+    setInterval(updateSlideTimer, 1000);
+
+    function togglePauseSlide() {
+        isSlidePaused = !isSlidePaused;
+        const icon = document.getElementById('pauseIcon');
+        const text = document.getElementById('pauseText');
+        if (isSlidePaused) {
+            if (icon) icon.className = 'bi bi-play-fill';
+            if (text) text.innerText = 'Lanjut';
+        } else {
+            if (icon) icon.className = 'bi bi-pause-fill';
+            if (text) text.innerText = 'Jeda';
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+    }
+
+    /* ── Live Digital Clock ── */
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
+        const dateStr = now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+        
+        const cTime = document.getElementById('liveClock');
+        const cDate = document.getElementById('liveDate');
+        if (cTime) cTime.innerText = timeStr;
+        if (cDate) cDate.innerText = `WITA \u2022 ${dateStr}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       2. WEB AUDIO ALERT SYSTEM
+       ────────────────────────────────────────────────────────────────────────── */
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function toggleSoundAlert() {
+        soundEnabled = !soundEnabled;
+        const btn = document.getElementById('btnToggleSound');
+        const icon = document.getElementById('soundIcon');
+        const text = document.getElementById('soundText');
+
+        if (soundEnabled) {
+            if (btn) btn.className = 'hdr-ctrl-btn sound-active';
+            if (icon) icon.className = 'bi bi-volume-up-fill';
+            if (text) text.innerText = 'Suara: ON';
+            playTone(880, 0.15, 'sine');
+        } else {
+            if (btn) btn.className = 'hdr-ctrl-btn';
+            if (icon) icon.className = 'bi bi-volume-mute-fill';
+            if (text) text.innerText = 'Suara: OFF';
+        }
+    }
+
+    function playTone(freq, duration, type = 'sine') {
+        if (!soundEnabled) return;
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       3. CHART.JS INITIALIZATION (24-Hour Slope Movement Trend)
+       ────────────────────────────────────────────────────────────────────────── */
+    let slopeChart = null;
+
+    function initSlopeChart() {
+        const ctx = document.getElementById('slopeTrendChart');
+        if (!ctx) return;
+
+        slopeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 600 },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#94a3b8',
+                            font: { family: 'Outfit', size: 10, weight: '700' },
+                            boxWidth: 10,
+                            padding: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        borderColor: 'rgba(56, 189, 248, 0.3)',
+                        borderWidth: 1,
+                        titleColor: '#38bdf8',
+                        bodyColor: '#ffffff',
+                        titleFont: { family: 'Outfit', weight: 'bold', size: 11 },
+                        bodyFont: { family: 'JetBrains Mono', size: 10 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0 }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { family: 'JetBrains Mono', size: 9.5 },
+                            callback: function(v) { return v + ' mm'; }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Akumulasi Pergeseran (mm)',
+                            color: '#94a3b8',
+                            font: { family: 'Outfit', size: 10, weight: '700' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartData(hourlyList) {
+        if (!slopeChart || !hourlyList || hourlyList.length === 0) return;
+
+        // Group by hour
+        const hourSet = new Set();
+        const deviceMap = {};
+
+        const palette = [
+            '#a855f7', '#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#6366f1', '#14b8a6'
+        ];
+
+        hourlyList.forEach(item => {
+            const h = item.hourStr.substring(11); // HH:mm
+            hourSet.add(h);
+
+            const devName = item.deviceName;
+            if (!deviceMap[devName]) {
+                deviceMap[devName] = {};
+            }
+            // Use maximum absolute accumulative or average
+            if (!deviceMap[devName][h] || Math.abs(item.avgAccumulative) > Math.abs(deviceMap[devName][h])) {
+                deviceMap[devName][h] = item.avgAccumulative;
+            }
+        });
+
+        const sortedHours = Array.from(hourSet).sort();
+
+        const datasets = [];
+        let pIdx = 0;
+        for (const [devName, hData] of Object.entries(deviceMap)) {
+            const color = palette[pIdx % palette.length];
+            const dataPoints = sortedHours.map(h => hData[h] !== undefined ? hData[h] : null);
+
+            datasets.push({
+                label: devName.replace('EXT IC_', '').replace('EXT IC', 'EXT'),
+                data: dataPoints,
+                borderColor: color,
+                backgroundColor: color + '22',
+                borderWidth: 2,
+                pointRadius: 2.5,
+                pointHoverRadius: 5,
+                tension: 0.35,
+                fill: false,
+                spanGaps: true
+            });
+            pIdx++;
+        }
+
+        slopeChart.data.labels = sortedHours;
+        slopeChart.data.datasets = datasets;
+        slopeChart.update();
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       4. REALTIME DATA FETCHING & UI RENDERING
+       ────────────────────────────────────────────────────────────────────────── */
+    const DISPLAY5_CACHE_KEY = 'MBS_DISPLAY5_CACHE_V1';
+    let isFetchingDisplay5 = false;
+
+    // Restore instant cache
+    (function restoreCache() {
+        try {
+            const raw = localStorage.getItem(DISPLAY5_CACHE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw);
+                renderDashboard(data);
+            }
+        } catch(e) {}
+    })();
+
+    async function fetchDisplay5Data(forceRefresh = false) {
+        if (isFetchingDisplay5) return;
+        isFetchingDisplay5 = true;
+        try {
+            const url = forceRefresh ? '/Display/GetDisplay5Data?refresh=true' : '/Display/GetDisplay5Data';
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            
+            if (data && data.success) {
+                renderDashboard(data);
+                try {
+                    localStorage.setItem(DISPLAY5_CACHE_KEY, JSON.stringify(data));
+                } catch(e) {}
+            }
+        } catch(e) {
+            console.error('Error fetching Display5 data:', e);
+        } finally {
+            isFetchingDisplay5 = false;
+        }
+    }
+
+    function renderDashboard(data) {
+        if (!data || !data.summary) return;
+
+        const summary = data.summary;
+        const devices = data.devices || [];
+        const alerts = data.recentAlerts || [];
+        const hourly = data.hourlyTrends || [];
+
+        // 1. Render Top KPI Row
+        const cardStatus = document.getElementById('cardOverallStatus');
+        const valStatus = document.getElementById('valOverallStatus');
+        const subStatus = document.getElementById('subOverallStatus');
+        const iconStatus = document.getElementById('iconOverallStatus');
+
+        if (cardStatus && valStatus && iconStatus) {
+            const st = (summary.overallStatus || 'NORMAL').toUpperCase();
+            cardStatus.className = 'kpi-card status-' + st.toLowerCase();
+            valStatus.innerText = st;
+
+            if (st === 'CRITICAL') {
+                subStatus.innerText = `${summary.criticalCount} Titik Sensor Melebihi Ambang Batas!`;
+                iconStatus.innerHTML = '<i class="bi bi-exclamation-octagon-fill"></i>';
+                // Trigger alert sound if enabled
+                playTone(750, 0.35, 'sawtooth');
+            } else if (st === 'WARNING') {
+                subStatus.innerText = `${summary.warningCount} Titik Sensor Mendekati Batas`;
+                iconStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+            } else {
+                subStatus.innerText = 'Seluruh lereng aman & stabil';
+                iconStatus.innerHTML = '<i class="bi bi-shield-check"></i>';
+            }
+        }
+
+        document.getElementById('valTotalDevices').innerText = summary.totalDevices || devices.length;
+        document.getElementById('valTotalSensors').innerText = summary.totalSensors || 0;
+        document.getElementById('valNormalSensors').innerText = summary.normalCount || 0;
+        document.getElementById('valCriticalSensors').innerText = summary.criticalCount || 0;
+
+        // Find max displacement
+        let maxDisp = 0;
+        let maxDevName = '--';
+        devices.forEach(d => {
+            (d.sensors || []).forEach(s => {
+                if (Math.abs(s.accumulativeDisplacement) > Math.abs(maxDisp)) {
+                    maxDisp = s.accumulativeDisplacement;
+                    maxDevName = `${d.siteLocation || d.deviceName} (${s.sensorName})`;
+                }
+            });
+        });
+        document.getElementById('valMaxDisplacement').innerText = maxDisp.toFixed(1);
+        document.getElementById('subMaxLocation').innerText = `Lokasi: ${maxDevName}`;
+
+        // Last sync time
+        if (summary.latestSync) {
+            const timePart = summary.latestSync.substring(11, 16);
+            document.getElementById('valLastSync').innerText = `${timePart} WITA`;
+            document.getElementById('subMinutesAgo').innerText = summary.minutesSinceSync <= 5 ? 'Sinkron baru saja (Realtime)' : `${summary.minutesSinceSync} menit yang lalu`;
+        }
+
+        // 2. Render Devices Grid
+        const devContainer = document.getElementById('devicesContainer');
+        if (devContainer) {
+            let html = '';
+            devices.forEach(dev => {
+                const devStatus = (dev.status || 'NORMAL').toLowerCase();
+                const badgeClass = devStatus === 'critical' ? 'critical' : (devStatus === 'warning' ? 'warning' : 'normal');
+
+                html += `
+                <div class="device-card ${devStatus}">
+                    <div class="device-hdr">
+                        <div class="device-name-box">
+                            <span class="device-name">${escapeHtml(dev.deviceName)}</span>
+                            <span class="site-tag">${escapeHtml(dev.siteLocation || 'PIT')}</span>
+                        </div>
+                        <span class="status-badge ${badgeClass}">
+                            <i class="bi bi-circle-fill" style="font-size: 6px;"></i> ${devStatus.toUpperCase()}
+                        </span>
+                    </div>
+                    <table class="sensor-table">
+                        <thead>
+                            <tr>
+                                <th>Sensor</th>
+                                <th class="text-end">Terkini</th>
+                                <th class="text-end">Akumulasi</th>
+                                <th class="text-end">Kecepatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                (dev.sensors || []).forEach(s => {
+                    const sStatus = (s.alertStatus || 'NORMAL').toLowerCase();
+                    const dispColor = sStatus === 'critical' ? 'critical' : (sStatus === 'warning' ? 'warning' : 'normal');
+
+                    html += `
+                            <tr>
+                                <td class="sensor-name-cell" title="${escapeHtml(s.sensorName)}">
+                                    <i class="bi bi-reception-4 text-purple me-1" style="font-size: 8px;"></i>${escapeHtml(s.sensorName)}
+                                </td>
+                                <td class="text-end disp-val ${dispColor}">
+                                    ${s.latestValue.toFixed(0)} <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">${s.unitSuffix}</span>
+                                </td>
+                                <td class="text-end disp-val ${dispColor}">
+                                    ${s.accumulativeDisplacement > 0 ? '+' : ''}${s.accumulativeDisplacement.toFixed(0)} <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">mm</span>
+                                </td>
+                                <td class="text-end vel-val">
+                                    ${s.velocityPerHour.toFixed(2)} mm/j
+                                </td>
+                            </tr>`;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                </div>`;
+            });
+
+            devContainer.innerHTML = html;
+        }
+
+        // 3. Render Alerts
+        const alertContainer = document.getElementById('alertsContainer');
+        const badgeAlertCount = document.getElementById('badgeAlertCount');
+        if (alertContainer) {
+            if (alerts.length === 0) {
+                alertContainer.innerHTML = `
+                    <div class="text-center p-4 text-muted" style="font-size: 11px;">
+                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-1"></i>
+                        Tidak ada log alarm kritis aktif saat ini. Seluruh lereng dalam pemantauan normal.
+                    </div>`;
+                if (badgeAlertCount) badgeAlertCount.innerText = '0 Peringatan';
+            } else {
+                if (badgeAlertCount) badgeAlertCount.innerText = `${alerts.length} Peringatan Terdeteksi`;
+                let alertHtml = '';
+                alerts.forEach(a => {
+                    const lvl = (a.alertLevel || 'INFO').toLowerCase();
+                    const cardClass = lvl === 'critical' ? 'critical' : (lvl === 'warning' ? 'warning' : '');
+                    const badgeBadge = lvl === 'critical' ? 'bg-danger' : (lvl === 'warning' ? 'bg-warning text-dark' : 'bg-info');
+
+                    alertHtml += `
+                    <div class="alert-card ${cardClass}">
+                        <div class="alert-top">
+                            <span class="alert-loc">
+                                <span class="badge ${badgeBadge} me-1" style="font-size: 8px;">${escapeHtml(a.alertLevel)}</span>
+                                ${escapeHtml(a.deviceName)} &bull; ${escapeHtml(a.sensorName)}
+                            </span>
+                            <span class="alert-time">${escapeHtml(a.readingTs.substring(11, 16))} WITA</span>
+                        </div>
+                        <div class="alert-desc">
+                            ${escapeHtml(a.alertMessage || `Terdeteksi pergeseran ${a.measuredValue} mm melampaui batas ${a.thresholdValue} mm`)}
+                        </div>
+                    </div>`;
+                });
+                alertContainer.innerHTML = alertHtml;
+            }
+        }
+
+        // 4. Update Chart
+        updateChartData(hourly);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // Init Chart and Start polling every 30 seconds
+    document.addEventListener('DOMContentLoaded', () => {
+        initSlopeChart();
+        fetchDisplay5Data();
+        setInterval(() => fetchDisplay5Data(), 30000);
+    });
+    </script>
+</body>
+</html>

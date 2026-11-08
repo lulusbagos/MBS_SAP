@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Data.SqlClient;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
 using System;
@@ -17,15 +19,18 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly IConfiguration _configuration;
         private const string Display1PerfCacheKey = "CACHE_DISPLAY1_PERF_V1";
         private const string Display2CacheKey = "CACHE_DISPLAY2_DATA_V1";
         private const string DisplayFeedCacheKey = "CACHE_DISPLAY_FEED_V1";
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
+        private const string Display5CacheKey = "CACHE_DISPLAY5_DATA_V1";
 
-        public DisplayController(AppDbContext context, IMemoryCache cache)
+        public DisplayController(AppDbContext context, IMemoryCache cache, IConfiguration configuration)
         {
             _context = context;
             _cache = cache;
+            _configuration = configuration;
         }
 
         [Route("")]
@@ -55,6 +60,237 @@ namespace MBS_SAP.Controllers
             ViewData["HideHeader"] = true;
             ViewData["HideNav"] = true;
             return View();
+        }
+
+        [HttpGet("/Display5")]
+        [HttpGet("Display5")]
+        [HttpGet("/PergerakanLereng")]
+        [HttpGet("/Slope")]
+        [HttpGet("Slope")]
+        public IActionResult Display5()
+        {
+            ViewData["HideHeader"] = true;
+            ViewData["HideNav"] = true;
+            return View();
+        }
+
+        [HttpGet("GetDisplay5Data")]
+        [HttpGet("/Display5/GetData")]
+        [ResponseCache(Duration = 10, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetDisplay5Data([FromQuery] bool refresh = false)
+        {
+            try
+            {
+                if (!refresh && _cache.TryGetValue(Display5CacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
+                string connStr = _configuration.GetConnectionString("XtensConnection")
+                    ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+
+                var devicesDict = new Dictionary<int, SlopeDeviceDto>();
+                var rawSensors = new List<SlopeSensorRawDto>();
+                var alerts = new List<SlopeAlertDto>();
+                var hourlyTrends = new List<SlopeHourlyTrendDto>();
+
+                using (var conn = new SqlConnection(connStr))
+                {
+                    await conn.OpenAsync();
+
+                    // 1. Latest slope status from view
+                    using (var cmd = new SqlCommand(@"
+                        SELECT 
+                            device_id, device_code, device_name, site_location,
+                            sensor_slot, sensor_id, sensor_code, sensor_name, enable_status,
+                            sensor_type_name, unit_suffix, decimal_comma, location_desc,
+                            baseline_value,
+                            CONVERT(VARCHAR(30), latest_timestamp, 120) as latest_ts,
+                            latest_value, delta_value, accumulative_displacement,
+                            lateral_displacement_mm, velocity_per_hour, velocity_per_day,
+                            threshold_velocity, threshold_accumulative,
+                            alert_status, minutes_since_last_reading
+                        FROM vw_latest_slope_status
+                        ORDER BY 
+                            CASE alert_status 
+                                WHEN 'CRITICAL' THEN 1 
+                                WHEN 'WARNING' THEN 2 
+                                ELSE 3 
+                            END, device_id, sensor_slot, sensor_id", conn))
+                    {
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                int devId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                                string devCode = reader.IsDBNull(1) ? "" : reader.GetString(1);
+                                string devName = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                                string siteLoc = reader.IsDBNull(3) ? "" : reader.GetString(3);
+                                int slot = reader.IsDBNull(4) ? 0 : reader.GetInt32(4);
+                                int sId = reader.IsDBNull(5) ? 0 : reader.GetInt32(5);
+                                string sCode = reader.IsDBNull(6) ? "" : reader.GetString(6);
+                                string sName = reader.IsDBNull(7) ? "" : reader.GetString(7);
+                                string sType = reader.IsDBNull(9) ? "Displacement" : reader.GetString(9);
+                                string uSuffix = reader.IsDBNull(10) ? "mm" : reader.GetString(10);
+                                string locDesc = reader.IsDBNull(12) ? "" : reader.GetString(12);
+                                double? baseline = reader.IsDBNull(13) ? (double?)null : Convert.ToDouble(reader.GetDecimal(13));
+                                string latestTs = reader.IsDBNull(14) ? "" : reader.GetString(14);
+                                double? latestVal = reader.IsDBNull(15) ? (double?)null : Convert.ToDouble(reader.GetDecimal(15));
+                                double? deltaVal = reader.IsDBNull(16) ? (double?)null : Convert.ToDouble(reader.GetDecimal(16));
+                                double? accumDisp = reader.IsDBNull(17) ? (double?)null : Convert.ToDouble(reader.GetDecimal(17));
+                                double? latDisp = reader.IsDBNull(18) ? (double?)null : Convert.ToDouble(reader.GetDecimal(18));
+                                double? velHour = reader.IsDBNull(19) ? (double?)null : Convert.ToDouble(reader.GetDecimal(19));
+                                double? velDay = reader.IsDBNull(20) ? (double?)null : Convert.ToDouble(reader.GetDecimal(20));
+                                double? thVel = reader.IsDBNull(21) ? (double?)null : Convert.ToDouble(reader.GetDecimal(21));
+                                double? thAcc = reader.IsDBNull(22) ? (double?)null : Convert.ToDouble(reader.GetDecimal(22));
+                                string aStatus = reader.IsDBNull(23) ? "NORMAL" : reader.GetString(23);
+                                int? minsAgo = reader.IsDBNull(24) ? (int?)null : reader.GetInt32(24);
+
+                                if (!devicesDict.TryGetValue(devId, out var devDto))
+                                {
+                                    devDto = new SlopeDeviceDto
+                                    {
+                                        DeviceId = devId,
+                                        DeviceCode = devCode,
+                                        DeviceName = devName,
+                                        SiteLocation = siteLoc,
+                                        Status = "NORMAL",
+                                        LastReadingTs = latestTs,
+                                        Sensors = new List<SlopeSensorItemDto>()
+                                    };
+                                    devicesDict[devId] = devDto;
+                                }
+
+                                if (aStatus == "CRITICAL") devDto.Status = "CRITICAL";
+                                else if (aStatus == "WARNING" && devDto.Status != "CRITICAL") devDto.Status = "WARNING";
+
+                                devDto.Sensors.Add(new SlopeSensorItemDto
+                                {
+                                    SensorId = sId,
+                                    SensorSlot = slot,
+                                    SensorCode = sCode,
+                                    SensorName = sName,
+                                    SensorTypeName = sType,
+                                    UnitSuffix = uSuffix,
+                                    LocationDesc = locDesc,
+                                    BaselineValue = baseline ?? 0.0,
+                                    LatestValue = latestVal ?? 0.0,
+                                    DeltaValue = deltaVal ?? 0.0,
+                                    AccumulativeDisplacement = accumDisp ?? 0.0,
+                                    LateralDisplacement = latDisp ?? 0.0,
+                                    VelocityPerHour = velHour ?? 0.0,
+                                    VelocityPerDay = velDay ?? 0.0,
+                                    ThresholdVelocity = thVel,
+                                    ThresholdAccumulative = thAcc,
+                                    AlertStatus = aStatus,
+                                    LatestTs = latestTs,
+                                    MinutesSinceLastReading = minsAgo
+                                });
+
+                                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo });
+                            }
+                        }
+                    }
+
+                    // 2. Recent alerts
+                    using (var cmdAlert = new SqlCommand(@"
+                        SELECT TOP 15
+                            a.alert_id, d.device_name, d.site_location, s.sensor_name,
+                            a.alert_level, a.metric_type, a.measured_value, a.threshold_value,
+                            a.alert_message, CONVERT(VARCHAR(30), a.reading_timestamp, 120) as reading_ts
+                        FROM tbl_t_slope_alert a
+                        LEFT JOIN tbl_m_device d ON a.device_id = d.device_id
+                        LEFT JOIN tbl_m_sensor s ON a.sensor_id = s.sensor_id
+                        ORDER BY a.reading_timestamp DESC", conn))
+                    {
+                        using (var reader = await cmdAlert.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                alerts.Add(new SlopeAlertDto
+                                {
+                                    AlertId = reader.GetInt64(0),
+                                    DeviceName = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                                    SiteLocation = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                                    SensorName = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                                    AlertLevel = reader.IsDBNull(4) ? "INFO" : reader.GetString(4),
+                                    MetricType = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                                    MeasuredValue = reader.IsDBNull(6) ? 0.0 : Convert.ToDouble(reader.GetDecimal(6)),
+                                    ThresholdValue = reader.IsDBNull(7) ? 0.0 : Convert.ToDouble(reader.GetDecimal(7)),
+                                    AlertMessage = reader.IsDBNull(8) ? "" : reader.GetString(8),
+                                    ReadingTs = reader.IsDBNull(9) ? "" : reader.GetString(9)
+                                });
+                            }
+                        }
+                    }
+
+                    // 3. Hourly movement
+                    using (var cmdHourly = new SqlCommand(@"
+                        SELECT 
+                            device_id, device_name, sensor_id, sensor_name, unit_suffix,
+                            CONVERT(VARCHAR(16), hour_bucket, 120) as hour_str,
+                            avg_accumulative_displacement, max_abs_velocity_per_hour
+                        FROM vw_hourly_slope_movement
+                        WHERE hour_bucket >= DATEADD(hour, -48, GETDATE())
+                        ORDER BY hour_bucket ASC, device_id, sensor_id", conn))
+                    {
+                        using (var reader = await cmdHourly.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                hourlyTrends.Add(new SlopeHourlyTrendDto
+                                {
+                                    DeviceId = reader.GetInt32(0),
+                                    DeviceName = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                                    SensorId = reader.GetInt32(2),
+                                    SensorName = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                                    UnitSuffix = reader.IsDBNull(4) ? "mm" : reader.GetString(4),
+                                    HourStr = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                                    AvgAccumulative = reader.IsDBNull(6) ? 0.0 : Convert.ToDouble(reader.GetDecimal(6)),
+                                    MaxVelocity = reader.IsDBNull(7) ? 0.0 : Convert.ToDouble(reader.GetDecimal(7))
+                                });
+                            }
+                        }
+                    }
+                }
+
+                int normalCount = rawSensors.Count(s => s.AlertStatus == "NORMAL");
+                int warningCount = rawSensors.Count(s => s.AlertStatus == "WARNING");
+                int criticalCount = rawSensors.Count(s => s.AlertStatus == "CRITICAL");
+                string overallStatus = criticalCount > 0 ? "CRITICAL" : (warningCount > 0 ? "WARNING" : "NORMAL");
+                string? latestSync = rawSensors.Where(s => !string.IsNullOrEmpty(s.LatestTs)).OrderByDescending(s => s.LatestTs).Select(s => s.LatestTs).FirstOrDefault();
+                int? minMinsAgo = rawSensors.Where(s => s.MinutesSinceLastReading.HasValue).Min(s => s.MinutesSinceLastReading);
+
+                var sortedDevices = devicesDict.Values.OrderBy(d => d.Status == "CRITICAL" ? 1 : (d.Status == "WARNING" ? 2 : 3)).ThenBy(d => d.DeviceId).ToList();
+
+                var responsePayload = new
+                {
+                    success = true,
+                    summary = new
+                    {
+                        totalDevices = devicesDict.Count,
+                        totalSensors = rawSensors.Count,
+                        normalCount,
+                        warningCount,
+                        criticalCount,
+                        overallStatus,
+                        latestSync,
+                        minutesSinceSync = minMinsAgo ?? 0
+                    },
+                    devices = sortedDevices,
+                    recentAlerts = alerts,
+                    hourlyTrends
+                };
+
+                _cache.Set(Display5CacheKey, responsePayload, TimeSpan.FromSeconds(20));
+                Response.Headers["X-Cache"] = "MISS";
+                return Ok(responsePayload);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet("GetDisplay3Data")]
