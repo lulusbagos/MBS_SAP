@@ -1149,6 +1149,9 @@
        ────────────────────────────────────────────────────────────────────────── */
     let soundEnabled = true;
     let audioCtx = null;
+    let lastScanSoundTime = 0;
+    let lastCriticalAlertSoundTime = 0;
+    let previousOverallStatus = null;
 
     function toggleSoundAlert() {
         soundEnabled = !soundEnabled;
@@ -1160,7 +1163,7 @@
             if (btn) btn.className = 'hdr-ctrl-btn sound-active';
             if (icon) icon.className = 'bi bi-volume-up-fill';
             if (text) text.innerText = 'Suara: ON';
-            playTone(880, 0.15, 'sine');
+            playTone(880, 0.1, 'sine');
         } else {
             if (btn) btn.className = 'hdr-ctrl-btn';
             if (icon) icon.className = 'bi bi-volume-mute-fill';
@@ -1181,8 +1184,9 @@
             const gain = audioCtx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            // Volume sangat lembut (ambient) agar tidak mengagetkan
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0005, audioCtx.currentTime + duration);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
@@ -1190,7 +1194,7 @@
         } catch(e) {}
     }
 
-    /* ── Cyber Radar Sonar Sound on Scan / API Fetch ── */
+    /* ── Cyber Radar Sonar Sound on Scan / API Fetch (Lembut & Terbatas) ── */
     function playScanRadarSound() {
         if (!soundEnabled) return;
         try {
@@ -1205,17 +1209,18 @@
             const gain = audioCtx.createGain();
 
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(1250, now);
-            osc.frequency.exponentialRampToValueAtTime(1750, now + 0.08);
+            osc.frequency.setValueAtTime(1100, now);
+            osc.frequency.exponentialRampToValueAtTime(1500, now + 0.06);
 
-            gain.gain.setValueAtTime(0.035, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            // Volume gain lembut (0.015) agar nyaman didengar
+            gain.gain.setValueAtTime(0.015, now);
+            gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.07);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
             osc.start(now);
-            osc.stop(now + 0.09);
+            osc.stop(now + 0.07);
         } catch(e) {}
     }
 
@@ -1359,8 +1364,13 @@
     async function fetchDisplay5Data(forceRefresh = false) {
         if (isFetchingDisplay5) return;
         isFetchingDisplay5 = true;
-        // 🎵 Mainkan audio radar scan futuristik saat melakukan penarikan data API / scan telemetri
-        playScanRadarSound();
+        const nowMs = Date.now();
+        // 🎵 Suara scan tenang: HANYA berbunyi jika ditekan manual atau minimal jeda 5 menit sekali (tidak mengganggu)
+        if (forceRefresh || (lastScanSoundTime === 0 || (nowMs - lastScanSoundTime >= 300000))) {
+            playScanRadarSound();
+            lastScanSoundTime = nowMs;
+        }
+
         const scanPing = document.getElementById('scanRadarPing');
         if (scanPing) scanPing.style.animation = 'radarPing 0.3s infinite ease-in-out';
 
@@ -1475,8 +1485,14 @@
             if (st === 'CRITICAL') {
                 subStatus.innerText = `${summary.criticalCount} Titik Sensor Melebihi Ambang Batas!`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-octagon-fill"></i>';
-                // Trigger alert sound if enabled
-                playTone(750, 0.35, 'sawtooth');
+                
+                // 🔔 Suara alarm HANYA berbunyi saat status baru pertama kali menjadi KRITIS atau jeda 10 menit
+                const nowTime = Date.now();
+                const isNewCritical = (previousOverallStatus !== 'CRITICAL');
+                if (isNewCritical || (nowTime - lastCriticalAlertSoundTime >= 600000)) {
+                    playTone(520, 0.2, 'sine'); // Nada lembut sine 520Hz, tidak bising
+                    lastCriticalAlertSoundTime = nowTime;
+                }
             } else if (st === 'WARNING') {
                 subStatus.innerText = `${summary.warningCount} Titik Sensor Mendekati Batas`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
@@ -1484,6 +1500,7 @@
                 subStatus.innerText = 'Seluruh lereng aman & stabil';
                 iconStatus.innerHTML = '<i class="bi bi-shield-check"></i>';
             }
+            previousOverallStatus = st;
         }
 
         document.getElementById('valTotalDevices').innerText = summary.totalDevices || devices.length;
