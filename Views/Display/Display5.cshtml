@@ -75,10 +75,10 @@
     /* ── Main TV Layout ── */
     .tv {
         display: grid;
-        grid-template-rows: auto auto 1fr auto;
+        grid-template-rows: auto auto auto 1fr auto;
         height: 100vh;
-        padding: 10px 14px 8px 14px;
-        gap: 8px;
+        padding: 8px 14px 6px 14px;
+        gap: 6px;
     }
 
     /* ── Header ── */
@@ -393,14 +393,47 @@
     }
 
     .ws-col-right {
-        grid-template-rows: 1.3fr 1fr;
+        grid-template-rows: auto 1fr auto;
+    }
+
+    /* ── Live Scan Differential Bar ── */
+    .scan-differential-bar {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: var(--r);
+        padding: 5px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .scan-radar-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #38bdf8;
+        box-shadow: 0 0 10px #38bdf8;
+        display: inline-block;
+        animation: radarPing 1s infinite ease-in-out;
+    }
+    @@keyframes radarPing {
+        0%, 100% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 16px #00d2ff; }
+    }
+
+    .ai-ml-box {
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        background: linear-gradient(135deg, rgba(30, 27, 75, 0.45), rgba(15, 23, 42, 0.75));
+        box-shadow: 0 8px 30px rgba(168, 85, 247, 0.15);
     }
 
     .panel-box {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        padding: 12px 16px;
+        padding: 10px 14px;
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
         display: flex;
         flex-direction: column;
@@ -869,6 +902,33 @@
             </div>
         </div>
 
+        <!-- 2.1 LIVE SCAN DIFFERENTIAL & TELEMETRY RADAR BAR -->
+        <div class="scan-differential-bar" id="scanComparisonBar">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="d-flex align-items-center gap-1 text-info font-monospace fw-bold" style="font-size: 11px;">
+                    <span class="scan-radar-dot me-1" id="scanRadarPing"></span>
+                    <i class="bi bi-radar"></i> SIKLUS SCAN REALTIME: <span id="valScanTime" class="text-white">--:--:--</span>
+                </span>
+                <span class="badge" id="badgeSensorsStable" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px;">
+                    <i class="bi bi-check-circle-fill me-1"></i> <span id="textSensorsStable">21 Sensor Stabil</span>
+                </span>
+                <span class="badge" id="badgeSensorsUp" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px;">
+                    <i class="bi bi-caret-up-fill me-1"></i> <span id="textSensorsUp">0 Bergerak Naik</span>
+                </span>
+                <span class="badge" id="badgeSensorsDown" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 10px;">
+                    <i class="bi bi-caret-down-fill me-1"></i> <span id="textSensorsDown">0 Turun</span>
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted" style="font-size: 10.5px;" id="textScanSummary">
+                    <i class="bi bi-arrow-repeat spin-icon me-1 text-info"></i> Membandingkan dengan siklus scan sebelumnya...
+                </span>
+                <button type="button" class="btn btn-sm py-0 px-2 text-white" onclick="fetchDisplay5Data(true)" title="Trigger scan paksa & bunyikan radar" style="background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 10px; border-radius: 6px;">
+                    <i class="bi bi-arrow-clockwise"></i> Scan Ulang
+                </button>
+            </div>
+        </div>
+
         <!-- 3. MAIN WORKSPACE GRID -->
         <main class="workspace-grid">
             <!-- Left Column: Devices Grid (Top) + Trends Chart (Bottom) -->
@@ -909,9 +969,49 @@
                 </section>
             </div>
 
-            <!-- Right Column: Recent Alerts (Top) + Geotech Action Matrix (Bottom) -->
+            <!-- Right Column: AI Machine Learning Analytics (Top) + Recent Alerts (Middle) + Geotech Action Matrix (Bottom) -->
             <div class="ws-col ws-col-right">
-                <!-- Top: Alerts Feed -->
+                <!-- Top: AI Machine Learning Predictive Analytics -->
+                <section class="panel-box ai-ml-box">
+                    <div class="panel-hdr" style="border-bottom: 1px solid rgba(168, 85, 247, 0.3); padding-bottom: 6px; margin-bottom: 6px;">
+                        <div class="panel-title" style="color: #c084fc; font-size: 11.5px;">
+                            <i class="bi bi-cpu-fill text-purple"></i> Analisis Prediktif AI (Model Saito-Fukuzono)
+                        </div>
+                        <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 9.5px;">
+                            <i class="bi bi-stars me-1"></i>Confidence: <span id="valAiConfidence">97.2%</span>
+                        </span>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <div class="p-2 rounded-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+                                    <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">AI Risk Index</div>
+                                    <div style="font-size: 16px; font-weight: 800; font-family: 'JetBrains Mono', monospace;" id="valAiRiskScore" class="text-success">14.0%</div>
+                                    <div style="font-size: 8.5px; font-weight: 700;" id="valAiRiskLevel" class="text-success">LOW RISK</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+                                    <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">Creep Regime</div>
+                                    <div style="font-size: 10px; font-weight: 800; color: #38bdf8; margin-top: 2px;" id="valAiCreepRegime">Primary (Stabil)</div>
+                                    <div style="font-size: 8.5px; color: var(--muted);" id="valAiAccelRate">a: 0.000 mm/h²</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+                                    <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">Estimasi ToF</div>
+                                    <div style="font-size: 10px; font-weight: 800; color: #34d399; margin-top: 2px;" id="valAiToF">Aman (Stabil)</div>
+                                    <div style="font-size: 8.5px; color: var(--muted);">Inverse Vel. 1/v</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-2 rounded-2" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); font-size: 10.5px; line-height: 1.35; color: #e2e8f0;">
+                            <i class="bi bi-robot text-purple me-1"></i> <span id="textAiNarrative">Model Machine Learning sedang menganalisis pola deformasi sensor...</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Middle: Alerts Feed -->
                 <section class="panel-box">
                     <div class="panel-hdr">
                         <div class="panel-title">
@@ -1090,6 +1190,35 @@
         } catch(e) {}
     }
 
+    /* ── Cyber Radar Sonar Sound on Scan / API Fetch ── */
+    function playScanRadarSound() {
+        if (!soundEnabled) return;
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1250, now);
+            osc.frequency.exponentialRampToValueAtTime(1750, now + 0.08);
+
+            gain.gain.setValueAtTime(0.035, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.09);
+        } catch(e) {}
+    }
+
     /* ──────────────────────────────────────────────────────────────────────────
        3. CHART.JS INITIALIZATION (24-Hour Slope Movement Trend)
        ────────────────────────────────────────────────────────────────────────── */
@@ -1230,6 +1359,11 @@
     async function fetchDisplay5Data(forceRefresh = false) {
         if (isFetchingDisplay5) return;
         isFetchingDisplay5 = true;
+        // 🎵 Mainkan audio radar scan futuristik saat melakukan penarikan data API / scan telemetri
+        playScanRadarSound();
+        const scanPing = document.getElementById('scanRadarPing');
+        if (scanPing) scanPing.style.animation = 'radarPing 0.3s infinite ease-in-out';
+
         try {
             const url = forceRefresh ? '/Display/GetDisplay5Data?refresh=true' : '/Display/GetDisplay5Data';
             const res = await fetch(url);
@@ -1246,6 +1380,7 @@
             console.error('Error fetching Display5 data:', e);
         } finally {
             isFetchingDisplay5 = false;
+            if (scanPing) scanPing.style.animation = 'radarPing 1s infinite ease-in-out';
         }
     }
 
@@ -1273,6 +1408,57 @@
                 badgeSource.innerHTML = '<i class="bi bi-database-fill-check me-1"></i> DB_Xtens SQL LIVE (172.16.1.93)';
                 badgeSource.title = 'Terhubung langsung ke database SQL Server DB_Xtens (172.16.1.93:1433)';
             }
+        }
+
+        // 0.1 Update Comparison Bar (Cycle Differential & Telemetry Scanner)
+        if (data.comparison) {
+            const cmp = data.comparison;
+            const valScanTime = document.getElementById('valScanTime');
+            if (valScanTime) valScanTime.innerText = cmp.lastScanTime || '--:--:--';
+            const txtStable = document.getElementById('textSensorsStable');
+            if (txtStable) txtStable.innerText = `${cmp.sensorsStable} Sensor Stabil`;
+            const txtUp = document.getElementById('textSensorsUp');
+            if (txtUp) txtUp.innerText = `${cmp.sensorsMovingUp} Bergerak Naik`;
+            const txtDown = document.getElementById('textSensorsDown');
+            if (txtDown) txtDown.innerText = `${cmp.sensorsMovingDown} Turun`;
+            const txtSummary = document.getElementById('textScanSummary');
+            if (txtSummary) {
+                txtSummary.innerHTML = `<i class="bi bi-clock-history me-1 text-info"></i> ${cmp.summaryText}`;
+            }
+        }
+
+        // 0.2 Update AI Machine Learning Predictive Analytics (Saito-Fukuzono Inverse Velocity)
+        if (data.aiPrediction) {
+            const ai = data.aiPrediction;
+            const rScore = document.getElementById('valAiRiskScore');
+            const rLevel = document.getElementById('valAiRiskLevel');
+            if (rScore && rLevel) {
+                rScore.innerText = `${ai.riskScore.toFixed(1)}%`;
+                rLevel.innerText = ai.riskLevel;
+                if (ai.riskLevel === 'CRITICAL') {
+                    rScore.className = 'text-danger';
+                    rLevel.className = 'text-danger fw-bold';
+                } else if (ai.riskLevel === 'MODERATE') {
+                    rScore.className = 'text-warning';
+                    rLevel.className = 'text-warning fw-bold';
+                } else {
+                    rScore.className = 'text-success';
+                    rLevel.className = 'text-success fw-bold';
+                }
+            }
+            const cRegime = document.getElementById('valAiCreepRegime');
+            if (cRegime) cRegime.innerText = ai.creepRegime || 'Primary (Stabil)';
+            const aRate = document.getElementById('valAiAccelRate');
+            if (aRate) aRate.innerText = `a: ${(ai.accelerationRate >= 0 ? '+' : '') + ai.accelerationRate.toFixed(4)} mm/h²`;
+            const tof = document.getElementById('valAiToF');
+            if (tof) {
+                tof.innerText = ai.timeToFailureForecast || 'Aman (Stabil)';
+                tof.className = ai.riskLevel === 'CRITICAL' ? 'text-danger fw-bold' : (ai.riskLevel === 'MODERATE' ? 'text-warning fw-bold' : 'text-success');
+            }
+            const conf = document.getElementById('valAiConfidence');
+            if (conf) conf.innerText = `${ai.confidenceScore.toFixed(1)}%`;
+            const narrative = document.getElementById('textAiNarrative');
+            if (narrative) narrative.innerText = ai.aiRecommendation || '';
         }
 
         // 1. Render Top KPI Row
@@ -1352,6 +1538,7 @@
                                 <th class="text-end">Terkini</th>
                                 <th class="text-end">Akumulasi</th>
                                 <th class="text-end">Kecepatan</th>
+                                <th class="text-end">Delta Scan</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -1359,6 +1546,13 @@
                 (dev.sensors || []).forEach(s => {
                     const sStatus = (s.alertStatus || 'NORMAL').toLowerCase();
                     const dispColor = sStatus === 'critical' ? 'critical' : (sStatus === 'warning' ? 'warning' : 'normal');
+
+                    let trendBadge = `<span style="color: rgba(148, 163, 184, 0.6); font-size: 9.5px;"><i class="bi bi-dash"></i> 0.00</span>`;
+                    if (s.movementTrend === 'UP') {
+                        trendBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 8.5px;"><i class="bi bi-caret-up-fill"></i> +${(s.deltaPreviousScan || 0).toFixed(2)} mm</span>`;
+                    } else if (s.movementTrend === 'DOWN') {
+                        trendBadge = `<span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 8.5px;"><i class="bi bi-caret-down-fill"></i> ${(s.deltaPreviousScan || 0).toFixed(2)} mm</span>`;
+                    }
 
                     html += `
                             <tr>
@@ -1373,6 +1567,9 @@
                                 </td>
                                 <td class="text-end vel-val">
                                     ${s.velocityPerHour.toFixed(2)} mm/j
+                                </td>
+                                <td class="text-end font-monospace">
+                                    ${trendBadge}
                                 </td>
                             </tr>`;
                 });

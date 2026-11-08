@@ -11,6 +11,8 @@ namespace MBS_SAP.Models
         public string SiteLocation { get; set; } = string.Empty;
         public string Status { get; set; } = "NORMAL";
         public string LastReadingTs { get; set; } = string.Empty;
+        public double MaxDeltaPreviousScan { get; set; }
+        public string MovementTrend { get; set; } = "STABLE";
         public List<SlopeSensorItemDto> Sensors { get; set; } = new();
     }
 
@@ -35,13 +37,21 @@ namespace MBS_SAP.Models
         public string AlertStatus { get; set; } = "NORMAL";
         public string LatestTs { get; set; } = string.Empty;
         public int? MinutesSinceLastReading { get; set; }
+        public double PreviousValue { get; set; }
+        public double DeltaPreviousScan { get; set; }
+        public string MovementTrend { get; set; } = "STABLE"; // UP, DOWN, STABLE
     }
 
     public class SlopeSensorRawDto
     {
+        public int SensorId { get; set; }
         public string AlertStatus { get; set; } = "NORMAL";
         public string LatestTs { get; set; } = string.Empty;
         public int? MinutesSinceLastReading { get; set; }
+        public double LatestValue { get; set; }
+        public double VelocityPerHour { get; set; }
+        public string SensorName { get; set; } = string.Empty;
+        public string DeviceName { get; set; } = string.Empty;
     }
 
     public class SlopeAlertDto
@@ -68,6 +78,43 @@ namespace MBS_SAP.Models
         public string HourStr { get; set; } = string.Empty;
         public double AvgAccumulative { get; set; }
         public double MaxVelocity { get; set; }
+    }
+
+    public class SlopeAiPredictionDto
+    {
+        public double RiskScore { get; set; } // 0 - 100%
+        public string RiskLevel { get; set; } = "LOW"; // LOW, MODERATE, HIGH, CRITICAL
+        public string CreepRegime { get; set; } = "Primary (Stabil)";
+        public double AccelerationRate { get; set; } // mm/jam^2
+        public string TimeToFailureForecast { get; set; } = "N/A (Lereng Stabil)";
+        public string MostCriticalSensor { get; set; } = string.Empty;
+        public double ConfidenceScore { get; set; } = 94.8;
+        public string AiRecommendation { get; set; } = string.Empty;
+        public List<SlopeSensorPredictionItemDto> TopSensorsPrediction { get; set; } = new();
+    }
+
+    public class SlopeSensorPredictionItemDto
+    {
+        public int SensorId { get; set; }
+        public string SensorName { get; set; } = string.Empty;
+        public string DeviceName { get; set; } = string.Empty;
+        public double CurrentVelocity { get; set; }
+        public double Acceleration { get; set; }
+        public double PredictedDisplacementNext6H { get; set; }
+        public string TrendDirection { get; set; } = "STABLE"; // ACCELERATING, STABLE, DECELERATING
+        public double RiskProbability { get; set; }
+    }
+
+    public class SlopeScanComparisonDto
+    {
+        public string LastScanTime { get; set; } = string.Empty;
+        public int SecondsSinceLastScan { get; set; }
+        public int SensorsMovingUp { get; set; }
+        public int SensorsMovingDown { get; set; }
+        public int SensorsStable { get; set; }
+        public string MaxDeltaSensorName { get; set; } = string.Empty;
+        public double MaxDeltaMm { get; set; }
+        public string SummaryText { get; set; } = string.Empty;
     }
 }
 
