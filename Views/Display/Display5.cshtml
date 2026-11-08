@@ -1194,8 +1194,42 @@
         } catch(e) {}
     }
 
-    /* ── Cyber Radar Sonar Sound on Scan / API Fetch (Lembut & Terbatas) ── */
-    function playScanRadarSound() {
+    /* ── RANDOM SCAN INTERVAL GENERATOR (Acak 3 Jam, 5 Jam, 8 Jam) ── */
+    const XTENS_SOUND_SCHEDULE_KEY = 'MBS_XTENS_NEXT_SCAN_SOUND_TS';
+
+    function getRandomScanIntervalMs() {
+        // Pilihan acak interval jam: 3 jam, 5 jam, atau 8 jam
+        const hourPresets = [3, 5, 8];
+        const selectedHours = hourPresets[Math.floor(Math.random() * hourPresets.length)];
+        // Variasi jitter menit acak (+/- 10 menit) agar variatif & natural
+        const jitterMinutes = (Math.random() * 20 - 10);
+        const totalMinutes = Math.max(180, (selectedHours * 60) + jitterMinutes); // minimal 3 jam
+        return Math.round(totalMinutes * 60 * 1000);
+    }
+
+    function checkAndPlayPeriodicScanSound(isManual = false) {
+        if (!soundEnabled) return;
+        const now = Date.now();
+        let nextScheduledTs = parseInt(localStorage.getItem(XTENS_SOUND_SCHEDULE_KEY) || '0', 10);
+
+        // Jika belum ada jadwal atau sudah terlewat lebih dari 24 jam, jadwalkan pertama kali
+        if (!nextScheduledTs || isNaN(nextScheduledTs) || nextScheduledTs < (now - 86400000)) {
+            nextScheduledTs = now + getRandomScanIntervalMs();
+            localStorage.setItem(XTENS_SOUND_SCHEDULE_KEY, nextScheduledTs);
+        }
+
+        // Cek apakah tombol manual ditekan atau waktu random 3h / 5h / 8h telah tiba
+        if (isManual || now >= nextScheduledTs) {
+            playExtensometerScanSound();
+            // Jadwalkan sesi berikutnya acak (3 jam, 5 jam, atau 8 jam ke depan)
+            const nextInterval = getRandomScanIntervalMs();
+            const nextTime = now + nextInterval;
+            localStorage.setItem(XTENS_SOUND_SCHEDULE_KEY, nextTime);
+        }
+    }
+
+    /* ── Audio Telemetry Extensometer Scanning (Lembut & Elegan) ── */
+    function playExtensometerScanSound() {
         if (!soundEnabled) return;
         try {
             if (!audioCtx) {
@@ -1205,22 +1239,44 @@
                 audioCtx.resume();
             }
             const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
 
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1100, now);
-            osc.frequency.exponentialRampToValueAtTime(1500, now + 0.06);
+            // Pulse 1: Handshake sensor extensometer (950Hz -> 1300Hz)
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(950, now);
+            osc1.frequency.exponentialRampToValueAtTime(1300, now + 0.1);
+            gain1.gain.setValueAtTime(0.016, now);
+            gain1.gain.exponentialRampToValueAtTime(0.0005, now + 0.12);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.12);
 
-            // Volume gain lembut (0.015) agar nyaman didengar
-            gain.gain.setValueAtTime(0.015, now);
-            gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.07);
+            // Pulse 2: Telemetry Data Packet Sync (1400Hz -> 1800Hz)
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1400, now + 0.14);
+            osc2.frequency.exponentialRampToValueAtTime(1800, now + 0.24);
+            gain2.gain.setValueAtTime(0.014, now + 0.14);
+            gain2.gain.exponentialRampToValueAtTime(0.0005, now + 0.26);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(now + 0.14);
+            osc2.stop(now + 0.26);
 
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            osc.start(now);
-            osc.stop(now + 0.07);
+            // Pulse 3: Chime Verifikasi Telemetri (2100Hz lembut)
+            const osc3 = audioCtx.createOscillator();
+            const gain3 = audioCtx.createGain();
+            osc3.type = 'sine';
+            osc3.frequency.setValueAtTime(2100, now + 0.28);
+            gain3.gain.setValueAtTime(0.012, now + 0.28);
+            gain3.gain.exponentialRampToValueAtTime(0.0005, now + 0.42);
+            osc3.connect(gain3);
+            gain3.connect(audioCtx.destination);
+            osc3.start(now + 0.28);
+            osc3.stop(now + 0.42);
         } catch(e) {}
     }
 
@@ -1364,12 +1420,8 @@
     async function fetchDisplay5Data(forceRefresh = false) {
         if (isFetchingDisplay5) return;
         isFetchingDisplay5 = true;
-        const nowMs = Date.now();
-        // 🎵 Suara scan tenang: HANYA berbunyi jika ditekan manual atau minimal jeda 5 menit sekali (tidak mengganggu)
-        if (forceRefresh || (lastScanSoundTime === 0 || (nowMs - lastScanSoundTime >= 300000))) {
-            playScanRadarSound();
-            lastScanSoundTime = nowMs;
-        }
+        // 🎵 Suara scan acak 3 jam, 5 jam, atau 8 jam sekali (atau saat tombol manual scan ditekan)
+        checkAndPlayPeriodicScanSound(forceRefresh === true);
 
         const scanPing = document.getElementById('scanRadarPing');
         if (scanPing) scanPing.style.animation = 'radarPing 0.3s infinite ease-in-out';
