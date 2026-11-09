@@ -157,10 +157,19 @@ namespace MBS_SAP.Controllers
 
             var merged = new List<object>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool isAllKaryawanAllowed = true;
 
             // Prioritaskan PJA yang ditugaskan khusus pada area yang dipilih
             if (!string.IsNullOrWhiteSpace(cleanArea))
             {
+                var areaEntity = await _context.MasterAreas
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea);
+                if (areaEntity != null)
+                {
+                    isAllKaryawanAllowed = areaEntity.IsAllKaryawan;
+                }
+
                 var areaMatches = await _context.AreaPjaRelations
                     .AsNoTracking()
                     .Where(p => p.NamaArea.ToLower() == cleanArea &&
@@ -191,6 +200,22 @@ namespace MBS_SAP.Controllers
                         });
                     }
                 }
+
+                // Jika area belum punya penugasan PJA, otomatis izinkan seluruh karyawan
+                var totalAssignedForArea = await _context.AreaPjaRelations
+                    .AsNoTracking()
+                    .CountAsync(p => p.NamaArea.ToLower() == cleanArea);
+                if (totalAssignedForArea == 0)
+                {
+                    isAllKaryawanAllowed = true;
+                }
+            }
+
+            // Jika area memiliki PJA khusus dan opsi "All Karyawan" dinonaktifkan oleh Admin,
+            // batasi hasil hanya pada PJA area tersebut
+            if (!isAllKaryawanAllowed && merged.Count > 0)
+            {
+                return Json(merged);
             }
 
             var pjaRefsTask = GetPjaReference(lintasPerusahaan);
