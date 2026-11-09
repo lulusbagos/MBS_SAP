@@ -21,6 +21,7 @@ namespace MBS_SAP.Data
         public DbSet<RunningText> RunningTexts { get; set; } = null!;
         public DbSet<AppUser> AppUsers { get; set; } = null!;
         public DbSet<MasterArea> MasterAreas { get; set; } = null!;
+        public DbSet<AreaPjaRelation> AreaPjaRelations { get; set; } = null!;
         public DbSet<MasterBenchmark> Benchmarks { get; set; } = null!;
         public DbSet<Quiz> Quizzes { get; set; } = null!;
         public DbSet<QuizAnswer> QuizAnswers { get; set; } = null!;
@@ -138,8 +139,20 @@ namespace MBS_SAP.Data
                 entity.Property(e => e.Role).HasColumnName("role");
             });
 
-            modelBuilder.Entity<MasterArea>()
-                .ToTable("tbl_m_area_utama");
+            modelBuilder.Entity<MasterArea>(entity =>
+            {
+                entity.ToTable("tbl_m_area_utama");
+                entity.HasMany(a => a.PjaList)
+                      .WithOne(p => p.Area)
+                      .HasForeignKey(p => p.AreaId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AreaPjaRelation>(entity =>
+            {
+                entity.ToTable("tbl_r_area_pja");
+                entity.HasIndex(e => new { e.AreaId, e.NikPja }).IsUnique();
+            });
 
             modelBuilder.Entity<IncidentNews>(entity =>
             {

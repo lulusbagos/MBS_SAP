@@ -1,0 +1,692 @@
+@{
+    ViewData["Title"] = "Setting PJA Area Utama";
+    ViewData["ActiveTab"] = "AreaPjaAdmin";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid px-3 px-md-4 py-3">
+    <!-- Header Page -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold" style="font-size: 12px;">
+                    <i class="bi bi-geo-alt-fill me-1"></i> MASTER DATA
+                </span>
+                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill fw-bold" style="font-size: 12px;">
+                    <i class="bi bi-shield-lock-fill me-1"></i> KHUSUS ADMINISTRATOR
+                </span>
+            </div>
+            <h2 class="fw-bold mt-2 mb-1" style="color: var(--text-main, #0f172a); font-size: 24px;">
+                Pengaturan PJA Area Utama
+            </h2>
+            <p class="text-muted mb-0" style="font-size: 13.5px;">
+                Atur penanggung jawab area (PJA) untuk masing-masing area kerja. Area dapat memiliki PJA khusus atau mengizinkan pencarian semua karyawan.
+            </p>
+        </div>
+        <div class="d-flex gap-2 w-100 w-md-auto">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-2" onclick="loadAreasData()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm" onclick="openCreateModal()">
+                <i class="bi bi-plus-circle-fill"></i> Tambah Area & PJA
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Total Area Utama</div>
+                        <div class="fs-3 fw-bold text-primary mt-1" id="statTotalArea">@ViewBag.TotalArea</div>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-geo-alt-fill fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">PJA Khusus Ditetapkan</div>
+                        <div class="fs-3 fw-bold text-success mt-1" id="statAreaKhusus">@ViewBag.AreaKhususCount</div>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 text-success d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-person-check-fill fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Semua Karyawan (All)</div>
+                        <div class="fs-3 fw-bold text-warning mt-1" id="statAreaAll">@ViewBag.AreaAllCount</div>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-people-fill fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold text-uppercase">Total Penugasan PJA</div>
+                        <div class="fs-3 fw-bold text-info mt-1" id="statTotalPja">@ViewBag.TotalPjaAssigned</div>
+                    </div>
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 text-info d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="bi bi-person-badge-fill fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-body">
+        <div class="card-header bg-transparent border-0 pt-3 pb-2 px-3 px-md-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill pe-3" 
+                               placeholder="Cari area utama, nama PJA, atau NIK..." oninput="debounceSearch()">
+                    </div>
+                </div>
+                <div class="col-12 col-md-7 d-flex justify-content-md-end gap-2">
+                    <div class="btn-group rounded-pill p-1 bg-light" role="group">
+                        <input type="radio" class="btn-check" name="filterType" id="filterAll" value="" checked onchange="filterData('')">
+                        <label class="btn btn-sm rounded-pill px-3" for="filterAll">Semua</label>
+
+                        <input type="radio" class="btn-check" name="filterType" id="filterKhusus" value="pja_khusus" onchange="filterData('pja_khusus')">
+                        <label class="btn btn-sm rounded-pill px-3" for="filterKhusus">PJA Khusus</label>
+
+                        <input type="radio" class="btn-check" name="filterType" id="filterAllKaryawan" value="all_karyawan" onchange="filterData('all_karyawan')">
+                        <label class="btn btn-sm rounded-pill px-3" for="filterAllKaryawan">All Karyawan</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="areasTable">
+                    <thead class="table-light text-muted small text-uppercase" style="letter-spacing: 0.5px;">
+                        <tr>
+                            <th class="ps-4" style="width: 60px;">No</th>
+                            <th style="min-width: 180px;">Area Utama</th>
+                            <th style="width: 170px;">Tipe Penunjukan</th>
+                            <th style="min-width: 320px;">Daftar PJA Terdaftar</th>
+                            <th class="text-center" style="width: 110px;">Jumlah PJA</th>
+                            <th class="text-end pe-4" style="width: 140px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="areasTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                                Memuat data area & PJA...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination & Footer -->
+        <div class="card-footer bg-transparent border-0 py-3 px-3 px-md-4 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+            <div class="small text-muted" id="paginationInfo">Menampilkan data...</div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0 rounded-pill" id="paginationNav"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Setting / Edit Area & PJA -->
+<div class="modal fade" id="areaModal" tabindex="-1" aria-labelledby="areaModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div>
+                    <h5 class="modal-title fw-bold" id="areaModalLabel">Setting PJA Area Utama</h5>
+                    <p class="text-muted small mb-0" id="modalSubTitle">Tentukan penanggung jawab area (PJA) untuk area ini.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <input type="hidden" id="editAreaId" value="" />
+
+                <!-- Nama Area -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-uppercase text-muted">Nama Area Utama <span class="text-danger">*</span></label>
+                    <input type="text" id="modalAreaName" class="form-control form-control-lg rounded-3 fs-6" 
+                           placeholder="Contoh: PIT TEMPUDO 4, WORKSHOP MAIN, PORT HAULING..." />
+                    <div class="form-text small text-muted">Masukkan nama area utama (gunakan huruf kapital standar).</div>
+                </div>
+
+                <!-- Tipe Penunjukan: All Karyawan vs PJA Khusus -->
+                <div class="p-3 rounded-4 mb-4" style="background: var(--bg-hover, #f8fafc); border: 1px solid var(--border-color, #e2e8f0);">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-bold" style="font-size: 14.5px;">
+                                <i class="bi bi-people-fill text-primary me-1"></i> Izinkan Semua Karyawan (All Karyawan)
+                            </div>
+                            <div class="text-muted small mt-1">
+                                Jika diaktifkan, saat user memilih area ini di aplikasi mobile, semua karyawan tetap bisa dicari dan dipilih sebagai PJA.
+                                Jika dinonaktifkan, aplikasi mobile akan mengutamakan daftar PJA khusus yang ditentukan di bawah.
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" role="switch" id="switchAllKaryawan" style="width: 2.8em; height: 1.5em; cursor: pointer;" checked onchange="togglePjaSection()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section PJA Khusus -->
+                <div id="pjaSection">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-0">
+                            Daftar Penanggung Jawab Area (PJA) Terdaftar
+                        </label>
+                        <span class="badge bg-primary rounded-pill px-2 py-1" id="selectedPjaCount">0 PJA Dipilih</span>
+                    </div>
+
+                    <!-- Search Employee Input -->
+                    <div class="position-relative mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 ps-3 text-muted">
+                                <i class="bi bi-person-plus-fill text-primary"></i>
+                            </span>
+                            <input type="text" id="empSearchInput" class="form-control border-start-0" 
+                                   placeholder="Ketik NIK, Nama Karyawan, atau Departemen untuk menambahkan PJA..." 
+                                   autocomplete="off" oninput="debounceEmpSearch()" />
+                        </div>
+                        <!-- Dropdown Hasil Pencarian -->
+                        <div id="empSearchResults" class="list-group position-absolute w-100 shadow-lg rounded-3 mt-1 overflow-auto d-none" 
+                             style="max-height: 240px; z-index: 1055; background: #fff; border: 1px solid #cbd5e1;"></div>
+                    </div>
+
+                    <!-- Chips / List PJA Terpilih -->
+                    <div class="border rounded-3 p-3 bg-light bg-opacity-50" style="min-height: 120px; max-height: 240px; overflow-y: auto;">
+                        <div id="pjaChipsContainer" class="d-flex flex-wrap gap-2">
+                            <div class="text-muted small w-100 text-center py-4" id="emptyPjaNotice">
+                                <i class="bi bi-person-x fs-3 d-block text-secondary mb-1"></i>
+                                Belum ada PJA khusus yang ditambahkan.<br>
+                                Gunakan kolom pencarian di atas untuk memilih karyawan sebagai PJA area ini.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 mt-2 rounded-3 small d-flex align-items-center gap-2 mb-0">
+                        <i class="bi bi-info-circle-fill fs-5 text-info"></i>
+                        <span>
+                            <strong>Info Mobile:</strong> Karyawan yang didaftarkan di sini akan langsung muncul otomatis saat user memilih area ini di formulir Hazard / Inspeksi / BBS di aplikasi mobile.
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2" id="saveAreaBtn" onclick="submitSaveArea()">
+                    <i class="bi bi-check-circle-fill"></i> Simpan Pengaturan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let pageSize = 15;
+    let currentSearch = '';
+    let currentFilterType = '';
+    let searchDebounceTimer = null;
+    let empDebounceTimer = null;
+    let selectedPjas = []; // array of { nik, nama, jabatan, departemen, perusahaan, isPicUtama }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadAreasData();
+    });
+
+    function debounceSearch() {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => {
+            currentSearch = document.getElementById('searchInput').value.trim();
+            currentPage = 1;
+            loadAreasData();
+        }, 350);
+    }
+
+    function filterData(type) {
+        currentFilterType = type;
+        currentPage = 1;
+        loadAreasData();
+    }
+
+    async function loadAreasData() {
+        const tbody = document.getElementById('areasTableBody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                    Memuat data area & PJA...
+                </td>
+            </tr>`;
+
+        try {
+            const url = `/AreaPja/GetAreasData?search=${encodeURIComponent(currentSearch)}&filterType=${encodeURIComponent(currentFilterType)}&page=${currentPage}&pageSize=${pageSize}`;
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (!json.success) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Gagal memuat data: ${json.message || 'Akses ditolak'}</td></tr>`;
+                return;
+            }
+
+            renderTable(json.data, json.totalItems, json.currentPage, json.totalPages);
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Terjadi kesalahan koneksi server.</td></tr>`;
+        }
+    }
+
+    function renderTable(data, totalItems, page, totalPages) {
+        const tbody = document.getElementById('areasTableBody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        Tidak ada data area yang sesuai dengan filter/pencarian.
+                    </td>
+                </tr>`;
+            document.getElementById('paginationInfo').innerText = `Menampilkan 0 dari 0 data`;
+            document.getElementById('paginationNav').innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        const startNo = (page - 1) * pageSize + 1;
+
+        data.forEach((item, index) => {
+            const no = startNo + index;
+            const badgeType = item.isAllKaryawan 
+                ? `<span class="badge rounded-pill bg-warning bg-opacity-10 text-warning px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1">
+                     <i class="bi bi-people-fill"></i> All Karyawan
+                   </span>`
+                : `<span class="badge rounded-pill bg-success bg-opacity-10 text-success px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1">
+                     <i class="bi bi-shield-check"></i> PJA Khusus
+                   </span>`;
+
+            // Render PJA Chips
+            let pjaHtml = '';
+            if (item.pjas && item.pjas.length > 0) {
+                pjaHtml = '<div class="d-flex flex-wrap gap-1">';
+                item.pjas.slice(0, 4).forEach(p => {
+                    pjaHtml += `
+                        <span class="badge rounded-pill bg-light text-dark border px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11.5px;">
+                            <i class="bi bi-person-fill text-primary"></i>
+                            <strong>${escapeHtml(p.nama)}</strong> 
+                            <span class="text-muted">(${escapeHtml(p.nik)})</span>
+                        </span>`;
+                });
+                if (item.pjas.length > 4) {
+                    pjaHtml += `<span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary border px-2 py-1">+${item.pjas.length - 4} lainnya</span>`;
+                }
+                pjaHtml += '</div>';
+            } else {
+                pjaHtml = `<span class="text-muted small fst-italic">
+                    ${item.isAllKaryawan ? 'Semua karyawan dapat dipilih' : 'Belum ada PJA khusus (muncul semua karyawan)'}
+                </span>`;
+            }
+
+            html += `
+                <tr>
+                    <td class="ps-4 fw-semibold text-muted">${no}</td>
+                    <td>
+                        <div class="fw-bold text-dark" style="font-size: 14.5px;">${escapeHtml(item.namaArea)}</div>
+                        <div class="text-muted small" style="font-size: 11.5px;">Dibuat: ${escapeHtml(item.createdAt || '-')}</div>
+                    </td>
+                    <td>${badgeType}</td>
+                    <td>${pjaHtml}</td>
+                    <td class="text-center">
+                        <span class="badge rounded-pill ${item.pjaCount > 0 ? 'bg-primary' : 'bg-light text-muted border'} px-2 py-1 fw-bold">
+                            ${item.pjaCount} PJA
+                        </span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" onclick="openEditModal(${item.id})" title="Edit Area & PJA">
+                                <i class="bi bi-pencil-square me-1"></i> Edit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="confirmDeleteArea(${item.id}, '${escapeHtml(item.namaArea)}')" title="Hapus Area">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+
+        tbody.innerHTML = html;
+
+        // Render Pagination
+        const endNo = Math.min(startNo + data.length - 1, totalItems);
+        document.getElementById('paginationInfo').innerText = `Menampilkan ${startNo}-${endNo} dari ${totalItems} data (Halaman ${page} dari ${totalPages})`;
+
+        let pagHtml = '';
+        if (page > 1) {
+            pagHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1); return false;">&laquo;</a></li>`;
+            pagHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page - 1}); return false;">&lsaquo;</a></li>`;
+        } else {
+            pagHtml += `<li class="page-item disabled"><span class="page-link">&laquo;</span></li>`;
+        }
+
+        const maxButtons = 5;
+        let startPage = Math.max(1, page - 2);
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+        if (endPage - startPage < maxButtons - 1) {
+            startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            if (p === page) {
+                pagHtml += `<li class="page-item active"><span class="page-link">${p}</span></li>`;
+            } else {
+                pagHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${p}); return false;">${p}</a></li>`;
+            }
+        }
+
+        if (page < totalPages) {
+            pagHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${page + 1}); return false;">&rsaquo;</a></li>`;
+            pagHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages}); return false;">&raquo;</a></li>`;
+        } else {
+            pagHtml += `<li class="page-item disabled"><span class="page-link">&raquo;</span></li>`;
+        }
+
+        document.getElementById('paginationNav').innerHTML = pagHtml;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadAreasData();
+    }
+
+    function togglePjaSection() {
+        const isAll = document.getElementById('switchAllKaryawan').checked;
+        const pjaSection = document.getElementById('pjaSection');
+        // Both can be used: even if all is checked, user can optionally define preferred PJAs
+    }
+
+    function openCreateModal() {
+        document.getElementById('editAreaId').value = '';
+        document.getElementById('modalAreaName').value = '';
+        document.getElementById('modalAreaName').disabled = false;
+        document.getElementById('switchAllKaryawan').checked = true;
+        document.getElementById('empSearchInput').value = '';
+        document.getElementById('empSearchResults').classList.add('d-none');
+        document.getElementById('areaModalLabel').innerText = 'Tambah Area & PJA Baru';
+        document.getElementById('modalSubTitle').innerText = 'Daftarkan nama area kerja utama baru dan tentukan penugasan PJA-nya.';
+        selectedPjas = [];
+        renderPjaChips();
+        new bootstrap.Modal(document.getElementById('areaModal')).show();
+    }
+
+    async function openEditModal(id) {
+        try {
+            const res = await fetch(`/AreaPja/GetAreaDetail/${id}`);
+            const json = await res.json();
+            if (!json.success) {
+                alert(json.message || 'Gagal memuat detail area.');
+                return;
+            }
+
+            const area = json.data;
+            document.getElementById('editAreaId').value = area.id;
+            document.getElementById('modalAreaName').value = area.namaArea;
+            document.getElementById('modalAreaName').disabled = false;
+            document.getElementById('switchAllKaryawan').checked = area.isAllKaryawan;
+            document.getElementById('empSearchInput').value = '';
+            document.getElementById('empSearchResults').classList.add('d-none');
+            document.getElementById('areaModalLabel').innerText = `Edit PJA: ${area.namaArea}`;
+            document.getElementById('modalSubTitle').innerText = 'Perbarui nama area dan daftar penanggung jawab area (PJA) terpilih.';
+
+            selectedPjas = area.pjas || [];
+            renderPjaChips();
+            new bootstrap.Modal(document.getElementById('areaModal')).show();
+        } catch (e) {
+            alert('Terjadi kesalahan memuat data.');
+        }
+    }
+
+    function renderPjaChips() {
+        const container = document.getElementById('pjaChipsContainer');
+        const countBadge = document.getElementById('selectedPjaCount');
+        countBadge.innerText = `${selectedPjas.length} PJA Dipilih`;
+
+        if (selectedPjas.length === 0) {
+            container.innerHTML = `
+                <div class="text-muted small w-100 text-center py-4" id="emptyPjaNotice">
+                    <i class="bi bi-person-x fs-3 d-block text-secondary mb-1"></i>
+                    Belum ada PJA khusus yang ditambahkan.<br>
+                    Gunakan kolom pencarian di atas untuk memilih karyawan sebagai PJA area ini.
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        selectedPjas.forEach((p, idx) => {
+            html += `
+                <div class="card border rounded-pill shadow-sm px-3 py-1 d-inline-flex flex-row align-items-center gap-2 bg-white">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 11px;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size: 12.5px; line-height: 1.1;">${escapeHtml(p.nama)}</div>
+                        <div class="text-muted" style="font-size: 11px;">${escapeHtml(p.nik)} - ${escapeHtml(p.departemen || '-')}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none" onclick="removePja(${idx})" title="Hapus PJA">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function removePja(idx) {
+        selectedPjas.splice(idx, 1);
+        renderPjaChips();
+    }
+
+    function debounceEmpSearch() {
+        clearTimeout(empDebounceTimer);
+        empDebounceTimer = setTimeout(performEmpSearch, 300);
+    }
+
+    async function performEmpSearch() {
+        const query = document.getElementById('empSearchInput').value.trim();
+        const resultsBox = document.getElementById('empSearchResults');
+
+        if (query.length < 2) {
+            resultsBox.classList.add('d-none');
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/AreaPja/SearchEmployees?term=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            if (!data || data.length === 0) {
+                resultsBox.innerHTML = `<div class="p-3 text-muted small text-center">Karyawan tidak ditemukan untuk kata kunci "${escapeHtml(query)}"</div>`;
+                resultsBox.classList.remove('d-none');
+                return;
+            }
+
+            let html = '';
+            data.forEach(item => {
+                const isAlreadySelected = selectedPjas.some(p => p.nik === item.nik);
+                html += `
+                    <button type="button" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-2 border-bottom" 
+                            onclick="selectEmployee(${JSON.stringify(item).replace(/"/g, '&quot;')})" 
+                            ${isAlreadySelected ? 'disabled' : ''}>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div class="text-start">
+                                <div class="fw-bold ${isAlreadySelected ? 'text-muted' : 'text-dark'}" style="font-size: 13px;">${escapeHtml(item.nama)}</div>
+                                <div class="text-muted" style="font-size: 11.5px;">NIK: ${escapeHtml(item.nik)} &bull; Dept: ${escapeHtml(item.departemen)} &bull; ${escapeHtml(item.perusahaan)}</div>
+                            </div>
+                        </div>
+                        <div>
+                            ${isAlreadySelected 
+                                ? '<span class="badge bg-secondary rounded-pill" style="font-size: 10px;">Sudah Dipilih</span>' 
+                                : '<span class="badge bg-primary rounded-pill px-2 py-1" style="font-size: 11px;"><i class="bi bi-plus-lg"></i> Pilih</span>'}
+                        </div>
+                    </button>`;
+            });
+
+            resultsBox.innerHTML = html;
+            resultsBox.classList.remove('d-none');
+        } catch (e) {
+            resultsBox.innerHTML = `<div class="p-3 text-danger small text-center">Gagal mencari data karyawan.</div>`;
+            resultsBox.classList.remove('d-none');
+        }
+    }
+
+    function selectEmployee(emp) {
+        if (!selectedPjas.some(p => p.nik === emp.nik)) {
+            selectedPjas.push({
+                nik: emp.nik,
+                nama: emp.nama,
+                jabatan: emp.jabatan,
+                departemen: emp.departemen,
+                perusahaan: emp.perusahaan,
+                isPicUtama: false
+            });
+            renderPjaChips();
+        }
+        document.getElementById('empSearchInput').value = '';
+        document.getElementById('empSearchResults').classList.add('d-none');
+    }
+
+    // Close employee dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+        const resultsBox = document.getElementById('empSearchResults');
+        const searchInput = document.getElementById('empSearchInput');
+        if (resultsBox && !resultsBox.contains(e.target) && e.target !== searchInput) {
+            resultsBox.classList.add('d-none');
+        }
+    });
+
+    async function submitSaveArea() {
+        const areaIdVal = document.getElementById('editAreaId').value;
+        const areaName = document.getElementById('modalAreaName').value.trim();
+        const isAllKaryawan = document.getElementById('switchAllKaryawan').checked;
+        const saveBtn = document.getElementById('saveAreaBtn');
+
+        if (!areaName) {
+            alert('Nama Area Utama wajib diisi!');
+            document.getElementById('modalAreaName').focus();
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...`;
+
+        const payload = {
+            id: areaIdVal ? parseInt(areaIdVal) : null,
+            namaArea: areaName,
+            isAllKaryawan: isAllKaryawan,
+            pjas: selectedPjas
+        };
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        try {
+            const res = await fetch('/AreaPja/SaveArea', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const json = await res.json();
+            if (!json.success) {
+                alert(json.message || 'Gagal menyimpan pengaturan area.');
+                return;
+            }
+
+            // Close modal & reload data
+            const modalEl = document.getElementById('areaModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+
+            loadAreasData();
+            // Update quick stats
+            updateStats();
+        } catch (e) {
+            alert('Terjadi kesalahan saat menyimpan.');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<i class="bi bi-check-circle-fill"></i> Simpan Pengaturan`;
+        }
+    }
+
+    async function confirmDeleteArea(id, name) {
+        if (!confirm(`Apakah Anda yakin ingin menghapus area "${name}" beserta semua penugasan PJA-nya?`)) {
+            return;
+        }
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        try {
+            const res = await fetch(`/AreaPja/DeleteArea/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                }
+            });
+            const json = await res.json();
+            if (json.success) {
+                loadAreasData();
+                updateStats();
+            } else {
+                alert(json.message || 'Gagal menghapus area.');
+            }
+        } catch (e) {
+            alert('Terjadi kesalahan saat menghapus.');
+        }
+    }
+
+    async function updateStats() {
+        try {
+            const res = await fetch('/AreaPja/Index');
+            // stats updated on full page refresh or next visit
+        } catch (_) {}
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>

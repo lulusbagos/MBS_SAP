@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,5 +34,21 @@ namespace MBS_SAP.Models
         [Required]
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [Column("is_all_karyawan")]
+        public bool IsAllKaryawan { get; set; } = true;
+
+        [Column("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
+
+        [MaxLength(50)]
+        [Column("updated_by_nik")]
+        public string? UpdatedByNik { get; set; }
+
+        [MaxLength(150)]
+        [Column("updated_by_name")]
+        public string? UpdatedByName { get; set; }
+
+        public virtual List<AreaPjaRelation> PjaList { get; set; } = new();
     }
 }

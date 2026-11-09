@@ -22,7 +22,7 @@
     var sheCount = 8;
     var ciCount = 5;
     var transportCount = 1 + (userCompanyId == "1" ? 1 : 0);
-    var masterCount = isAdminUser ? 8 : 0;
+    var masterCount = isAdminUser ? 9 : 0;
 
     // Active state checkers for parent groups
     var isKpiActive = activeTab == "Performance" || activeTab == "League" || activeTab == "SapQuality";
@@ -30,7 +30,7 @@
     var isCiActive = activeTab == "Rci" || activeTab == "Fci" || activeTab == "Dci" || activeTab == "Spi" || activeTab == "Gci";
     var isTransportActive = activeTab == "P2h" || activeTab == "Dpa";
     var isIncidentActive = activeTab == "Incident" || activeTab == "BannerInformasi";
-    var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword" || activeTab == "EventQrAdmin" || activeTab == "UserScanAdmin";
+    var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword" || activeTab == "EventQrAdmin" || activeTab == "UserScanAdmin" || activeTab == "AreaPjaAdmin";
 
     var rawUserName = User.Identity?.IsAuthenticated == true ? (User.Identity.Name ?? "User") : "User";
     var nameWords = rawUserName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -917,6 +917,10 @@ body.light-theme .user-role {
                 </button>
                 <div class="collapse menu-sub-collapse @(isMasterActive ? "show" : "")" id="collapseMaster">
                     <div class="menu-sub-list">
+                        <a asp-controller="AreaPja" asp-action="Index" class="sub-menu-item @(activeTab == "AreaPjaAdmin" ? "active" : "")">
+                            <i class="bi bi-geo-alt-fill" style="color: #f59e0b;"></i>
+                            <span>Setting PJA Area Utama</span>
+                        </a>
                         <a asp-controller="EventQr" asp-action="Index" class="sub-menu-item @(activeTab == "EventQrAdmin" ? "active" : "")">
                             <i class="bi bi-calendar-event-fill" style="color: #22c55e;"></i>
                             <span>Event QR (Admin)</span>
