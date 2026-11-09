@@ -10,6 +10,7 @@
     
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1260,22 +1261,28 @@
                             <i class="bi bi-grid-3x3-gap-fill text-purple" id="panelLeftIcon"></i>
                             <span id="panelLeftTitle">Status Sensor Extensometer Per Lokasi</span>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="view-switch-capsule">
-                                <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="manualSwitchLeftView('cards')" title="Tampilan Kartu Telemetri">
-                                    <i class="bi bi-grid-3x3-gap-fill"></i> Kartu
-                                </button>
-                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="manualSwitchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
-                                    <i class="bi bi-map-fill"></i> Peta 2D
-                                </button>
-                                <button type="button" class="view-tab-btn" id="btnView3D" onclick="manualSwitchLeftView('3d')" title="Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer">
-                                    <i class="bi bi-box-fill text-warning"></i> Model 3D Pit
-                                </button>
-                                <button type="button" class="view-tab-btn" id="btnAutoCycle" onclick="toggleAutoCycleLeftView()" title="Putar Bergantian Otomatis: Kartu -> Peta 2D -> Model 3D" style="border-left: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8;">
-                                    <i class="bi bi-arrow-repeat text-info me-1" id="iconAutoCycle"></i> <span id="textAutoCycle">Auto (20s)</span>
-                                </button>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="view-switch-capsule">
+                                    <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="manualSwitchLeftView('cards')" title="Tampilan Kartu Telemetri">
+                                        <i class="bi bi-grid-3x3-gap-fill text-purple"></i> Kartu
+                                    </button>
+                                    <button type="button" class="view-tab-btn" id="btnViewMap" onclick="manualSwitchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
+                                        <i class="bi bi-map-fill text-info"></i> Peta 2D
+                                    </button>
+                                    <button type="button" class="view-tab-btn" id="btnView3D" onclick="manualSwitchLeftView('3d')" title="Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer">
+                                        <i class="bi bi-box-fill text-warning"></i> Model 3D
+                                    </button>
+                                    <button type="button" class="view-tab-btn" id="btnAutoCycle" onclick="toggleAutoCycleLeftView()" title="Status Putar Bergantian Otomatis: Kartu -> Peta 2D -> Model 3D" style="border-left: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8; background: rgba(56, 189, 248, 0.08);">
+                                        <i class="bi bi-arrow-repeat text-info me-1" id="iconAutoCycle"></i> <span id="textAutoCycle">Auto (12s)</span>
+                                    </button>
+                                </div>
+                                <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
                             </div>
-                            <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
+                            <!-- Countdown Progress Bar -->
+                            <div style="width: 100%; height: 3px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden;">
+                                <div id="cycleProgressBar" style="width: 100%; height: 100%; background: linear-gradient(90deg, #38bdf8, #a855f7, #fbbf24); transition: width 0.9s linear;"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -2310,30 +2317,37 @@
 
     // ── Auto-Cycle Left Views (Cards -> Peta 2D -> Model 3D) ──
     const CYCLE_VIEWS = ['cards', 'map', '3d'];
-    const CYCLE_DURATION = 20; // 20 detik per tampilan
+    const CYCLE_DURATION = 12; // 12 detik bergantian secara otomatis
     let autoCycleEnabled = true;
     let autoCycleRemaining = CYCLE_DURATION;
     let autoCycleTimer = null;
-    let manualPauseRemaining = 0; // Waktu jeda jika user klik manual
+    let manualPauseRemaining = 0; // Jeda jika user klik tab secara manual
 
     function initAutoCycleLeftView() {
         if (autoCycleTimer) clearInterval(autoCycleTimer);
         autoCycleTimer = setInterval(() => {
             if (!autoCycleEnabled) return;
 
+            const txt = document.getElementById('textAutoCycle');
+            const pBar = document.getElementById('cycleProgressBar');
+
             if (manualPauseRemaining > 0) {
                 manualPauseRemaining--;
-                const txt = document.getElementById('textAutoCycle');
                 if (txt) txt.innerText = `Jeda (${manualPauseRemaining}s)`;
+                if (pBar) pBar.style.width = '100%';
                 return;
             }
 
             autoCycleRemaining--;
-            const txt = document.getElementById('textAutoCycle');
             if (txt) txt.innerText = `Auto (${autoCycleRemaining}s)`;
+            if (pBar) {
+                const pct = Math.max(0, (autoCycleRemaining / CYCLE_DURATION) * 100);
+                pBar.style.width = pct + '%';
+            }
 
             if (autoCycleRemaining <= 0) {
                 autoCycleRemaining = CYCLE_DURATION;
+                if (pBar) pBar.style.width = '100%';
                 const curIdx = CYCLE_VIEWS.indexOf(activeLeftView);
                 const nextIdx = (curIdx + 1) % CYCLE_VIEWS.length;
                 switchLeftView(CYCLE_VIEWS[nextIdx]);
@@ -2343,11 +2357,15 @@
 
     function manualSwitchLeftView(mode) {
         switchLeftView(mode);
-        // Jeda auto-cycle selama 45 detik saat user berinteraksi manual
+        autoCycleRemaining = CYCLE_DURATION;
+        const pBar = document.getElementById('cycleProgressBar');
+        if (pBar) pBar.style.width = '100%';
+
+        // Jeda auto-cycle selama 15 detik setelah interaksi manual, lalu lanjut berputar otomatis
         if (autoCycleEnabled) {
-            manualPauseRemaining = 45;
+            manualPauseRemaining = 15;
             const txt = document.getElementById('textAutoCycle');
-            if (txt) txt.innerText = `Jeda (45s)`;
+            if (txt) txt.innerText = `Jeda (15s)`;
         }
     }
 
@@ -2356,6 +2374,8 @@
         const icon = document.getElementById('iconAutoCycle');
         const txt = document.getElementById('textAutoCycle');
         const btn = document.getElementById('btnAutoCycle');
+        const pBar = document.getElementById('cycleProgressBar');
+
         if (btn) btn.classList.toggle('active', autoCycleEnabled);
         if (icon) icon.className = autoCycleEnabled ? 'bi bi-arrow-repeat text-info me-1' : 'bi bi-pause-circle-fill text-muted me-1';
         if (txt) {
@@ -2364,6 +2384,7 @@
         if (autoCycleEnabled) {
             manualPauseRemaining = 0;
             autoCycleRemaining = CYCLE_DURATION;
+            if (pBar) pBar.style.width = '100%';
         }
     }
 
@@ -2389,14 +2410,20 @@
             setTimeout(() => {
                 initPit3D();
                 update3DSensorPins();
-            }, 50);
+                onWindowResize3D();
+                if (renderer3d && scene3d && camera3d) {
+                    renderer3d.render(scene3d, camera3d);
+                }
+            }, 60);
         } else if (mode === 'map') {
             if (btnMap) btnMap.classList.add('active');
             if (mapContainer) mapContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Peta Ortofoto Spasial Pit (25 Titik Extensometer ECW)';
             if (panelIcon) panelIcon.className = 'bi bi-map-fill text-info';
-            initPitMapCanvas();
-            renderPitMap();
+            setTimeout(() => {
+                initPitMapCanvas();
+                renderPitMap();
+            }, 40);
         } else {
             if (btnCards) btnCards.classList.add('active');
             if (devContainer) devContainer.classList.remove('d-none');
