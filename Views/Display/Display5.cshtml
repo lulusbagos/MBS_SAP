@@ -372,6 +372,115 @@
         100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); transform: scale(1.06); }
     }
 
+    /* ── ROTARY EMERGENCY BEACON (THRESHOLD > 200 MM) ── */
+    body.alarm-rotary-triggered {
+        box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.4), inset 0 0 120px rgba(239, 68, 68, 0.2) !important;
+        animation: ambientAlarmPulse 1.2s ease-in-out infinite;
+    }
+    @@keyframes ambientAlarmPulse {
+        0%, 100% { box-shadow: inset 0 0 40px rgba(239, 68, 68, 0.35); }
+        50% { box-shadow: inset 0 0 110px rgba(239, 68, 68, 0.8), inset 0 0 180px rgba(239, 68, 68, 0.45); }
+    }
+
+    .rotary-beacon-box {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px 4px 6px;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 9999px;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+    }
+    .rotary-beacon-box.active {
+        background: rgba(239, 68, 68, 0.22);
+        border-color: #ef4444;
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.7), inset 0 0 12px rgba(239, 68, 68, 0.4);
+        animation: rotaryBoxPulse 0.9s ease-in-out infinite;
+    }
+    @@keyframes rotaryBoxPulse {
+        0%, 100% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 16px rgba(239, 68, 68, 0.5); }
+        50% { border-color: #ff3333; box-shadow: 0 0 35px rgba(239, 68, 68, 0.95), 0 0 60px rgba(239, 68, 68, 0.6); }
+    }
+    .rotary-beacon-lamp {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .rotary-beacon-dome {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #f59e0b 25%, #92400e 85%);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        border: 1.5px solid rgba(255, 255, 255, 0.25);
+    }
+    .rotary-beacon-box.active .rotary-beacon-dome {
+        background: radial-gradient(circle, #ff3b30 25%, #991b1b 90%);
+        box-shadow: 0 0 25px rgba(239, 68, 68, 1);
+        border-color: #ff9999;
+    }
+    .rotary-beacon-beam {
+        position: absolute;
+        inset: -12px;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.95) 25deg, transparent 55deg, transparent 360deg);
+        display: none;
+        pointer-events: none;
+    }
+    .rotary-beacon-box.active .rotary-beacon-beam {
+        display: block;
+        animation: rotaryBeamSpin 0.55s linear infinite;
+    }
+    @@keyframes rotaryBeamSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .rotary-beacon-core {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 0 8px #ffffff;
+    }
+    .rotary-label {
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        line-height: 1.1;
+        display: block;
+    }
+    .rotary-beacon-box.active .rotary-label {
+        color: #fca5a5;
+        animation: blinkRotaryText 0.6s infinite;
+    }
+    @@keyframes blinkRotaryText {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.25; }
+    }
+    .rotary-threshold {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--muted);
+        display: block;
+        letter-spacing: 0.03em;
+    }
+    .rotary-beacon-box.active .rotary-threshold {
+        color: #f87171;
+    }
+
     /* ── Main Workspace Grid (Left 63% / Right 37%) ── */
     .workspace-grid {
         display: grid;
@@ -821,8 +930,28 @@
                 </button>
             </div>
 
-            <!-- Sound & Fullscreen Controls -->
+            <!-- Sound & Rotary Beacon & Fullscreen Controls -->
             <div class="hdr-actions">
+                <!-- Rotary Warning Beacon Lamp -->
+                <div class="rotary-beacon-box" id="rotaryBeaconBox" onclick="openCoordModal()" title="Status Lampu Rotary (Threshold: > 200 mm) &bull; Klik untuk melihat 25 titik koordinat">
+                    <div class="rotary-beacon-lamp">
+                        <div class="rotary-beacon-dome">
+                            <div class="rotary-beacon-beam"></div>
+                            <div class="rotary-beacon-core"></div>
+                        </div>
+                    </div>
+                    <div class="rotary-beacon-text">
+                        <span class="rotary-label" id="rotaryStatusText">ROTARY STANDBY</span>
+                        <span class="rotary-threshold">THRESHOLD: 200 mm</span>
+                    </div>
+                </div>
+
+                <!-- 25 Titik Koordinat Geoteknik Button -->
+                <button type="button" class="hdr-ctrl-btn" onclick="openCoordModal()" title="Daftar 25 Titik Sensor & Koordinat N/E (UTM / Geotiff)" style="color: #c084fc; border-color: rgba(168, 85, 247, 0.4); width: auto; padding: 0 10px; gap: 6px;">
+                    <i class="bi bi-geo-alt-fill text-purple"></i>
+                    <span style="font-size: 11px; font-weight: 700;">25 Titik N/E</span>
+                </button>
+
                 <button type="button" class="hdr-ctrl-btn sound-active" id="btnToggleSound" onclick="toggleSoundAlert()" title="Aktifkan / Bisukan suara alarm lereng">
                     <i class="bi bi-volume-up-fill" id="soundIcon"></i>
                     <span id="soundText">Suara: ON</span>
@@ -1152,6 +1281,9 @@
     let lastScanSoundTime = 0;
     let lastCriticalAlertSoundTime = 0;
     let previousOverallStatus = null;
+    let isRotaryTriggeredGlobal = false;
+    let isRotarySirenPlaying = false;
+    let rotarySirenInterval = null;
 
     function toggleSoundAlert() {
         soundEnabled = !soundEnabled;
@@ -1164,11 +1296,80 @@
             if (icon) icon.className = 'bi bi-volume-up-fill';
             if (text) text.innerText = 'Suara: ON';
             playTone(880, 0.1, 'sine');
+            if (isRotaryTriggeredGlobal) {
+                startRotaryEmergencySiren();
+            }
         } else {
             if (btn) btn.className = 'hdr-ctrl-btn';
             if (icon) icon.className = 'bi bi-volume-mute-fill';
             if (text) text.innerText = 'Suara: OFF';
+            stopRotaryEmergencySiren();
         }
+    }
+
+    function updateRotaryAlarm(isTriggered) {
+        isRotaryTriggeredGlobal = isTriggered;
+        const beaconBox = document.getElementById('rotaryBeaconBox');
+        const statusText = document.getElementById('rotaryStatusText');
+
+        if (isTriggered) {
+            if (beaconBox) beaconBox.classList.add('active');
+            if (statusText) statusText.innerText = 'ROTARY ALARM AKTIF!';
+            document.body.classList.add('alarm-rotary-triggered');
+
+            if (soundEnabled && !isRotarySirenPlaying) {
+                startRotaryEmergencySiren();
+            }
+        } else {
+            if (beaconBox) beaconBox.classList.remove('active');
+            if (statusText) statusText.innerText = 'ROTARY STANDBY';
+            document.body.classList.remove('alarm-rotary-triggered');
+            stopRotaryEmergencySiren();
+        }
+    }
+
+    function startRotaryEmergencySiren() {
+        isRotarySirenPlaying = true;
+        playRotaryTone();
+        if (!rotarySirenInterval) {
+            rotarySirenInterval = setInterval(() => {
+                if (isRotarySirenPlaying && soundEnabled) {
+                    playRotaryTone();
+                }
+            }, 1800);
+        }
+    }
+
+    function stopRotaryEmergencySiren() {
+        isRotarySirenPlaying = false;
+        if (rotarySirenInterval) {
+            clearInterval(rotarySirenInterval);
+            rotarySirenInterval = null;
+        }
+    }
+
+    function playRotaryTone() {
+        if (!soundEnabled) return;
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            // Sirene wail naik-turun khas lampu rotary darurat (600Hz -> 1150Hz -> 600Hz)
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(1150, now + 0.45);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.9);
+            gain.gain.setValueAtTime(0.045, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.95);
+        } catch(e) {}
     }
 
     function playTone(freq, duration, type = 'sine') {
@@ -1529,13 +1730,37 @@
         const subStatus = document.getElementById('subOverallStatus');
         const iconStatus = document.getElementById('iconOverallStatus');
 
+        // Simpan data global untuk modal koordinat
+        window.latestDevicesData = devices;
+        if (data.extensometerCoordinates) {
+            window.allExtensometerCoordinates = data.extensometerCoordinates;
+        }
+
+        // 🚨 Evaluasi Ambang Batas Kritis 200 mm & Alarm Rotary Beacon
+        const THRESHOLD_ROTARY_MM = 200.0;
+        let isRotaryActive = false;
+        devices.forEach(dev => {
+            (dev.sensors || []).forEach(s => {
+                if (Math.abs(s.latestValue) > THRESHOLD_ROTARY_MM || 
+                    Math.abs(s.accumulativeDisplacement) > THRESHOLD_ROTARY_MM || 
+                    Math.abs(s.lateralDisplacement || 0) > THRESHOLD_ROTARY_MM) {
+                    isRotaryActive = true;
+                }
+            });
+        });
+        if (data.rotaryAlarmActive === true) {
+            isRotaryActive = true;
+        }
+
+        updateRotaryAlarm(isRotaryActive);
+
         if (cardStatus && valStatus && iconStatus) {
-            const st = (summary.overallStatus || 'NORMAL').toUpperCase();
+            const st = isRotaryActive ? 'CRITICAL' : (summary.overallStatus || 'NORMAL').toUpperCase();
             cardStatus.className = 'kpi-card status-' + st.toLowerCase();
             valStatus.innerText = st;
 
-            if (st === 'CRITICAL') {
-                subStatus.innerText = `${summary.criticalCount} Titik Sensor Melebihi Ambang Batas!`;
+            if (st === 'CRITICAL' || isRotaryActive) {
+                subStatus.innerText = isRotaryActive ? `PERGESERAN > 200 mm! ALARM ROTARY AKTIF` : `${summary.criticalCount} Titik Sensor Melebihi Ambang Batas!`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-octagon-fill"></i>';
                 
                 // 🔔 Suara alarm HANYA berbunyi saat status baru pertama kali menjadi KRITIS atau jeda 10 menit
@@ -1549,7 +1774,7 @@
                 subStatus.innerText = `${summary.warningCount} Titik Sensor Mendekati Batas`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
             } else {
-                subStatus.innerText = 'Seluruh lereng aman & stabil';
+                subStatus.innerText = 'Seluruh lereng aman & stabil (Pergeseran \u2264 200 mm)';
                 iconStatus.innerHTML = '<i class="bi bi-shield-check"></i>';
             }
             previousOverallStatus = st;
@@ -1614,7 +1839,10 @@
 
                 (dev.sensors || []).forEach(s => {
                     const sStatus = (s.alertStatus || 'NORMAL').toLowerCase();
-                    const dispColor = sStatus === 'critical' ? 'critical' : (sStatus === 'warning' ? 'warning' : 'normal');
+                    const isExceed200 = Math.abs(s.latestValue) > THRESHOLD_ROTARY_MM || 
+                                        Math.abs(s.accumulativeDisplacement) > THRESHOLD_ROTARY_MM || 
+                                        Math.abs(s.lateralDisplacement || 0) > THRESHOLD_ROTARY_MM;
+                    const dispColor = isExceed200 ? 'critical' : (sStatus === 'critical' ? 'critical' : (sStatus === 'warning' ? 'warning' : 'normal'));
 
                     let trendBadge = `<span style="color: rgba(148, 163, 184, 0.6); font-size: 9.5px;"><i class="bi bi-dash"></i> 0.00</span>`;
                     if (s.movementTrend === 'UP') {
@@ -1623,10 +1851,15 @@
                         trendBadge = `<span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 8.5px;"><i class="bi bi-caret-down-fill"></i> ${(s.deltaPreviousScan || 0).toFixed(2)} mm</span>`;
                     }
 
+                    const coordTag = s.coordinateN ? `<span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; font-size: 8px; margin-left: 3px;" title="N: ${s.coordinateN}, E: ${s.coordinateE} &bull; Area: ${s.area || '-'}">N:${s.coordinateN}</span>` : '';
+                    const rotaryBadge = isExceed200 ? `<span class="badge bg-danger text-white ms-1" style="font-size: 7.5px; animation: blinkRotaryText 0.5s infinite;"><i class="bi bi-exclamation-triangle-fill"></i> &gt;200mm ROTARY</span>` : '';
+
                     html += `
-                            <tr>
+                            <tr ${isExceed200 ? 'style="background: rgba(239, 68, 68, 0.16);"' : ''}>
                                 <td class="sensor-name-cell" title="${escapeHtml(s.sensorName)}">
                                     <i class="bi bi-reception-4 text-purple me-1" style="font-size: 8px;"></i>${escapeHtml(s.sensorName)}
+                                    ${coordTag}
+                                    ${rotaryBadge}
                                 </td>
                                 <td class="text-end disp-val ${dispColor}">
                                     ${s.latestValue.toFixed(0)} <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">${s.unitSuffix}</span>
@@ -1703,6 +1936,86 @@
             .replace(/'/g, '&#39;');
     }
 
+    function openCoordModal() {
+        const tbody = document.getElementById('coordTableBody');
+        if (!tbody) return;
+
+        const coords = (window.allExtensometerCoordinates && window.allExtensometerCoordinates.length > 0)
+            ? window.allExtensometerCoordinates
+            : [
+                { no: 1, uniqueId: "MU_T6_Extend", extensoId: "MU_IC01A", area: "T6", location: "T6_LW_South", n: 114845, e: 572945 },
+                { no: 2, uniqueId: "D1", extensoId: "S_D1", area: "-", location: "KONTAINER", n: 109263, e: 574550 },
+                { no: 3, uniqueId: "D2_T6_LWs35", extensoId: "S_D2", area: "T6", location: "T6_LW_South", n: 114592, e: 572850 },
+                { no: 4, uniqueId: "D3_Sekatan", extensoId: "S_D3", area: "T6", location: "T6_LW_South", n: 115130, e: 573079 },
+                { no: 5, uniqueId: "MU_Mess GPE (GAM)", extensoId: "MU_IC02A", area: "GAM", location: "Mess GPE", n: 120205, e: 577446 },
+                { no: 6, uniqueId: "D1_Mess GPE", extensoId: "S_D1", area: "GAM", location: "Mess GPE", n: 120120, e: 577485 },
+                { no: 7, uniqueId: "D3_Mess GPE", extensoId: "S_D3", area: "GAM", location: "Mess GPE", n: 120178, e: 577340 },
+                { no: 8, uniqueId: "MU_KM17_Hauling", extensoId: "MU_IC03A", area: "HAULING", location: "KM_17_H", n: 100866, e: 586640 },
+                { no: 9, uniqueId: "D3_KM15_H", extensoId: "S_D3", area: "HAULING", location: "KM_15_H", n: 100783, e: 587630 },
+                { no: 10, uniqueId: "MU_IC01_T4 KPP", extensoId: "MU_IC01", area: "T4", location: "T4 HW", n: 115728, e: 571453 },
+                { no: 11, uniqueId: "D1_LW", extensoId: "S_D1", area: "T4", location: "T4LW", n: 115989, e: 570979 },
+                { no: 12, uniqueId: "D2_LW", extensoId: "S_D2", area: "T4", location: "T4 LW", n: 115584, e: 570934 },
+                { no: 13, uniqueId: "D3", extensoId: "S_D3", area: "-", location: "KONTAINER", n: 109263, e: 574550 },
+                { no: 14, uniqueId: "MU_IC02_WD9", extensoId: "MU_IC02", area: "T4_WD9", location: "WD9", n: 112998, e: 570357 },
+                { no: 15, uniqueId: "D1_WD9", extensoId: "S_D1", area: "T4_WD9", location: "WD9", n: 113053, e: 570979 },
+                { no: 16, uniqueId: "D2_WD9", extensoId: "S_D2", area: "T4_WD9", location: "WD9", n: 112982, e: 571415 },
+                { no: 17, uniqueId: "D3", extensoId: "S_D3", area: "-", location: "KONTAINER", n: 109263, e: 574550 },
+                { no: 18, uniqueId: "MU_IC03_Central", extensoId: "MU_IC03", area: "CENTRAL", location: "JL_CENTRAL", n: 121996, e: 575045 },
+                { no: 19, uniqueId: "D1", extensoId: "S_D1", area: "CENTRAL", location: "JL_CENTRAL", n: 121903, e: 575013 },
+                { no: 20, uniqueId: "D2", extensoId: "S_D2", area: "-", location: "KONTAINER", n: 109263, e: 574550 },
+                { no: 21, uniqueId: "D3", extensoId: "S_D3", area: "-", location: "KONTAINER", n: 109263, e: 574550 },
+                { no: 22, uniqueId: "MU_IC04_JL_Mawar", extensoId: "MU_IC04", area: "JL Mawar", location: "JL Mawar 5.5", n: 113969, e: 575062 },
+                { no: 23, uniqueId: "D1_jl_Mawar", extensoId: "S_D1", area: "JL Mawar", location: "JL Mawar 5.5", n: 113913, e: 575108 },
+                { no: 24, uniqueId: "D2_PE_HW", extensoId: "S_D2", area: "PE", location: "PE_HW", n: 113030, e: 574424 },
+                { no: 25, uniqueId: "D3_PE_HW", extensoId: "S_D3", area: "PE", location: "PE_HW", n: 112927, e: 574389 }
+            ];
+
+        // Kumpulkan seluruh telemetri sensor aktif
+        const allSensors = [];
+        (window.latestDevicesData || []).forEach(d => {
+            (d.sensors || []).forEach(s => allSensors.push(s));
+        });
+
+        let rowsHtml = '';
+        coords.forEach(c => {
+            const uid = (c.uniqueId || '').toLowerCase();
+            const extId = (c.extensoId || '').toLowerCase();
+
+            const matched = allSensors.find(s => 
+                (s.uniqueId && s.uniqueId.toLowerCase() === uid) ||
+                (s.sensorName && s.sensorName.toLowerCase().includes(uid)) ||
+                (s.sensorCode && s.sensorCode.toLowerCase() === extId)
+            );
+
+            let statusBadge = `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 10px;"><i class="bi bi-clock-history me-1"></i>Terkonfigurasi</span>`;
+            if (matched) {
+                const val = Math.max(Math.abs(matched.latestValue || 0), Math.abs(matched.accumulativeDisplacement || 0));
+                if (val > 200) {
+                    statusBadge = `<span class="badge bg-danger text-white font-monospace" style="font-size: 10px; animation: blinkRotaryText 0.5s infinite;"><i class="bi bi-exclamation-triangle-fill me-1"></i>${val.toFixed(0)} mm &bull; ROTARY ON</span>`;
+                } else if (matched.alertStatus === 'WARNING') {
+                    statusBadge = `<span class="badge bg-warning text-dark font-monospace" style="font-size: 10px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>${val.toFixed(0)} mm (Warning)</span>`;
+                } else {
+                    statusBadge = `<span class="badge bg-success text-white font-monospace" style="font-size: 10px;"><i class="bi bi-check-circle-fill me-1"></i>${val.toFixed(0)} mm (Normal)</span>`;
+                }
+            }
+
+            rowsHtml += `
+                <tr>
+                    <td class="text-center font-monospace text-muted">${c.no}</td>
+                    <td class="fw-bold text-white"><i class="bi bi-geo-alt-fill text-purple me-1"></i>${escapeHtml(c.uniqueId)}</td>
+                    <td class="font-monospace text-info">${escapeHtml(c.extensoId)}</td>
+                    <td><span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px;">${escapeHtml(c.area)}</span></td>
+                    <td class="text-white-50">${escapeHtml(c.location)}</td>
+                    <td class="text-end font-monospace text-warning">${c.n ? c.n.toLocaleString('id-ID') : '-'}</td>
+                    <td class="text-end font-monospace text-warning">${c.e ? c.e.toLocaleString('id-ID') : '-'}</td>
+                    <td class="text-center">${statusBadge}</td>
+                </tr>`;
+        });
+
+        tbody.innerHTML = rowsHtml;
+        new bootstrap.Modal(document.getElementById('coordModal')).show();
+    }
+
     // Init Chart and Start polling every 10 seconds for real-time monitoring
     document.addEventListener('DOMContentLoaded', () => {
         initSlopeChart();
@@ -1710,6 +2023,63 @@
         setInterval(() => fetchDisplay5Data(), 10000);
     });
     </script>
+
+    <!-- Modal 25 Titik Koordinat Sensor Extensometer & Geotiff 3D Ready -->
+    <div class="modal fade" id="coordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content" style="background: #090e1d; border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 20px; color: #f8fafc; box-shadow: 0 25px 60px rgba(0,0,0,0.85); backdrop-filter: blur(24px);">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding: 14px 22px;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(168, 85, 247, 0.2); color: #c084fc; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0 text-white" style="font-size: 15.5px;">Master 25 Titik Extensometer &amp; Koordinat Spasial (N / E)</h5>
+                            <p class="text-muted small mb-0" style="font-size: 11px;">PT Indexim Coalindo &bull; Sistem Monitoring Lereng EWS &bull; Ambang Batas: <strong>200 mm</strong></p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3 mb-3 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);">
+                        <div class="d-flex align-items-center gap-2 small text-info" style="font-size: 11.5px;">
+                            <i class="bi bi-layers-fill fs-5"></i>
+                            <span><strong>Kesiapan Visualisasi 3D:</strong> Titik koordinat spasial di bawah siap di-render pada model elevasi lereng (GeoTIFF Raster) setelah berkas raster dikirimkan.</span>
+                        </div>
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 10.5px;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Threshold Rotary: &gt; 200 mm
+                        </span>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 58vh; overflow-y: auto;">
+                        <table class="table table-dark table-hover table-sm align-middle mb-0" style="font-size: 11.5px; background: transparent;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">
+                                    <th class="text-center" style="width: 45px;">No</th>
+                                    <th>Unique ID</th>
+                                    <th>EXTENSO_ID</th>
+                                    <th>Area</th>
+                                    <th>Location</th>
+                                    <th class="text-end font-monospace">Northing (N)</th>
+                                    <th class="text-end font-monospace">Easting (E)</th>
+                                    <th class="text-center" style="width: 170px;">Status Live</th>
+                                </tr>
+                            </thead>
+                            <tbody id="coordTableBody">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3" style="border-top: 1px solid rgba(255,255,255,0.08);">
+                    <small class="text-muted me-auto" style="font-size: 11px;">
+                        <i class="bi bi-broadcast text-success me-1"></i> Data telemetri diperbarui secara otomatis setiap 10 detik.
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal" style="font-size: 11px;">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

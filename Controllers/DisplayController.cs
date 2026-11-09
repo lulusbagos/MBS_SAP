@@ -29,6 +29,61 @@ namespace MBS_SAP.Controllers
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
         private const string Display5CacheKey = "CACHE_DISPLAY5_DATA_V1";
 
+        public const double SlopeDisplacementCriticalThresholdMm = 200.0;
+
+        public static readonly List<SlopeSensorCoordDto> ExtensometerMasterCoordinates = new()
+        {
+            new() { No = 1, UniqueId = "MU_T6_Extend", ExtensoId = "MU_IC01A", Area = "T6", Location = "T6_LW_South", N = 114845, E = 572945 },
+            new() { No = 2, UniqueId = "D1", ExtensoId = "S_D1", Area = "-", Location = "KONTAINER", N = 109263, E = 574550 },
+            new() { No = 3, UniqueId = "D2_T6_LWs35", ExtensoId = "S_D2", Area = "T6", Location = "T6_LW_South", N = 114592, E = 572850 },
+            new() { No = 4, UniqueId = "D3_Sekatan", ExtensoId = "S_D3", Area = "T6", Location = "T6_LW_South", N = 115130, E = 573079 },
+            new() { No = 5, UniqueId = "MU_Mess GPE (GAM)", ExtensoId = "MU_IC02A", Area = "GAM", Location = "Mess GPE", N = 120205, E = 577446 },
+            new() { No = 6, UniqueId = "D1_Mess GPE", ExtensoId = "S_D1", Area = "GAM", Location = "Mess GPE", N = 120120, E = 577485 },
+            new() { No = 7, UniqueId = "D3_Mess GPE", ExtensoId = "S_D3", Area = "GAM", Location = "Mess GPE", N = 120178, E = 577340 },
+            new() { No = 8, UniqueId = "MU_KM17_Hauling", ExtensoId = "MU_IC03A", Area = "HAULING", Location = "KM_17_H", N = 100866, E = 586640 },
+            new() { No = 9, UniqueId = "D3_KM15_H", ExtensoId = "S_D3", Area = "HAULING", Location = "KM_15_H", N = 100783, E = 587630 },
+            new() { No = 10, UniqueId = "MU_IC01_T4 KPP", ExtensoId = "MU_IC01", Area = "T4", Location = "T4 HW", N = 115728, E = 571453 },
+            new() { No = 11, UniqueId = "D1_LW", ExtensoId = "S_D1", Area = "T4", Location = "T4LW", N = 115989, E = 570979 },
+            new() { No = 12, UniqueId = "D2_LW", ExtensoId = "S_D2", Area = "T4", Location = "T4 LW", N = 115584, E = 570934 },
+            new() { No = 13, UniqueId = "D3", ExtensoId = "S_D3", Area = "-", Location = "KONTAINER", N = 109263, E = 574550 },
+            new() { No = 14, UniqueId = "MU_IC02_WD9", ExtensoId = "MU_IC02", Area = "T4_WD9", Location = "WD9", N = 112998, E = 570357 },
+            new() { No = 15, UniqueId = "D1_WD9", ExtensoId = "S_D1", Area = "T4_WD9", Location = "WD9", N = 113053, E = 570979 },
+            new() { No = 16, UniqueId = "D2_WD9", ExtensoId = "S_D2", Area = "T4_WD9", Location = "WD9", N = 112982, E = 571415 },
+            new() { No = 17, UniqueId = "D3", ExtensoId = "S_D3", Area = "-", Location = "KONTAINER", N = 109263, E = 574550 },
+            new() { No = 18, UniqueId = "MU_IC03_Central", ExtensoId = "MU_IC03", Area = "CENTRAL", Location = "JL_CENTRAL", N = 121996, E = 575045 },
+            new() { No = 19, UniqueId = "D1", ExtensoId = "S_D1", Area = "CENTRAL", Location = "JL_CENTRAL", N = 121903, E = 575013 },
+            new() { No = 20, UniqueId = "D2", ExtensoId = "S_D2", Area = "-", Location = "KONTAINER", N = 109263, E = 574550 },
+            new() { No = 21, UniqueId = "D3", ExtensoId = "S_D3", Area = "-", Location = "KONTAINER", N = 109263, E = 574550 },
+            new() { No = 22, UniqueId = "MU_IC04_JL_Mawar", ExtensoId = "MU_IC04", Area = "JL Mawar", Location = "JL Mawar 5.5", N = 113969, E = 575062 },
+            new() { No = 23, UniqueId = "D1_jl_Mawar", ExtensoId = "S_D1", Area = "JL Mawar", Location = "JL Mawar 5.5", N = 113913, E = 575108 },
+            new() { No = 24, UniqueId = "D2_PE_HW", ExtensoId = "S_D2", Area = "PE", Location = "PE_HW", N = 113030, E = 574424 },
+            new() { No = 25, UniqueId = "D3_PE_HW", ExtensoId = "S_D3", Area = "PE", Location = "PE_HW", N = 112927, E = 574389 },
+        };
+
+        private static SlopeSensorCoordDto? MatchExtensometerCoord(string deviceName, string sensorName, string sensorCode)
+        {
+            var dev = deviceName ?? string.Empty;
+            var sName = sensorName ?? string.Empty;
+            var sCode = sensorCode ?? string.Empty;
+
+            var match = ExtensometerMasterCoordinates.FirstOrDefault(c =>
+                sName.Equals(c.UniqueId, StringComparison.OrdinalIgnoreCase) ||
+                dev.Equals(c.UniqueId, StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match;
+
+            match = ExtensometerMasterCoordinates.FirstOrDefault(c =>
+                sName.IndexOf(c.UniqueId, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                dev.IndexOf(c.UniqueId, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (match != null) return match;
+
+            match = ExtensometerMasterCoordinates.FirstOrDefault(c =>
+                sCode.Equals(c.ExtensoId, StringComparison.OrdinalIgnoreCase) &&
+                (dev.IndexOf(c.Area, StringComparison.OrdinalIgnoreCase) >= 0 || sName.IndexOf(c.Location, StringComparison.OrdinalIgnoreCase) >= 0));
+            if (match != null) return match;
+
+            return ExtensometerMasterCoordinates.FirstOrDefault(c => sCode.Equals(c.ExtensoId, StringComparison.OrdinalIgnoreCase));
+        }
+
         public DisplayController(AppDbContext context, IMemoryCache cache, IConfiguration configuration, IHttpClientFactory httpClientFactory)
         {
             _context = context;
@@ -176,6 +231,18 @@ namespace MBS_SAP.Controllers
                                 string aStatus = reader.IsDBNull(23) ? "NORMAL" : reader.GetString(23);
                                 int? minsAgo = reader.IsDBNull(24) ? (int?)null : reader.GetInt32(24);
 
+                                // 🚨 Threshold Pergeseran Lereng (200 mm):
+                                // Sensor displacement melebihi >200 mm memicu status CRITICAL & mengaktifkan alarm rotary
+                                if (Math.Abs(accumDisp ?? 0) > SlopeDisplacementCriticalThresholdMm ||
+                                    Math.Abs(latestVal ?? 0) > SlopeDisplacementCriticalThresholdMm ||
+                                    Math.Abs(latDisp ?? 0) > SlopeDisplacementCriticalThresholdMm)
+                                {
+                                    aStatus = "CRITICAL";
+                                    thAcc = SlopeDisplacementCriticalThresholdMm;
+                                }
+
+                                var coord = MatchExtensometerCoord(devName, sName, sCode);
+
                                 if (!devicesDict.TryGetValue(devId, out var devDto))
                                 {
                                     devDto = new SlopeDeviceDto
@@ -211,13 +278,19 @@ namespace MBS_SAP.Controllers
                                     VelocityPerHour = velHour ?? 0.0,
                                     VelocityPerDay = velDay ?? 0.0,
                                     ThresholdVelocity = thVel,
-                                    ThresholdAccumulative = thAcc,
+                                    ThresholdAccumulative = thAcc ?? SlopeDisplacementCriticalThresholdMm,
                                     AlertStatus = aStatus,
                                     LatestTs = latestTs,
-                                    MinutesSinceLastReading = minsAgo
+                                    MinutesSinceLastReading = minsAgo,
+                                    UniqueId = coord?.UniqueId ?? string.Empty,
+                                    ExtensoId = coord?.ExtensoId ?? string.Empty,
+                                    Area = coord?.Area ?? string.Empty,
+                                    LocationCoord = coord?.Location ?? string.Empty,
+                                    CoordinateN = coord?.N,
+                                    CoordinateE = coord?.E
                                 });
 
-                                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo });
+                                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo, LatestValue = latestVal ?? 0.0, SensorName = sName, DeviceName = devName });
                             }
                         }
                     }
@@ -383,6 +456,8 @@ namespace MBS_SAP.Controllers
                     dataSource,
                     apiConnected,
                     apiBaseUrl,
+                    displacementThresholdMm = SlopeDisplacementCriticalThresholdMm,
+                    rotaryAlarmActive = (criticalCount > 0) || sortedDevices.Any(d => d.Sensors.Any(s => s.AlertStatus == "CRITICAL" || Math.Abs(s.LatestValue) > SlopeDisplacementCriticalThresholdMm || Math.Abs(s.AccumulativeDisplacement) > SlopeDisplacementCriticalThresholdMm)),
                     summary = new
                     {
                         totalDevices = devicesDict.Count,
@@ -392,13 +467,15 @@ namespace MBS_SAP.Controllers
                         criticalCount,
                         overallStatus,
                         latestSync,
-                        minutesSinceSync = minMinsAgo ?? 0
+                        minutesSinceSync = minMinsAgo ?? 0,
+                        displacementThresholdMm = SlopeDisplacementCriticalThresholdMm
                     },
                     comparison,
                     aiPrediction,
                     devices = sortedDevices,
                     recentAlerts = alerts,
-                    hourlyTrends
+                    hourlyTrends,
+                    extensometerCoordinates = ExtensometerMasterCoordinates
                 };
 
                 _cache.Set(Display5CacheKey, responsePayload, TimeSpan.FromSeconds(10));
@@ -586,6 +663,18 @@ namespace MBS_SAP.Controllers
                 string aStatus = elem.TryGetProperty("alert_status", out var pStat) ? pStat.GetString() ?? "NORMAL" : "NORMAL";
                 int? minsAgo = elem.TryGetProperty("minutes_since_last_reading", out var pMins) && pMins.TryGetInt32(out var vMins) ? vMins : null;
 
+                // 🚨 Threshold Pergeseran Lereng (200 mm):
+                // Sensor displacement melebihi >200 mm memicu status CRITICAL & mengaktifkan alarm rotary
+                if (Math.Abs(accumDisp) > SlopeDisplacementCriticalThresholdMm ||
+                    Math.Abs(latestVal) > SlopeDisplacementCriticalThresholdMm ||
+                    Math.Abs(latDisp) > SlopeDisplacementCriticalThresholdMm)
+                {
+                    aStatus = "CRITICAL";
+                    thAcc = SlopeDisplacementCriticalThresholdMm;
+                }
+
+                var coord = MatchExtensometerCoord(devName, sName, sCode);
+
                 if (!devicesDict.TryGetValue(devId, out var devDto))
                 {
                     devDto = new SlopeDeviceDto
@@ -621,13 +710,19 @@ namespace MBS_SAP.Controllers
                     VelocityPerHour = velHour,
                     VelocityPerDay = velDay,
                     ThresholdVelocity = thVel,
-                    ThresholdAccumulative = thAcc,
+                    ThresholdAccumulative = thAcc ?? SlopeDisplacementCriticalThresholdMm,
                     AlertStatus = aStatus,
                     LatestTs = latestTs,
-                    MinutesSinceLastReading = minsAgo
+                    MinutesSinceLastReading = minsAgo,
+                    UniqueId = coord?.UniqueId ?? string.Empty,
+                    ExtensoId = coord?.ExtensoId ?? string.Empty,
+                    Area = coord?.Area ?? string.Empty,
+                    LocationCoord = coord?.Location ?? string.Empty,
+                    CoordinateN = coord?.N,
+                    CoordinateE = coord?.E
                 });
 
-                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo });
+                rawSensors.Add(new SlopeSensorRawDto { AlertStatus = aStatus, LatestTs = latestTs, MinutesSinceLastReading = minsAgo, LatestValue = latestVal, SensorName = sName, DeviceName = devName });
             }
 
             var hourlyTrends = new List<SlopeHourlyTrendDto>();

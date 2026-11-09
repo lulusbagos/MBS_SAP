@@ -33,13 +33,21 @@ namespace MBS_SAP.Models
         public double VelocityPerHour { get; set; }
         public double VelocityPerDay { get; set; }
         public double? ThresholdVelocity { get; set; }
-        public double? ThresholdAccumulative { get; set; }
+        public double? ThresholdAccumulative { get; set; } = 200.0;
         public string AlertStatus { get; set; } = "NORMAL";
         public string LatestTs { get; set; } = string.Empty;
         public int? MinutesSinceLastReading { get; set; }
         public double PreviousValue { get; set; }
         public double DeltaPreviousScan { get; set; }
         public string MovementTrend { get; set; } = "STABLE"; // UP, DOWN, STABLE
+        
+        // Titik Koordinat & Mapping Geoteknik
+        public string UniqueId { get; set; } = string.Empty;
+        public string ExtensoId { get; set; } = string.Empty;
+        public string Area { get; set; } = string.Empty;
+        public string LocationCoord { get; set; } = string.Empty;
+        public double? CoordinateN { get; set; }
+        public double? CoordinateE { get; set; }
     }
 
     public class SlopeSensorRawDto
@@ -115,6 +123,17 @@ namespace MBS_SAP.Models
         public string MaxDeltaSensorName { get; set; } = string.Empty;
         public double MaxDeltaMm { get; set; }
         public string SummaryText { get; set; } = string.Empty;
+    }
+
+    public class SlopeSensorCoordDto
+    {
+        public int No { get; set; }
+        public string UniqueId { get; set; } = string.Empty;
+        public string ExtensoId { get; set; } = string.Empty;
+        public string Area { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public double N { get; set; }
+        public double E { get; set; }
     }
 }
 
