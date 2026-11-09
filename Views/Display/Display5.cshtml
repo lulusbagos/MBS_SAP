@@ -17,6 +17,9 @@
     
     <!-- Chart.js for Telemetry Trends -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Three.js & OrbitControls for 3D Pit Terrain Model -->
+    <script src="~/lib/three/three.min.js"></script>
+    <script src="~/lib/three/OrbitControls.js"></script>
 
     <style>
     :root {
@@ -721,6 +724,55 @@
         line-height: 1.35;
     }
 
+    /* ── Model 3D WebGL Pit Container ── */
+    .pit-3d-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        background: radial-gradient(circle at center, #0a1128 0%, #020617 100%);
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    .pit-3d-canvas-wrapper {
+        position: relative;
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 220px;
+        overflow: hidden;
+        cursor: grab;
+    }
+    .pit-3d-canvas-wrapper:active {
+        cursor: grabbing;
+    }
+    #pit3dCanvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    .pit-3d-hint-bar {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        border-radius: 20px;
+        padding: 4px 14px;
+        color: #94a3b8;
+        font-size: 10px;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 20;
+        white-space: nowrap;
+    }
+
     /* ── Device & Sensor Cards Grid ── */
     .devices-scroll-area {
         overflow-y: auto;
@@ -1213,8 +1265,11 @@
                                 <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="switchLeftView('cards')" title="Tampilan Kartu Telemetri">
                                     <i class="bi bi-grid-3x3-gap-fill"></i> Kartu
                                 </button>
-                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="switchLeftView('map')" title="Tampilan Peta Spasial 25 Titik ECW">
-                                    <i class="bi bi-map-fill"></i> Peta 25 Titik ECW
+                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="switchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
+                                    <i class="bi bi-map-fill"></i> Peta 2D
+                                </button>
+                                <button type="button" class="view-tab-btn" id="btnView3D" onclick="switchLeftView('3d')" title="Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer">
+                                    <i class="bi bi-box-fill text-warning"></i> Model 3D Pit
                                 </button>
                             </div>
                             <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
@@ -1258,6 +1313,44 @@
                         <div class="pit-canvas-wrapper" id="pitCanvasWrapper">
                             <canvas id="pitMapCanvas"></canvas>
                             <div class="map-tooltip" id="mapPinTooltip"></div>
+                        </div>
+                    </div>
+
+                    <!-- Mode C: Pit 3D WebGL Three.js Container -->
+                    <div class="pit-3d-container d-none" id="pit3dContainer">
+                        <div class="pit-map-toolbar">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="map-badge-tag" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">
+                                    <i class="bi bi-box-fill me-1"></i> 3D TERRAIN WEBGL
+                                </span>
+                                <button type="button" class="area-pill active" id="btn3dAutoRotate" onclick="toggle3dAutoRotate()" title="Putar Otomatis 3D">
+                                    <i class="bi bi-arrow-repeat text-info me-1"></i>Putar Otomatis (ON)
+                                </button>
+                                <button type="button" class="area-pill" id="btn3dWireframe" onclick="toggle3dWireframe()" title="Toggle Model Rangka Kawat">
+                                    <i class="bi bi-grid-3x3 text-purple me-1"></i>Wireframe
+                                </button>
+                                <button type="button" class="area-pill" id="btn3dExaggerate" onclick="toggle3dExaggeration()" title="Tingkatkan / Normal Kedalaman Lereng">
+                                    <i class="bi bi-arrows-vertical text-warning me-1"></i>Elevasi: 1.5x
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <button type="button" class="map-ctrl-btn" onclick="reset3dCamera()" title="Kembalikan Sudut Pandang Kamera 3D">
+                                    <i class="bi bi-arrows-angle-contract"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="pit-3d-canvas-wrapper" id="pit3dWrapper">
+                            <canvas id="pit3dCanvas"></canvas>
+                            <div class="map-tooltip" id="pit3dTooltip"></div>
+                            <div class="pit-3d-hint-bar">
+                                <span><i class="bi bi-mouse me-1 text-info"></i>Drag Kiri: Putar 360°</span>
+                                <span>&bull;</span>
+                                <span>Drag Kanan: Geser Peta</span>
+                                <span>&bull;</span>
+                                <span>Scroll: Zoom In/Out</span>
+                                <span>&bull;</span>
+                                <span>Hover/Klik: Cek Sensor</span>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -2106,6 +2199,13 @@
 
         // 4. Update Chart
         updateChartData(hourly);
+
+        // 5. Update Map Spasial / Model 3D jika sedang aktif
+        if (activeLeftView === 'map') {
+            renderPitMap();
+        } else if (activeLeftView === '3d') {
+            update3DSensorPins();
+        }
     }
 
     function escapeHtml(str) {
@@ -2209,24 +2309,34 @@
         activeLeftView = mode;
         const btnCards = document.getElementById('btnViewCards');
         const btnMap = document.getElementById('btnViewMap');
+        const btn3D = document.getElementById('btnView3D');
         const devContainer = document.getElementById('devicesContainer');
         const mapContainer = document.getElementById('pitMapContainer');
+        const pit3dContainer = document.getElementById('pit3dContainer');
         const panelTitle = document.getElementById('panelLeftTitle');
         const panelIcon = document.getElementById('panelLeftIcon');
 
-        if (mode === 'map') {
-            if (btnCards) btnCards.classList.remove('active');
+        [btnCards, btnMap, btn3D].forEach(b => { if (b) b.classList.remove('active'); });
+        [devContainer, mapContainer, pit3dContainer].forEach(c => { if (c) c.classList.add('d-none'); });
+
+        if (mode === '3d') {
+            if (btn3D) btn3D.classList.add('active');
+            if (pit3dContainer) pit3dContainer.classList.remove('d-none');
+            if (panelTitle) panelTitle.innerText = 'Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer';
+            if (panelIcon) panelIcon.className = 'bi bi-box-fill text-warning';
+            setTimeout(() => {
+                initPit3D();
+                update3DSensorPins();
+            }, 50);
+        } else if (mode === 'map') {
             if (btnMap) btnMap.classList.add('active');
-            if (devContainer) devContainer.classList.add('d-none');
             if (mapContainer) mapContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Peta Ortofoto Spasial Pit (25 Titik Extensometer ECW)';
             if (panelIcon) panelIcon.className = 'bi bi-map-fill text-info';
             initPitMapCanvas();
             renderPitMap();
         } else {
-            if (btnMap) btnMap.classList.remove('active');
             if (btnCards) btnCards.classList.add('active');
-            if (mapContainer) mapContainer.classList.add('d-none');
             if (devContainer) devContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Status Sensor Extensometer Per Lokasi';
             if (panelIcon) panelIcon.className = 'bi bi-grid-3x3-gap-fill text-purple';
@@ -2562,6 +2672,496 @@
         } else {
             wrapper.style.cursor = isMapDragging ? 'grabbing' : 'grab';
             tooltip.style.display = 'none';
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 6. THREE.JS 3D TERRAIN & EXTENSOMETER PINS ENGINE
+    // ──────────────────────────────────────────────────────────────────────────
+    let scene3d = null, camera3d = null, renderer3d = null, controls3d = null;
+    let terrainMesh3d = null;
+    let pinObjects3d = [];
+    let is3dInited = false;
+    let is3dAutoRotate = true;
+    let is3dWireframe = false;
+    let current3dExaggeration = 1.5;
+    let animFrame3dId = null;
+    let raycaster3d = null, mouse3d = null;
+    let hovered3dPin = null;
+
+    function initPit3D() {
+        if (is3dInited) {
+            onWindowResize3D();
+            return;
+        }
+
+        const container = document.getElementById('pit3dWrapper');
+        const canvas = document.getElementById('pit3dCanvas');
+        if (!container || !canvas || typeof THREE === 'undefined') {
+            console.warn('Three.js belum tersedia di halaman');
+            return;
+        }
+
+        is3dInited = true;
+        const width = container.clientWidth || 600;
+        const height = container.clientHeight || 400;
+
+        // 1. Scene
+        scene3d = new THREE.Scene();
+        scene3d.background = new THREE.Color(0x060b19);
+        scene3d.fog = new THREE.FogExp2(0x060b19, 0.0032);
+
+        // 2. Camera
+        camera3d = new THREE.PerspectiveCamera(45, width / height, 0.5, 3000);
+        camera3d.position.set(0, 115, 135);
+
+        // 3. Renderer
+        renderer3d = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer3d.setSize(width, height);
+        renderer3d.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer3d.shadowMap.enabled = true;
+        renderer3d.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // 4. OrbitControls
+        if (THREE.OrbitControls) {
+            controls3d = new THREE.OrbitControls(camera3d, renderer3d.domElement);
+            controls3d.enableDamping = true;
+            controls3d.dampingFactor = 0.05;
+            controls3d.autoRotate = is3dAutoRotate;
+            controls3d.autoRotateSpeed = 0.7;
+            controls3d.maxPolarAngle = Math.PI / 2 - 0.05; // Mencegah kamera tembus bawah tanah
+            controls3d.minDistance = 20;
+            controls3d.maxDistance = 500;
+            controls3d.target.set(0, -6, 0);
+        }
+
+        // 5. Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x0f172a, 0.75);
+        scene3d.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfff6e8, 1.4);
+        sunLight.position.set(130, 190, 80);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 600;
+        sunLight.shadow.camera.left = -90;
+        sunLight.shadow.camera.right = 90;
+        sunLight.shadow.camera.top = 90;
+        sunLight.shadow.camera.bottom = -90;
+        scene3d.add(sunLight);
+
+        // Fill Light Sky-Blue (memberikan estetika cinematic pit)
+        const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+        fillLight.position.set(-110, 70, -90);
+        scene3d.add(fillLight);
+
+        // 6. Terrain Mesh
+        build3DTerrain();
+
+        // 7. Raycaster for Hover & Click
+        raycaster3d = new THREE.Raycaster();
+        mouse3d = new THREE.Vector2(-999, -999);
+
+        container.addEventListener('mousemove', onMouseMove3D);
+        container.addEventListener('click', onClick3D);
+        window.addEventListener('resize', onWindowResize3D);
+
+        // 8. Start Loop
+        animate3D();
+    }
+
+    function getTerrainElevation3D(e, n) {
+        // Model elevasi lereng pit tambang berbasis koordinat survei
+        let elev = 100.0;
+        const dCentral = Math.hypot(e - 575000, (n - 121500) * 1.2);
+        if (dCentral < 1800) {
+            const m = 1 - dCentral / 1800;
+            elev -= (Math.floor(m * 8) / 8 * 0.7 + m * 0.3) * 75;
+        }
+        const dT6 = Math.hypot(e - 573000, (n - 114800) * 0.9);
+        if (dT6 < 1500) {
+            const m = 1 - dT6 / 1500;
+            elev -= (Math.floor(m * 7) / 7 * 0.7 + m * 0.3) * 65;
+        }
+        const dT4 = Math.hypot(e - 571200, (n - 115700) * 1.1);
+        if (dT4 < 1400) {
+            const m = 1 - dT4 / 1400;
+            elev -= (Math.floor(m * 6) / 6 * 0.7 + m * 0.3) * 60;
+        }
+        const dWD9 = Math.hypot(e - 570900, n - 113000);
+        if (dWD9 < 1200) {
+            elev += (1 - dWD9 / 1200) * 35;
+        }
+        const dPE = Math.hypot(e - 574400, n - 113000);
+        if (dPE < 1100) {
+            elev -= (1 - dPE / 1100) * 40;
+        }
+        const norm = (elev - 32.36) / (133.34 - 32.36);
+        return (norm * 22 * current3dExaggeration) - (11 * current3dExaggeration);
+    }
+
+    function build3DTerrain() {
+        if (!scene3d) return;
+
+        const baseUrl = (window.baseUrl || '/').replace(/\/$/, '') + '/';
+        const texLoader = new THREE.TextureLoader();
+
+        const orthoTexture = texLoader.load(baseUrl + 'images/pit_ortho_central.jpg', () => {
+            if (renderer3d) renderer3d.render(scene3d, camera3d);
+        });
+        orthoTexture.wrapS = THREE.ClampToEdgeWrapping;
+        orthoTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+        const heightTexture = texLoader.load(baseUrl + 'images/pit_heightmap.png', () => {
+            if (renderer3d) renderer3d.render(scene3d, camera3d);
+        });
+
+        const geo = new THREE.PlaneGeometry(120, 160, 160, 160);
+        const mat = new THREE.MeshStandardMaterial({
+            map: orthoTexture,
+            displacementMap: heightTexture,
+            displacementScale: 22 * current3dExaggeration,
+            displacementBias: -11 * current3dExaggeration,
+            roughness: 0.85,
+            metalness: 0.05,
+            wireframe: is3dWireframe
+        });
+
+        terrainMesh3d = new THREE.Mesh(geo, mat);
+        terrainMesh3d.rotation.x = -Math.PI / 2;
+        terrainMesh3d.receiveShadow = true;
+        scene3d.add(terrainMesh3d);
+
+        // Build 25 3D Sensor Pins
+        build3DSensorPins();
+    }
+
+    function build3DSensorPins() {
+        if (!scene3d) return;
+
+        // Bersihkan pin lama jika ada
+        pinObjects3d.forEach(obj => scene3d.remove(obj));
+        pinObjects3d = [];
+
+        ECW_PINS.forEach((p, idx) => {
+            const x3d = ((p.e - 568543) / (577749 - 568543) - 0.5) * 120;
+            const z3d = ((121755 - p.n) / (121755 - 108343) - 0.5) * 160;
+            const y3d = getTerrainElevation3D(p.e, p.n);
+
+            const pinGroup = new THREE.Group();
+            pinGroup.position.set(x3d, y3d, z3d);
+
+            // Tiang Tower Sensor (Cylinder)
+            const poleGeo = new THREE.CylinderGeometry(0.35, 0.45, 7.5, 8);
+            const poleMat = new THREE.MeshStandardMaterial({
+                color: 0x94a3b8,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const poleMesh = new THREE.Mesh(poleGeo, poleMat);
+            poleMesh.position.y = 3.75;
+            poleMesh.castShadow = true;
+            pinGroup.add(poleMesh);
+
+            // Base Anchor Pelat Landasan
+            const baseGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.5, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = 0.25;
+            pinGroup.add(baseMesh);
+
+            // Top Beacon Orb (Sphere)
+            const orbGeo = new THREE.SphereGeometry(1.3, 16, 16);
+            const orbMat = new THREE.MeshStandardMaterial({
+                color: 0x10b981,
+                emissive: 0x10b981,
+                emissiveIntensity: 0.8,
+                roughness: 0.1
+            });
+            const orbMesh = new THREE.Mesh(orbGeo, orbMat);
+            orbMesh.position.y = 8.2;
+            pinGroup.add(orbMesh);
+
+            // Pulsing Radar Ring (Ground Disc)
+            const ringGeo = new THREE.RingGeometry(0.8, 3.2, 32);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x10b981,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.6
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = -Math.PI / 2;
+            ringMesh.position.y = 0.35;
+            pinGroup.add(ringMesh);
+
+            // 3D Canvas Sprite Label
+            const sprite = create3DLabelSprite(`${p.uniqueId} (0mm)`, false, false);
+            sprite.position.y = 12.0;
+            pinGroup.add(sprite);
+
+            // Simpan metadata
+            pinGroup.userData = {
+                pin: p,
+                pole: poleMesh,
+                orb: orbMesh,
+                ring: ringMesh,
+                sprite: sprite,
+                dispVal: 0,
+                isCritical: false,
+                isWarning: false,
+                pulseTimer: Math.random() * Math.PI
+            };
+
+            scene3d.add(pinGroup);
+            pinObjects3d.push(pinGroup);
+        });
+    }
+
+    function create3DLabelSprite(text, isCritical, isWarning) {
+        const c = document.createElement('canvas');
+        c.width = 256;
+        c.height = 64;
+        const ctx = c.getContext('2d');
+
+        // Background capsule
+        ctx.fillStyle = isCritical ? 'rgba(239, 68, 68, 0.92)' : (isWarning ? 'rgba(245, 158, 11, 0.92)' : 'rgba(15, 23, 42, 0.88)');
+        ctx.strokeStyle = isCritical ? '#ffffff' : (isWarning ? '#fef08a' : 'rgba(56, 189, 248, 0.6)');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(6, 6, 244, 52, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        // Text
+        ctx.font = 'bold 20px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 32);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(15, 3.8, 1);
+        return sprite;
+    }
+
+    function update3DSensorPins() {
+        if (!is3dInited || pinObjects3d.length === 0) return;
+
+        const allSensors = [];
+        (window.latestDevicesData || []).forEach(d => {
+            (d.sensors || []).forEach(s => allSensors.push(s));
+        });
+
+        pinObjects3d.forEach(group => {
+            const data = group.userData;
+            const p = data.pin;
+            const uid = p.uniqueId.toLowerCase();
+            const extId = p.extensoId.toLowerCase();
+
+            const liveSensor = allSensors.find(s => 
+                (s.uniqueId && s.uniqueId.toLowerCase() === uid) ||
+                (s.sensorName && s.sensorName.toLowerCase().includes(uid)) ||
+                (s.sensorCode && s.sensorCode.toLowerCase() === extId)
+            );
+
+            const dispVal = liveSensor ? Math.max(Math.abs(liveSensor.latestValue || 0), Math.abs(liveSensor.accumulativeDisplacement || 0)) : 0;
+            const isCritical = dispVal > 200 || (liveSensor && liveSensor.alertStatus === 'CRITICAL');
+            const isWarning = !isCritical && (liveSensor && liveSensor.alertStatus === 'WARNING');
+
+            data.sensor = liveSensor;
+            data.dispVal = dispVal;
+            data.isCritical = isCritical;
+            data.isWarning = isWarning;
+
+            // Update Orb Color
+            const targetColor = isCritical ? 0xef4444 : (isWarning ? 0xfbbf24 : 0x10b981);
+            data.orb.material.color.setHex(targetColor);
+            data.orb.material.emissive.setHex(targetColor);
+            data.orb.material.emissiveIntensity = isCritical ? 1.6 : (isWarning ? 1.1 : 0.7);
+
+            // Update Ground Ring Color
+            data.ring.material.color.setHex(targetColor);
+
+            // Update Sprite Label
+            group.remove(data.sprite);
+            data.sprite = create3DLabelSprite(`${p.uniqueId} (${dispVal.toFixed(0)}mm)`, isCritical, isWarning);
+            data.sprite.position.y = 12.0;
+            group.add(data.sprite);
+        });
+    }
+
+    function toggle3dAutoRotate() {
+        if (!controls3d) return;
+        is3dAutoRotate = !is3dAutoRotate;
+        controls3d.autoRotate = is3dAutoRotate;
+        const btn = document.getElementById('btn3dAutoRotate');
+        if (btn) {
+            btn.classList.toggle('active', is3dAutoRotate);
+            btn.innerHTML = is3dAutoRotate 
+                ? '<i class="bi bi-arrow-repeat text-info me-1"></i>Putar Otomatis (ON)' 
+                : '<i class="bi bi-pause-fill text-muted me-1"></i>Putar Otomatis (OFF)';
+        }
+    }
+
+    function toggle3dWireframe() {
+        if (!terrainMesh3d) return;
+        is3dWireframe = !is3dWireframe;
+        terrainMesh3d.material.wireframe = is3dWireframe;
+        const btn = document.getElementById('btn3dWireframe');
+        if (btn) {
+            btn.classList.toggle('active', is3dWireframe);
+            btn.innerHTML = is3dWireframe
+                ? '<i class="bi bi-grid-3x3-gap-fill text-purple me-1"></i>Wireframe (ON)'
+                : '<i class="bi bi-grid-3x3 text-muted me-1"></i>Wireframe';
+        }
+    }
+
+    function toggle3dExaggeration() {
+        current3dExaggeration = current3dExaggeration === 1.5 ? 2.2 : (current3dExaggeration === 2.2 ? 1.0 : 1.5);
+        if (terrainMesh3d) {
+            terrainMesh3d.material.displacementScale = 22 * current3dExaggeration;
+            terrainMesh3d.material.displacementBias = -11 * current3dExaggeration;
+            terrainMesh3d.material.needsUpdate = true;
+        }
+        // Update ketinggian pin
+        pinObjects3d.forEach(group => {
+            const p = group.userData.pin;
+            group.position.y = getTerrainElevation3D(p.e, p.n);
+        });
+        const btn = document.getElementById('btn3dExaggerate');
+        if (btn) {
+            btn.innerHTML = `<i class="bi bi-arrows-vertical text-warning me-1"></i>Elevasi: ${current3dExaggeration.toFixed(1)}x`;
+        }
+    }
+
+    function reset3dCamera() {
+        if (!camera3d || !controls3d) return;
+        camera3d.position.set(0, 115, 135);
+        controls3d.target.set(0, -6, 0);
+        controls3d.update();
+    }
+
+    function onMouseMove3D(e) {
+        const container = document.getElementById('pit3dWrapper');
+        const tooltip = document.getElementById('pit3dTooltip');
+        if (!container || !raycaster3d || !camera3d) return;
+
+        const rect = container.getBoundingClientRect();
+        mouse3d.x = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+        mouse3d.y = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+        raycaster3d.setFromCamera(mouse3d, camera3d);
+        const intersectable = [];
+        pinObjects3d.forEach(g => {
+            intersectable.push(g.userData.orb);
+            intersectable.push(g.userData.pole);
+        });
+
+        const hits = raycaster3d.intersectObjects(intersectable, false);
+
+        if (hits.length > 0) {
+            container.style.cursor = 'pointer';
+            const hitGroup = hits[0].object.parent;
+            if (hitGroup && hitGroup.userData) {
+                const data = hitGroup.userData;
+                const p = data.pin;
+                const s = data.sensor;
+                const statusBadge = data.isCritical 
+                    ? '<span class="badge bg-danger text-white">KRITIS &gt; 200 mm</span>' 
+                    : (data.isWarning ? '<span class="badge bg-warning text-dark">Waspada</span>' : '<span class="badge bg-success text-white">Normal</span>');
+
+                tooltip.innerHTML = `
+                    <div class="fw-bold text-info mb-1" style="font-size: 12px;">
+                        <i class="bi bi-box-fill text-warning me-1"></i>${escapeHtml(p.uniqueId)} (${escapeHtml(p.extensoId)})
+                    </div>
+                    <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">
+                        Area: <strong class="text-white">${escapeHtml(p.area)}</strong> &bull; Lokasi: ${escapeHtml(p.location)}
+                    </div>
+                    <div class="font-monospace text-warning small mb-1" style="font-size: 10.5px;">
+                        N: ${p.n.toLocaleString('id-ID')} &bull; E: ${p.e.toLocaleString('id-ID')}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-secondary">
+                        <span>Pergeseran: <strong class="${data.isCritical ? 'text-danger' : 'text-success'}">${data.dispVal.toFixed(1)} mm</strong></span>
+                        ${statusBadge}
+                    </div>
+                    ${s ? `<div class="text-muted small mt-1" style="font-size: 9.5px;">Kecepatan: ${s.velocityPerHour.toFixed(2)} mm/jam &bull; Tren: ${s.movementTrend}</div>` : ''}
+                `;
+                tooltip.style.left = `${Math.min(container.clientWidth - 270, Math.max(10, e.clientX - rect.left + 15))}px`;
+                tooltip.style.top = `${Math.min(container.clientHeight - 130, Math.max(10, e.clientY - rect.top - 40))}px`;
+                tooltip.style.display = 'block';
+            }
+        } else {
+            container.style.cursor = 'grab';
+            if (tooltip) tooltip.style.display = 'none';
+        }
+    }
+
+    function onClick3D(e) {
+        const container = document.getElementById('pit3dWrapper');
+        if (!container || !raycaster3d || !camera3d || !controls3d) return;
+
+        raycaster3d.setFromCamera(mouse3d, camera3d);
+        const intersectable = [];
+        pinObjects3d.forEach(g => {
+            intersectable.push(g.userData.orb);
+            intersectable.push(g.userData.pole);
+        });
+
+        const hits = raycaster3d.intersectObjects(intersectable, false);
+        if (hits.length > 0) {
+            const hitGroup = hits[0].object.parent;
+            if (hitGroup) {
+                // Haluskan target kamera ke pin yang diklik
+                controls3d.target.set(hitGroup.position.x, hitGroup.position.y + 4, hitGroup.position.z);
+                controls3d.update();
+            }
+        }
+    }
+
+    function onWindowResize3D() {
+        const container = document.getElementById('pit3dWrapper');
+        if (!container || !renderer3d || !camera3d) return;
+
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        if (width > 0 && height > 0) {
+            camera3d.aspect = width / height;
+            camera3d.updateProjectionMatrix();
+            renderer3d.setSize(width, height);
+        }
+    }
+
+    function animate3D() {
+        animFrame3dId = requestAnimationFrame(animate3D);
+
+        if (activeLeftView === '3d' && renderer3d && scene3d && camera3d) {
+            if (controls3d) controls3d.update();
+
+            // Animasi Pulsa Cincin Radar di Tanah
+            const time = performance.now() * 0.0025;
+            pinObjects3d.forEach(group => {
+                const data = group.userData;
+                if (data.ring) {
+                    const cycle = (time + data.pulseTimer) % (Math.PI * 2);
+                    const scale = 1.0 + Math.sin(cycle) * 0.4;
+                    data.ring.scale.set(scale, scale, 1);
+                    data.ring.material.opacity = Math.max(0.1, 0.7 - Math.sin(cycle) * 0.5);
+
+                    // Efek kedip strobo untuk status Kritis (> 200 mm)
+                    if (data.isCritical && data.orb) {
+                        const strobe = Math.sin(time * 6) > 0 ? 2.5 : 0.8;
+                        data.orb.material.emissiveIntensity = strobe;
+                    }
+                }
+            });
+
+            renderer3d.render(scene3d, camera3d);
         }
     }
 
