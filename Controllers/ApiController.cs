@@ -882,7 +882,7 @@ ORDER BY nama_perusahaan";
             if (int.TryParse(compIdClaim, out int cid) && cid > 0)
             {
                 var areas = await _context.MasterAreas
-                    .Where(a => a.PerusahaanId == cid)
+                    .Where(a => a.PerusahaanId == cid || a.PerusahaanId == 1)
                     .OrderBy(a => a.NamaArea)
                     .Select(a => new { id = a.Id, namaArea = a.NamaArea })
                     .ToListAsync();
