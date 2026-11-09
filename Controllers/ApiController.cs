@@ -218,13 +218,11 @@ namespace MBS_SAP.Controllers
                 return Json(merged);
             }
 
-            var pjaRefsTask = GetPjaReference(lintasPerusahaan);
-            var empTask = SearchEmployee(cleanTerm, lintasPerusahaan);
+            var pjaRefAction = await GetPjaReference(lintasPerusahaan);
+            var empAction = await SearchEmployee(cleanTerm, lintasPerusahaan);
 
-            await Task.WhenAll(pjaRefsTask, empTask);
-
-            var pjaRefJson = pjaRefsTask.Result as JsonResult;
-            var empJson = empTask.Result as JsonResult;
+            var pjaRefJson = pjaRefAction as JsonResult;
+            var empJson = empAction as JsonResult;
 
             var pjaList = (pjaRefJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
             var empList = (empJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
