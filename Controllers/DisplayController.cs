@@ -28,6 +28,7 @@ namespace MBS_SAP.Controllers
         private const string DisplayFeedCacheKey = "CACHE_DISPLAY_FEED_V1";
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
         private const string Display5CacheKey = "CACHE_DISPLAY5_DATA_V1";
+        private static DateTime _apiOfflineUntil = DateTime.MinValue;
 
         public const double SlopeDisplacementCriticalThresholdMm = 200.0;
 
@@ -146,7 +147,8 @@ namespace MBS_SAP.Controllers
                     return Ok(cachedData);
                 }
 
-                string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
+                string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "";
+                bool enableRestApi = _configuration.GetValue<bool?>("SlopeMonitoring:EnableRestApi") ?? false;
                 string connStr = _configuration.GetConnectionString("XtensConnection")
                     ?? "Server=172.16.1.93;Database=DB_Xtens;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
 
@@ -157,23 +159,31 @@ namespace MBS_SAP.Controllers
                 var alerts = new List<SlopeAlertDto>();
                 var hourlyTrends = new List<SlopeHourlyTrendDto>();
 
-                // 1. Coba hubungi REST API FastAPI (http://172.16.1.93:8000)
-                try
+                // 1. Coba hubungi REST API FastAPI jika diaktifkan dan tidak sedang offline
+                if (enableRestApi && !string.IsNullOrWhiteSpace(apiBaseUrl) && DateTime.UtcNow >= _apiOfflineUntil)
                 {
-                    var apiResult = await FetchSlopeDataFromApiAsync(apiBaseUrl);
-                    if (apiResult.success && apiResult.devices.Count > 0)
+                    try
                     {
-                        apiConnected = true;
-                        dataSource = $"REST API ({apiBaseUrl.TrimEnd('/')})";
-                        foreach (var d in apiResult.devices) devicesDict[d.DeviceId] = d;
-                        rawSensors.AddRange(apiResult.rawSensors);
-                        hourlyTrends.AddRange(apiResult.hourlyTrends);
-                        alerts.AddRange(apiResult.alerts);
+                        var apiResult = await FetchSlopeDataFromApiAsync(apiBaseUrl);
+                        if (apiResult.success && apiResult.devices.Count > 0)
+                        {
+                            apiConnected = true;
+                            dataSource = $"REST API ({apiBaseUrl.TrimEnd('/')})";
+                            foreach (var d in apiResult.devices) devicesDict[d.DeviceId] = d;
+                            rawSensors.AddRange(apiResult.rawSensors);
+                            hourlyTrends.AddRange(apiResult.hourlyTrends);
+                            alerts.AddRange(apiResult.alerts);
+                        }
+                        else
+                        {
+                            _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
+                        }
                     }
-                }
-                catch
-                {
-                    apiConnected = false;
+                    catch
+                    {
+                        apiConnected = false;
+                        _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
+                    }
                 }
 
                 // 2. Jika REST API tidak aktif / kosong, gunakan Direct SQL Server DB_Xtens
@@ -761,25 +771,36 @@ namespace MBS_SAP.Controllers
         [HttpGet("SlopeApi/Latest")]
         public async Task<IActionResult> GetSlopeApiLatest([FromQuery] int? device_id, [FromQuery] string? alert_status)
         {
-            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
-            try
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "";
+            bool enableRestApi = _configuration.GetValue<bool?>("SlopeMonitoring:EnableRestApi") ?? false;
+            if (enableRestApi && !string.IsNullOrWhiteSpace(apiBaseUrl) && DateTime.UtcNow >= _apiOfflineUntil)
             {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(3);
-                string url = $"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/latest";
-                var qList = new List<string>();
-                if (device_id.HasValue) qList.Add($"device_id={device_id.Value}");
-                if (!string.IsNullOrEmpty(alert_status)) qList.Add($"alert_status={Uri.EscapeDataString(alert_status)}");
-                if (qList.Count > 0) url += "?" + string.Join("&", qList);
-
-                var res = await client.GetAsync(url);
-                if (res.IsSuccessStatusCode)
+                try
                 {
-                    var content = await res.Content.ReadAsStringAsync();
-                    return Content(content, "application/json");
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    string url = $"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/latest";
+                    var qList = new List<string>();
+                    if (device_id.HasValue) qList.Add($"device_id={device_id.Value}");
+                    if (!string.IsNullOrEmpty(alert_status)) qList.Add($"alert_status={Uri.EscapeDataString(alert_status)}");
+                    if (qList.Count > 0) url += "?" + string.Join("&", qList);
+
+                    var res = await client.GetAsync(url);
+                    if (res.IsSuccessStatusCode)
+                    {
+                        var content = await res.Content.ReadAsStringAsync();
+                        return Content(content, "application/json");
+                    }
+                    else
+                    {
+                        _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
+                    }
+                }
+                catch
+                {
+                    _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
                 }
             }
-            catch { }
 
             // Fallback SQL
             string connStr = _configuration.GetConnectionString("XtensConnection")
@@ -813,19 +834,30 @@ namespace MBS_SAP.Controllers
         [HttpGet("SlopeApi/Summary")]
         public async Task<IActionResult> GetSlopeApiSummary()
         {
-            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
-            try
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "";
+            bool enableRestApi = _configuration.GetValue<bool?>("SlopeMonitoring:EnableRestApi") ?? false;
+            if (enableRestApi && !string.IsNullOrWhiteSpace(apiBaseUrl) && DateTime.UtcNow >= _apiOfflineUntil)
             {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(3);
-                var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/summary");
-                if (res.IsSuccessStatusCode)
+                try
                 {
-                    var content = await res.Content.ReadAsStringAsync();
-                    return Content(content, "application/json");
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/summary");
+                    if (res.IsSuccessStatusCode)
+                    {
+                        var content = await res.Content.ReadAsStringAsync();
+                        return Content(content, "application/json");
+                    }
+                    else
+                    {
+                        _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
+                    }
+                }
+                catch
+                {
+                    _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
                 }
             }
-            catch { }
 
             // Fallback SQL
             string connStr = _configuration.GetConnectionString("XtensConnection")
@@ -863,19 +895,30 @@ namespace MBS_SAP.Controllers
         [HttpGet("SlopeApi/HourlyTrend")]
         public async Task<IActionResult> GetSlopeApiHourlyTrend([FromQuery] int sensor_id = 2925, [FromQuery] int hours = 48)
         {
-            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "http://172.16.1.93:8000";
-            try
+            string apiBaseUrl = _configuration["SlopeMonitoring:ApiBaseUrl"] ?? "";
+            bool enableRestApi = _configuration.GetValue<bool?>("SlopeMonitoring:EnableRestApi") ?? false;
+            if (enableRestApi && !string.IsNullOrWhiteSpace(apiBaseUrl) && DateTime.UtcNow >= _apiOfflineUntil)
             {
-                var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(3);
-                var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/hourly-trend?sensor_id={sensor_id}&hours={hours}");
-                if (res.IsSuccessStatusCode)
+                try
                 {
-                    var content = await res.Content.ReadAsStringAsync();
-                    return Content(content, "application/json");
+                    var client = _httpClientFactory.CreateClient();
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    var res = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/dashboard/hourly-trend?sensor_id={sensor_id}&hours={hours}");
+                    if (res.IsSuccessStatusCode)
+                    {
+                        var content = await res.Content.ReadAsStringAsync();
+                        return Content(content, "application/json");
+                    }
+                    else
+                    {
+                        _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
+                    }
+                }
+                catch
+                {
+                    _apiOfflineUntil = DateTime.UtcNow.AddMinutes(15);
                 }
             }
-            catch { }
 
             // Fallback SQL
             string connStr = _configuration.GetConnectionString("XtensConnection")
