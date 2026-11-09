@@ -942,9 +942,9 @@ ORDER BY nama_perusahaan";
             return Ok(new { message = "Area berhasil ditambahkan.", data = new { id = newArea.Id, namaArea = newArea.NamaArea } });
         }
 
-        [HttpGet]
         [HttpGet("/master/benchmarks")]
         [HttpGet("/api/master/benchmarks")]
+        [HttpGet("/Api/GetBenchmarks")]
         public async Task<IActionResult> GetBenchmarks(string areaUtama)
         {
             if (string.IsNullOrWhiteSpace(areaUtama))
@@ -971,9 +971,9 @@ ORDER BY nama_perusahaan";
             return Json(distinctBenchmarks);
         }
 
-        [HttpPost]
         [HttpPost("/master/benchmarks")]
         [HttpPost("/api/master/benchmarks")]
+        [HttpPost("/Api/AddBenchmark")]
         public async Task<IActionResult> AddBenchmark(string? areaUtama, string? namaBenchmark)
         {
             if (string.IsNullOrWhiteSpace(areaUtama)) return BadRequest("Area utama tidak boleh kosong.");
