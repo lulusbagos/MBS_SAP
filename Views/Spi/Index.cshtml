@@ -1303,6 +1303,16 @@
             return;
         }
 
+        var cleanName = benchmarkName.trim().toUpperCase();
+        var exists = (globalBenchmarksList || []).some(function(b) {
+            var bName = typeof b === 'string' ? b : (b.namaBenchmark || '');
+            return bName.trim().toUpperCase() === cleanName;
+        });
+        if (exists) {
+            errorDiv.html('<i class="bi bi-exclamation-triangle-fill me-1"></i>Benchmark <b>"' + cleanName + '"</b> sudah terdaftar di area ini!').show();
+            return;
+        }
+
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
         errorDiv.hide();
 
@@ -1310,11 +1320,11 @@
             url: '/Api/AddBenchmark',
             type: 'POST',
             dataType: 'json',
-            data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
+            data: { areaUtama: areaUtama, namaBenchmark: cleanName },
             success: function(response) {
                 $('#addBenchmarkModal').modal('hide');
                 $('#newBenchmarkName').val('');
-                var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
+                var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : cleanName;
                 loadBenchmarks(areaUtama, benchmarkToSelect);
                 btn.prop('disabled', false).text('Simpan Benchmark');
             },
@@ -1337,6 +1347,30 @@
             $('#newBenchmarkArea').val(area);
             $('#newBenchmarkName').val('');
             $('#addBenchmarkError').hide();
+            $('#btnSaveBenchmark').prop('disabled', false).text('Simpan Benchmark');
+
+            // Realtime duplicate check on typing
+            $('#newBenchmarkName').off('input keyup').on('input keyup', function () {
+                var val = $(this).val().trim().toUpperCase();
+                var err = $('#addBenchmarkError');
+                var btn = $('#btnSaveBenchmark');
+                if (!val) {
+                    err.hide();
+                    btn.prop('disabled', false);
+                    return;
+                }
+                var exists = (globalBenchmarksList || []).some(function(b) {
+                    var bName = typeof b === 'string' ? b : (b.namaBenchmark || '');
+                    return bName.trim().toUpperCase() === val;
+                });
+                if (exists) {
+                    err.html('<i class="bi bi-exclamation-triangle-fill me-1"></i>Benchmark <b>"' + val + '"</b> sudah terdaftar di area ini.').show();
+                    btn.prop('disabled', true);
+                } else {
+                    err.hide();
+                    btn.prop('disabled', false);
+                }
+            });
 
             var list = $('#existingBenchmarksList');
             list.empty();

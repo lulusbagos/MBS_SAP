@@ -943,44 +943,54 @@ ORDER BY nama_perusahaan";
         }
 
         [HttpGet]
+        [HttpGet("/master/benchmarks")]
+        [HttpGet("/api/master/benchmarks")]
         public async Task<IActionResult> GetBenchmarks(string areaUtama)
         {
-            var compIdClaim = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(compIdClaim, out int cid) && cid > 0 && !string.IsNullOrWhiteSpace(areaUtama))
+            if (string.IsNullOrWhiteSpace(areaUtama))
             {
-                var benchmarks = await _context.Benchmarks
-                    .AsNoTracking()
-                    .Where(b => (b.PerusahaanId == cid || b.PerusahaanId == 1) && b.AreaUtama == areaUtama)
-                    .OrderBy(b => b.NamaBenchmark)
-                    .Select(b => new { id = b.Id, namaBenchmark = b.NamaBenchmark })
-                    .ToListAsync();
-                return Json(benchmarks);
+                return Json(new object[] { });
             }
-            return Json(new object[] { });
+
+            areaUtama = areaUtama.Trim();
+
+            var rawBenchmarks = await _context.Benchmarks
+                .AsNoTracking()
+                .Where(b => b.AreaUtama == areaUtama && !string.IsNullOrWhiteSpace(b.NamaBenchmark))
+                .Select(b => new { id = b.Id, namaBenchmark = b.NamaBenchmark!.Trim() })
+                .ToListAsync();
+
+            // Deduplikasi case-insensitive agar tidak ada benchmark yang muncul ganda di dropdown
+            var distinctBenchmarks = rawBenchmarks
+                .GroupBy(b => b.namaBenchmark, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .OrderBy(b => b.namaBenchmark)
+                .Select(b => new { id = b.id, namaBenchmark = b.namaBenchmark.ToUpper() })
+                .ToList();
+
+            return Json(distinctBenchmarks);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddBenchmark(string areaUtama, string namaBenchmark)
+        [HttpPost("/master/benchmarks")]
+        [HttpPost("/api/master/benchmarks")]
+        public async Task<IActionResult> AddBenchmark(string? areaUtama, string? namaBenchmark)
         {
             if (string.IsNullOrWhiteSpace(areaUtama)) return BadRequest("Area utama tidak boleh kosong.");
             if (string.IsNullOrWhiteSpace(namaBenchmark)) return BadRequest("Nama benchmark tidak boleh kosong.");
             
+            areaUtama = areaUtama.Trim();
             namaBenchmark = namaBenchmark.Trim().ToUpper();
 
-            var compIdClaim = User.FindFirst("CompanyId")?.Value;
-            if (!int.TryParse(compIdClaim, out int cid) || cid <= 0)
-            {
-                return Unauthorized("Anda tidak memiliki akses perusahaan.");
-            }
+            // 1. Validasi pencegahan duplikasi ketat di level aplikasi (case-insensitive & trimmed)
+            var exists = await _context.Benchmarks
+                .AnyAsync(b => b.AreaUtama == areaUtama && 
+                               b.NamaBenchmark != null && 
+                               b.NamaBenchmark.Trim().ToUpper() == namaBenchmark);
 
-            var existingBenchmarks = await _context.Benchmarks
-                .Where(b => b.PerusahaanId == cid && b.AreaUtama == areaUtama)
-                .Select(b => b.NamaBenchmark)
-                .ToListAsync();
-
-            if (existingBenchmarks.Any(b => b == namaBenchmark))
+            if (exists)
             {
-                return BadRequest($"Benchmark '{namaBenchmark}' sudah ada di area ini.");
+                return BadRequest($"Benchmark '{namaBenchmark}' sudah terdaftar di area '{areaUtama}'.");
             }
 
             var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0000";
@@ -990,14 +1000,22 @@ ORDER BY nama_perusahaan";
             {
                 AreaUtama = areaUtama,
                 NamaBenchmark = namaBenchmark,
-                PerusahaanId = cid,
+                PerusahaanId = 1, // Didaftarkan sebagai master site agar langsung bisa dipakai semua karyawan & kontraktor
                 CreatedByNik = userNik,
                 CreatedByName = userName,
                 CreatedAt = System.DateTime.Now
             };
 
-            _context.Benchmarks.Add(newBenchmark);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Benchmarks.Add(newBenchmark);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Jika terjadi race-condition yang tertangkap oleh UNIQUE INDEX di database
+                return BadRequest($"Benchmark '{namaBenchmark}' sudah terdaftar di area '{areaUtama}'.");
+            }
 
             return Ok(new { message = "Benchmark berhasil ditambahkan.", data = new { id = newBenchmark.Id, namaBenchmark = newBenchmark.NamaBenchmark } });
         }
