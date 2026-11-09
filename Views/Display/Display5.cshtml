@@ -1148,6 +1148,11 @@
                     <i class="bi bi-volume-up-fill" id="soundIcon"></i>
                     <span id="soundText">Suara: ON</span>
                 </button>
+                <!-- Badge Indikator Jeda Suara Alarm Pergerakan Lereng -->
+                <div class="hdr-ctrl-btn" id="soundCooldownBadge" onclick="testSlopeMovementSound()" title="Klik untuk menguji nada suara alarm pergerakan lereng &bull; Jeda otomatis 20 Menit antar-alarm" style="width: auto; padding: 0 10px; font-size: 11px; gap: 5px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.35); cursor: pointer;">
+                    <i class="bi bi-clock-history" id="soundCooldownIcon"></i>
+                    <span id="soundCooldownText">Jeda: Siaga</span>
+                </div>
                 <button type="button" class="hdr-ctrl-btn" onclick="toggleFullScreen()" title="Fullscreen Mode">
                     <i class="bi bi-arrows-fullscreen"></i>
                 </button>
@@ -1559,16 +1564,58 @@
     updateClock();
 
     /* ──────────────────────────────────────────────────────────────────────────
-       2. WEB AUDIO ALERT SYSTEM
+       2. WEB AUDIO ALERT SYSTEM DENGAN THROTTLING JEDA (COOLDOWN 20 MENIT)
        ────────────────────────────────────────────────────────────────────────── */
     let soundEnabled = true;
     let audioCtx = null;
     let lastScanSoundTime = 0;
-    let lastCriticalAlertSoundTime = 0;
     let previousOverallStatus = null;
     let isRotaryTriggeredGlobal = false;
-    let isRotarySirenPlaying = false;
-    let rotarySirenInterval = null;
+    let isMovementSirenActive = false;
+
+    // KONTROL JEDA INTERVAL SUARA PERGERAKAN (>200 mm)
+    // Cooldown 20 menit agar tidak berisik berulang setiap 1 menit
+    const MOVEMENT_ALERT_COOLDOWN_MS = 20 * 60 * 1000; // 20 Menit jeda antar-suara
+    const MOVEMENT_SOUND_STORAGE_KEY = 'MBS_DISP5_MOVEMENT_SOUND_LAST_TS';
+
+    function getSlopeMovementCooldownRemainingMs() {
+        const lastPlayed = parseInt(localStorage.getItem(MOVEMENT_SOUND_STORAGE_KEY) || '0', 10);
+        const elapsed = Date.now() - lastPlayed;
+        return Math.max(0, MOVEMENT_ALERT_COOLDOWN_MS - elapsed);
+    }
+
+    function updateSoundCooldownBadge() {
+        const badgeText = document.getElementById('soundCooldownText');
+        const badgeIcon = document.getElementById('soundCooldownIcon');
+        const badgeEl = document.getElementById('soundCooldownBadge');
+        if (!badgeText) return;
+
+        if (!soundEnabled) {
+            badgeText.innerText = 'Suara: Hening';
+            if (badgeEl) badgeEl.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+            if (badgeEl) badgeEl.style.color = '#94a3b8';
+            return;
+        }
+
+        const remainingMs = getSlopeMovementCooldownRemainingMs();
+        if (remainingMs > 0) {
+            const remainingMins = Math.ceil(remainingMs / 60000);
+            badgeText.innerText = `Jeda: ${remainingMins}m`;
+            if (badgeEl) {
+                badgeEl.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                badgeEl.style.color = '#f59e0b';
+            }
+            if (badgeIcon) badgeIcon.className = 'bi bi-hourglass-split';
+        } else {
+            badgeText.innerText = isRotaryTriggeredGlobal ? 'Alarm: Siap' : 'Jeda: Standby';
+            if (badgeEl) {
+                badgeEl.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+                badgeEl.style.color = '#38bdf8';
+            }
+            if (badgeIcon) badgeIcon.className = 'bi bi-check2-circle';
+        }
+    }
+    setInterval(updateSoundCooldownBadge, 5000);
 
     function toggleSoundAlert() {
         soundEnabled = !soundEnabled;
@@ -1581,14 +1628,12 @@
             if (icon) icon.className = 'bi bi-volume-up-fill';
             if (text) text.innerText = 'Suara: ON';
             playTone(880, 0.1, 'sine');
-            if (isRotaryTriggeredGlobal) {
-                startRotaryEmergencySiren();
-            }
+            updateSoundCooldownBadge();
         } else {
             if (btn) btn.className = 'hdr-ctrl-btn';
             if (icon) icon.className = 'bi bi-volume-mute-fill';
             if (text) text.innerText = 'Suara: OFF';
-            stopRotaryEmergencySiren();
+            updateSoundCooldownBadge();
         }
     }
 
@@ -1602,59 +1647,79 @@
             if (statusText) statusText.innerText = 'ROTARY ALARM AKTIF!';
             document.body.classList.add('alarm-rotary-triggered');
 
-            if (soundEnabled && !isRotarySirenPlaying) {
-                startRotaryEmergencySiren();
-            }
+            // Cek apakah suara diaktifkan & cooldown jeda 20 menit sudah selesai
+            checkAndTriggerMovementAlarmSound();
         } else {
             if (beaconBox) beaconBox.classList.remove('active');
             if (statusText) statusText.innerText = 'ROTARY STANDBY';
             document.body.classList.remove('alarm-rotary-triggered');
-            stopRotaryEmergencySiren();
+        }
+        updateSoundCooldownBadge();
+    }
+
+    function checkAndTriggerMovementAlarmSound(forcePlay = false) {
+        if (!soundEnabled) return;
+        const remainingMs = getSlopeMovementCooldownRemainingMs();
+
+        // Hanya berbunyi jika jeda 20 menit sudah lewat ATAU dipaksa (forcePlay)
+        if (remainingMs <= 0 || forcePlay) {
+            localStorage.setItem(MOVEMENT_SOUND_STORAGE_KEY, Date.now().toString());
+            playSlopeMovementAlertBurst();
+            updateSoundCooldownBadge();
         }
     }
 
-    function startRotaryEmergencySiren() {
-        isRotarySirenPlaying = true;
-        playRotaryTone();
-        if (!rotarySirenInterval) {
-            rotarySirenInterval = setInterval(() => {
-                if (isRotarySirenPlaying && soundEnabled) {
-                    playRotaryTone();
-                }
-            }, 1800);
-        }
-    }
+    // Memainkan burst peringatan sirene lereng wail 3 siklus (~2.8 detik) lalu berhenti otomatis
+    function playSlopeMovementAlertBurst() {
+        if (!soundEnabled || isMovementSirenActive) return;
+        isMovementSirenActive = true;
 
-    function stopRotaryEmergencySiren() {
-        isRotarySirenPlaying = false;
-        if (rotarySirenInterval) {
-            clearInterval(rotarySirenInterval);
-            rotarySirenInterval = null;
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const startTime = audioCtx.currentTime;
+            const totalCycles = 3; // 3 siklus peringatan wail lalu otomatis diam
+
+            for (let i = 0; i < totalCycles; i++) {
+                const cStart = startTime + (i * 0.95);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sawtooth';
+                // Frekuensi wail sirene lereng: 580Hz -> 1050Hz -> 580Hz
+                osc.frequency.setValueAtTime(580, cStart);
+                osc.frequency.exponentialRampToValueAtTime(1050, cStart + 0.42);
+                osc.frequency.exponentialRampToValueAtTime(580, cStart + 0.84);
+
+                // Gain yang terkontrol lembut agar tidak mengagetkan
+                gain.gain.setValueAtTime(0.04, cStart);
+                gain.gain.exponentialRampToValueAtTime(0.001, cStart + 0.85);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(cStart);
+                osc.stop(cStart + 0.86);
+            }
+
+            setTimeout(() => {
+                isMovementSirenActive = false;
+            }, (totalCycles * 0.95 * 1000) + 100);
+        } catch(e) {
+            isMovementSirenActive = false;
         }
     }
 
     function playRotaryTone() {
         if (!soundEnabled) return;
-        try {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const now = audioCtx.currentTime;
+        checkAndTriggerMovementAlarmSound(true);
+    }
 
-            // Sirene wail naik-turun khas lampu rotary darurat (600Hz -> 1150Hz -> 600Hz)
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(600, now);
-            osc.frequency.exponentialRampToValueAtTime(1150, now + 0.45);
-            osc.frequency.exponentialRampToValueAtTime(600, now + 0.9);
-            gain.gain.setValueAtTime(0.045, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
-
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(now);
-            osc.stop(now + 0.95);
-        } catch(e) {}
+    function testSlopeMovementSound() {
+        if (!soundEnabled) {
+            toggleSoundAlert();
+        }
+        playSlopeMovementAlertBurst();
     }
 
     function playTone(freq, duration, type = 'sine') {
@@ -2048,13 +2113,7 @@
                 subStatus.innerText = isRotaryActive ? `PERGESERAN > 200 mm! ALARM ROTARY AKTIF` : `${summary.criticalCount} Titik Sensor Melebihi Ambang Batas!`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-octagon-fill"></i>';
                 
-                // 🔔 Suara alarm HANYA berbunyi saat status baru pertama kali menjadi KRITIS atau jeda 10 menit
-                const nowTime = Date.now();
-                const isNewCritical = (previousOverallStatus !== 'CRITICAL');
-                if (isNewCritical || (nowTime - lastCriticalAlertSoundTime >= 600000)) {
-                    playTone(520, 0.2, 'sine'); // Nada lembut sine 520Hz, tidak bising
-                    lastCriticalAlertSoundTime = nowTime;
-                }
+                // 🔔 Peringatan suara pergerakan lereng ditangani terpusat di updateRotaryAlarm() dengan jeda cooldown 20 menit
             } else if (st === 'WARNING') {
                 subStatus.innerText = `${summary.warningCount} Titik Sensor Mendekati Batas`;
                 iconStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
