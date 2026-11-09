@@ -1234,6 +1234,7 @@
                         <div class="pit-map-toolbar">
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="map-badge-tag"><i class="bi bi-compass-fill me-1 text-info"></i> CENTRAL ORTHO GRID</span>
+                                <button type="button" class="area-pill active" id="btnToggleOrtho" onclick="toggleOrthoLayer()" title="Aktif/Nonaktifkan Tampilan Foto Udara Drone"><i class="bi bi-camera-fill text-info me-1"></i>Foto Udara (ON)</button>
                                 <div class="area-filter-pills" id="mapAreaFilters">
                                     <button type="button" class="area-pill active" onclick="filterMapArea('ALL')">Semua (25)</button>
                                     <button type="button" class="area-pill" onclick="filterMapArea('T6')">T6</button>
@@ -2122,13 +2123,50 @@
     // ──────────────────────────────────────────────────────────────────────────
     let activeLeftView = 'cards';
     let mapFilterArea = 'ALL';
-    let mapZoom = 1.0;
-    let mapPanX = 0;
-    let mapPanY = 0;
+    let mapZoom = 1.35;
+    let mapPanX = 140;
+    let mapPanY = 40;
     let isMapDragging = false;
     let mapDragStartX = 0;
     let mapDragStartY = 0;
     let mapHoveredPin = null;
+
+    // Ortofoto Udara Asli Tambang (Dari file ECW / GeoTIFF HD Pit Central)
+    const ORTHO_BOUNDS = {
+        minE: 568543.0,
+        maxE: 577749.0,
+        minN: 108343.0,
+        maxN: 121755.4
+    };
+
+    let orthoImg = new Image();
+    let orthoImgLoaded = false;
+    let showOrthoLayer = true;
+
+    function initOrthoImage() {
+        const baseUrl = (window.baseUrl || '/').replace(/\/$/, '') + '/';
+        orthoImg.src = baseUrl + 'images/pit_ortho_central.jpg';
+        orthoImg.onload = () => {
+            orthoImgLoaded = true;
+            renderPitMap();
+        };
+        orthoImg.onerror = () => {
+            console.warn('Gagal memuat citra ortofoto /images/pit_ortho_central.jpg');
+        };
+    }
+    initOrthoImage();
+
+    function toggleOrthoLayer() {
+        showOrthoLayer = !showOrthoLayer;
+        const btn = document.getElementById('btnToggleOrtho');
+        if (btn) {
+            btn.classList.toggle('active', showOrthoLayer);
+            btn.innerHTML = showOrthoLayer 
+                ? '<i class="bi bi-camera-fill text-info me-1"></i>Foto Udara (ON)' 
+                : '<i class="bi bi-camera text-muted me-1"></i>Foto Udara (OFF)';
+        }
+        renderPitMap();
+    }
 
     // Koordinat Batas Wilayah Pit Spasial (Mine Grid Coordinates)
     const MINE_BOUNDS = {
@@ -2212,9 +2250,9 @@
     }
 
     function resetMap() {
-        mapZoom = 1.0;
-        mapPanX = 0;
-        mapPanY = 0;
+        mapZoom = 1.35;
+        mapPanX = 140;
+        mapPanY = 40;
         renderPitMap();
     }
 
@@ -2312,6 +2350,28 @@
         // 1. Gambar Background Radar Grid Pit
         ctx.fillStyle = '#060a17';
         ctx.fillRect(startX, startY, drawW, drawH);
+
+        // 1b. Render Ortofoto Udara Asli Tambang (GeoTIFF / ECW Pit Central)
+        if (showOrthoLayer && orthoImgLoaded) {
+            const imgX = startX + ((ORTHO_BOUNDS.minE - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            const imgY = startY + (1 - (ORTHO_BOUNDS.maxN - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+            const imgW = ((ORTHO_BOUNDS.maxE - ORTHO_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            const imgH = ((ORTHO_BOUNDS.maxN - ORTHO_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+
+            ctx.save();
+            ctx.globalAlpha = 0.94;
+            ctx.drawImage(orthoImg, imgX, imgY, imgW, imgH);
+            
+            // Border & label ortofoto
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(imgX, imgY, imgW, imgH);
+
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
+            ctx.font = 'bold 9px "JetBrains Mono", monospace';
+            ctx.fillText('CITRA ORTOFOTO UDARA PIT CENTRAL (EOM OKTOBER 2026)', imgX + 8, imgY + 16);
+            ctx.restore();
+        }
 
         // Grid lines (setiap 2,000 meter)
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
