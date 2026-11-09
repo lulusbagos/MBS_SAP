@@ -582,6 +582,145 @@
         text-transform: uppercase;
     }
 
+    /* ── View Switch Capsule (Kartu vs Peta Ortofoto) ── */
+    .view-switch-capsule {
+        display: flex;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 8px;
+        padding: 2px;
+        gap: 2px;
+    }
+    .view-tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .view-tab-btn:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.06);
+    }
+    .view-tab-btn.active {
+        background: linear-gradient(135deg, #0284c7, #0ea5e9);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+    }
+
+    /* ── Peta Ortofoto Spasial Canvas Container ── */
+    .pit-map-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        background: #020617;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    .pit-map-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        background: rgba(15, 23, 42, 0.85);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        gap: 8px;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+    }
+    .map-badge-tag {
+        font-size: 9.5px;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: rgba(168, 85, 247, 0.15);
+        color: #c084fc;
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        letter-spacing: 0.05em;
+    }
+    .area-filter-pills {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+    .area-pill {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--muted);
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .area-pill:hover, .area-pill.active {
+        background: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.4);
+    }
+    .map-ctrl-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--txt);
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .map-ctrl-btn:hover {
+        background: rgba(56, 189, 248, 0.25);
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.5);
+    }
+    .pit-canvas-wrapper {
+        position: relative;
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 220px;
+        overflow: hidden;
+        cursor: grab;
+    }
+    .pit-canvas-wrapper:active {
+        cursor: grabbing;
+    }
+    #pitMapCanvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    .map-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(11, 19, 41, 0.95);
+        border: 1px solid #38bdf8;
+        border-radius: 10px;
+        padding: 8px 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.3);
+        color: #f8fafc;
+        font-size: 11px;
+        z-index: 50;
+        display: none;
+        max-width: 260px;
+        line-height: 1.35;
+    }
+
     /* ── Device & Sensor Cards Grid ── */
     .devices-scroll-area {
         overflow-y: auto;
@@ -1062,20 +1201,62 @@
         <main class="workspace-grid">
             <!-- Left Column: Devices Grid (Top) + Trends Chart (Bottom) -->
             <div class="ws-col ws-col-left">
-                <!-- Top: Extensometer Device Cards Grid -->
-                <section class="panel-box">
+                <!-- Top: Extensometer Device Cards Grid OR Pit Ortho Map -->
+                <section class="panel-box" id="leftMainPanel">
                     <div class="panel-hdr">
-                        <div class="panel-title">
-                            <i class="bi bi-grid-3x3-gap-fill text-purple"></i> Status Sensor Extensometer Per Lokasi
+                        <div class="panel-title d-flex align-items-center gap-2">
+                            <i class="bi bi-grid-3x3-gap-fill text-purple" id="panelLeftIcon"></i>
+                            <span id="panelLeftTitle">Status Sensor Extensometer Per Lokasi</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
+                            <div class="view-switch-capsule">
+                                <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="switchLeftView('cards')" title="Tampilan Kartu Telemetri">
+                                    <i class="bi bi-grid-3x3-gap-fill"></i> Kartu
+                                </button>
+                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="switchLeftView('map')" title="Tampilan Peta Spasial 25 Titik ECW">
+                                    <i class="bi bi-map-fill"></i> Peta 25 Titik ECW
+                                </button>
+                            </div>
                             <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
                         </div>
                     </div>
+
+                    <!-- Mode A: Devices Scroll Area -->
                     <div class="devices-scroll-area" id="devicesContainer">
                         <!-- Rendered dynamically by JS -->
                         <div class="text-center p-4 text-muted w-100">
                             <div class="spinner-border spinner-border-sm text-purple me-2"></div> Memuat data telemetri DB_Xtens...
+                        </div>
+                    </div>
+
+                    <!-- Mode B: Pit Ortho Map 25 Titik ECW Container -->
+                    <div class="pit-map-container d-none" id="pitMapContainer">
+                        <div class="pit-map-toolbar">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="map-badge-tag"><i class="bi bi-compass-fill me-1 text-info"></i> CENTRAL ORTHO GRID</span>
+                                <div class="area-filter-pills" id="mapAreaFilters">
+                                    <button type="button" class="area-pill active" onclick="filterMapArea('ALL')">Semua (25)</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('T6')">T6</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('T4')">T4</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('T4_WD9')">WD9</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('GAM')">GAM</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('CENTRAL')">Central</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('JL Mawar')">Mawar</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('PE')">PE</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('HAULING')">Hauling</button>
+                                    <button type="button" class="area-pill" onclick="filterMapArea('KONTAINER')">Kontainer</button>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="text-muted font-monospace me-2" style="font-size: 10px;" id="mouseCoordsDisplay">E: --- | N: ---</span>
+                                <button type="button" class="map-ctrl-btn" onclick="zoomMap(1.2)" title="Perbesar Peta"><i class="bi bi-zoom-in"></i></button>
+                                <button type="button" class="map-ctrl-btn" onclick="zoomMap(0.8)" title="Perkecil Peta"><i class="bi bi-zoom-out"></i></button>
+                                <button type="button" class="map-ctrl-btn" onclick="resetMap()" title="Kembalikan Tampilan Peta"><i class="bi bi-arrows-angle-contract"></i></button>
+                            </div>
+                        </div>
+                        <div class="pit-canvas-wrapper" id="pitCanvasWrapper">
+                            <canvas id="pitMapCanvas"></canvas>
+                            <div class="map-tooltip" id="mapPinTooltip"></div>
                         </div>
                     </div>
                 </section>
@@ -1934,6 +2115,394 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 5. INTERACTIVE PIT ORTHO MAP ENGINE (25 TITIK EXTENSOMETER ECW)
+    // ──────────────────────────────────────────────────────────────────────────
+    let activeLeftView = 'cards';
+    let mapFilterArea = 'ALL';
+    let mapZoom = 1.0;
+    let mapPanX = 0;
+    let mapPanY = 0;
+    let isMapDragging = false;
+    let mapDragStartX = 0;
+    let mapDragStartY = 0;
+    let mapHoveredPin = null;
+
+    // Koordinat Batas Wilayah Pit Spasial (Mine Grid Coordinates)
+    const MINE_BOUNDS = {
+        minE: 569000,
+        maxE: 589000,
+        minN: 99000,
+        maxN: 124000
+    };
+
+    // Master 25 Titik Extensometer (Dari data ECW)
+    const ECW_PINS = [
+        { no: 1, uniqueId: "MU_T6_Extend", extensoId: "MU_IC01A", area: "T6", location: "T6_LW_South", n: 114845, e: 572945 },
+        { no: 2, uniqueId: "D1", extensoId: "S_D1", area: "KONTAINER", location: "KONTAINER", n: 109263, e: 574550 },
+        { no: 3, uniqueId: "D2_T6_LWs35", extensoId: "S_D2", area: "T6", location: "T6_LW_South", n: 114592, e: 572850 },
+        { no: 4, uniqueId: "D3_Sekatan", extensoId: "S_D3", area: "T6", location: "T6_LW_South", n: 115130, e: 573079 },
+        { no: 5, uniqueId: "MU_Mess GPE (GAM)", extensoId: "MU_IC02A", area: "GAM", location: "Mess GPE", n: 120205, e: 577446 },
+        { no: 6, uniqueId: "D1_Mess GPE", extensoId: "S_D1", area: "GAM", location: "Mess GPE", n: 120120, e: 577485 },
+        { no: 7, uniqueId: "D3_Mess GPE", extensoId: "S_D3", area: "GAM", location: "Mess GPE", n: 120178, e: 577340 },
+        { no: 8, uniqueId: "MU_KM17_Hauling", extensoId: "MU_IC03A", area: "HAULING", location: "KM_17_H", n: 100866, e: 586640 },
+        { no: 9, uniqueId: "D3_KM15_H", extensoId: "S_D3", area: "HAULING", location: "KM_15_H", n: 100783, e: 587630 },
+        { no: 10, uniqueId: "MU_IC01_T4 KPP", extensoId: "MU_IC01", area: "T4", location: "T4 HW", n: 115728, e: 571453 },
+        { no: 11, uniqueId: "D1_LW", extensoId: "S_D1", area: "T4", location: "T4LW", n: 115989, e: 570979 },
+        { no: 12, uniqueId: "D2_LW", extensoId: "S_D2", area: "T4", location: "T4 LW", n: 115584, e: 570934 },
+        { no: 13, uniqueId: "D3", extensoId: "S_D3", area: "KONTAINER", location: "KONTAINER", n: 109263, e: 574550 },
+        { no: 14, uniqueId: "MU_IC02_WD9", extensoId: "MU_IC02", area: "T4_WD9", location: "WD9", n: 112998, e: 570357 },
+        { no: 15, uniqueId: "D1_WD9", extensoId: "S_D1", area: "T4_WD9", location: "WD9", n: 113053, e: 570979 },
+        { no: 16, uniqueId: "D2_WD9", extensoId: "S_D2", area: "T4_WD9", location: "WD9", n: 112982, e: 571415 },
+        { no: 17, uniqueId: "D3", extensoId: "S_D3", area: "KONTAINER", location: "KONTAINER", n: 109263, e: 574550 },
+        { no: 18, uniqueId: "MU_IC03_Central", extensoId: "MU_IC03", area: "CENTRAL", location: "JL_CENTRAL", n: 121996, e: 575045 },
+        { no: 19, uniqueId: "D1", extensoId: "S_D1", area: "CENTRAL", location: "JL_CENTRAL", n: 121903, e: 575013 },
+        { no: 20, uniqueId: "D2", extensoId: "S_D2", area: "KONTAINER", location: "KONTAINER", n: 109263, e: 574550 },
+        { no: 21, uniqueId: "D3", extensoId: "S_D3", area: "KONTAINER", location: "KONTAINER", n: 109263, e: 574550 },
+        { no: 22, uniqueId: "MU_IC04_JL_Mawar", extensoId: "MU_IC04", area: "JL Mawar", location: "JL Mawar 5.5", n: 113969, e: 575062 },
+        { no: 23, uniqueId: "D1_jl_Mawar", extensoId: "S_D1", area: "JL Mawar", location: "JL Mawar 5.5", n: 113913, e: 575108 },
+        { no: 24, uniqueId: "D2_PE_HW", extensoId: "S_D2", area: "PE", location: "PE_HW", n: 113030, e: 574424 },
+        { no: 25, uniqueId: "D3_PE_HW", extensoId: "S_D3", area: "PE", location: "PE_HW", n: 112927, e: 574389 }
+    ];
+
+    function switchLeftView(mode) {
+        activeLeftView = mode;
+        const btnCards = document.getElementById('btnViewCards');
+        const btnMap = document.getElementById('btnViewMap');
+        const devContainer = document.getElementById('devicesContainer');
+        const mapContainer = document.getElementById('pitMapContainer');
+        const panelTitle = document.getElementById('panelLeftTitle');
+        const panelIcon = document.getElementById('panelLeftIcon');
+
+        if (mode === 'map') {
+            if (btnCards) btnCards.classList.remove('active');
+            if (btnMap) btnMap.classList.add('active');
+            if (devContainer) devContainer.classList.add('d-none');
+            if (mapContainer) mapContainer.classList.remove('d-none');
+            if (panelTitle) panelTitle.innerText = 'Peta Ortofoto Spasial Pit (25 Titik Extensometer ECW)';
+            if (panelIcon) panelIcon.className = 'bi bi-map-fill text-info';
+            initPitMapCanvas();
+            renderPitMap();
+        } else {
+            if (btnMap) btnMap.classList.remove('active');
+            if (btnCards) btnCards.classList.add('active');
+            if (mapContainer) mapContainer.classList.add('d-none');
+            if (devContainer) devContainer.classList.remove('d-none');
+            if (panelTitle) panelTitle.innerText = 'Status Sensor Extensometer Per Lokasi';
+            if (panelIcon) panelIcon.className = 'bi bi-grid-3x3-gap-fill text-purple';
+        }
+    }
+
+    function filterMapArea(area) {
+        mapFilterArea = area;
+        const container = document.getElementById('mapAreaFilters');
+        if (container) {
+            container.querySelectorAll('.area-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.includes(area) || (area === 'ALL' && btn.textContent.includes('Semua')));
+            });
+        }
+        renderPitMap();
+    }
+
+    function zoomMap(factor) {
+        mapZoom = Math.max(0.5, Math.min(4.0, mapZoom * factor));
+        renderPitMap();
+    }
+
+    function resetMap() {
+        mapZoom = 1.0;
+        mapPanX = 0;
+        mapPanY = 0;
+        renderPitMap();
+    }
+
+    let mapCanvasInited = false;
+    function initPitMapCanvas() {
+        if (mapCanvasInited) return;
+        const wrapper = document.getElementById('pitCanvasWrapper');
+        const canvas = document.getElementById('pitMapCanvas');
+        if (!wrapper || !canvas) return;
+
+        mapCanvasInited = true;
+
+        // Mouse drag pan
+        wrapper.addEventListener('mousedown', (e) => {
+            isMapDragging = true;
+            mapDragStartX = e.clientX - mapPanX;
+            mapDragStartY = e.clientY - mapPanY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMapDragging = false;
+        });
+
+        wrapper.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX - rect.left;
+            const clientY = e.clientY - rect.top;
+
+            if (isMapDragging) {
+                mapPanX = e.clientX - mapDragStartX;
+                mapPanY = e.clientY - mapDragStartY;
+                renderPitMap();
+                return;
+            }
+
+            // Hitung koordinat Mine Grid (E, N)
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const drawW = cw * mapZoom;
+            const drawH = ch * mapZoom;
+            const startX = (cw - drawW) / 2 + mapPanX;
+            const startY = (ch - drawH) / 2 + mapPanY;
+
+            const normX = (clientX - startX) / drawW;
+            const normY = (clientY - startY) / drawH;
+
+            const curE = MINE_BOUNDS.minE + normX * (MINE_BOUNDS.maxE - MINE_BOUNDS.minE);
+            const curN = MINE_BOUNDS.maxN - normY * (MINE_BOUNDS.maxN - MINE_BOUNDS.minN);
+
+            const disp = document.getElementById('mouseCoordsDisplay');
+            if (disp && normX >= 0 && normX <= 1 && normY >= 0 && normY <= 1) {
+                disp.innerText = `E: ${Math.round(curE).toLocaleString('id-ID')} | N: ${Math.round(curN).toLocaleString('id-ID')}`;
+            }
+
+            // Cek hover pin sensor
+            checkPinHover(clientX, clientY);
+        });
+
+        // Wheel zoom
+        wrapper.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.15 : 0.85;
+            zoomMap(factor);
+        }, { passive: false });
+
+        window.addEventListener('resize', () => {
+            if (activeLeftView === 'map') renderPitMap();
+        });
+    }
+
+    let renderedPinCoords = [];
+
+    function renderPitMap() {
+        const canvas = document.getElementById('pitMapCanvas');
+        const wrapper = document.getElementById('pitCanvasWrapper');
+        if (!canvas || !wrapper) return;
+
+        // Resize canvas to display size
+        const w = wrapper.clientWidth;
+        const h = wrapper.clientHeight;
+        if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+
+        // Transformasi zoom & pan
+        const drawW = w * mapZoom;
+        const drawH = h * mapZoom;
+        const startX = (w - drawW) / 2 + mapPanX;
+        const startY = (h - drawH) / 2 + mapPanY;
+
+        // 1. Gambar Background Radar Grid Pit
+        ctx.fillStyle = '#060a17';
+        ctx.fillRect(startX, startY, drawW, drawH);
+
+        // Grid lines (setiap 2,000 meter)
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.font = '9px "JetBrains Mono", monospace';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+
+        for (let e = 570000; e <= 588000; e += 2000) {
+            const gx = startX + ((e - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            ctx.beginPath();
+            ctx.moveTo(gx, startY);
+            ctx.lineTo(gx, startY + drawH);
+            ctx.stroke();
+            ctx.fillText(`${(e / 1000).toFixed(0)}k E`, gx + 3, startY + 12);
+        }
+
+        for (let n = 100000; n <= 122000; n += 2000) {
+            const gy = startY + (1 - (n - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+            ctx.beginPath();
+            ctx.moveTo(startX, gy);
+            ctx.lineTo(startX + drawW, gy);
+            ctx.stroke();
+            ctx.fillText(`${(n / 1000).toFixed(0)}k N`, startX + 4, gy - 3);
+        }
+
+        // 2. Gambar Zona Sektor Tambang (Sektor Pit & Hauling)
+        const SECTORS = [
+            { name: "SEKTOR CENTRAL", e: 575000, n: 121900, r: 42, color: "rgba(168, 85, 247, 0.15)", border: "#c084fc" },
+            { name: "SEKTOR GAM / GPE", e: 577400, n: 120150, r: 38, color: "rgba(56, 189, 248, 0.12)", border: "#38bdf8" },
+            { name: "SEKTOR T4 KPP", e: 571200, n: 115700, r: 45, color: "rgba(16, 185, 129, 0.12)", border: "#34d399" },
+            { name: "SEKTOR T6 SOUTH", e: 573000, n: 114800, r: 40, color: "rgba(245, 158, 11, 0.12)", border: "#fbbf24" },
+            { name: "DISPOSAL WD9", e: 570900, n: 113000, r: 36, color: "rgba(239, 68, 68, 0.12)", border: "#f87171" },
+            { name: "JL MAWAR 5.5", e: 575080, n: 113940, r: 30, color: "rgba(14, 165, 233, 0.12)", border: "#0ea5e9" },
+            { name: "SEKTOR PE_HW", e: 574400, n: 113000, r: 28, color: "rgba(217, 70, 239, 0.12)", border: "#d946ef" },
+            { name: "HAULING KM 15-17", e: 587100, n: 100800, r: 46, color: "rgba(234, 179, 8, 0.12)", border: "#eab308" },
+            { name: "BASE KONTAINER", e: 574550, n: 109263, r: 32, color: "rgba(148, 163, 184, 0.12)", border: "#94a3b8" }
+        ];
+
+        SECTORS.forEach(sec => {
+            const sx = startX + ((sec.e - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            const sy = startY + (1 - (sec.n - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+            const sr = sec.r * mapZoom;
+
+            ctx.beginPath();
+            ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+            ctx.fillStyle = sec.color;
+            ctx.fill();
+            ctx.strokeStyle = sec.border;
+            ctx.setLineDash([4, 4]);
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Label sektor
+            ctx.font = 'bold 9.5px "Outfit", sans-serif';
+            ctx.fillStyle = sec.border;
+            ctx.textAlign = 'center';
+            ctx.fillText(sec.name, sx, sy - sr - 4);
+        });
+
+        // 3. Render 25 Pin Sensor Extensometer ECW
+        renderedPinCoords = [];
+
+        // Gabungkan dengan telemetri live
+        const allSensors = [];
+        (window.latestDevicesData || []).forEach(d => {
+            (d.sensors || []).forEach(s => allSensors.push(s));
+        });
+
+        ECW_PINS.forEach(p => {
+            if (mapFilterArea !== 'ALL' && !p.area.toLowerCase().includes(mapFilterArea.toLowerCase())) {
+                return;
+            }
+
+            const px = startX + ((p.e - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            const py = startY + (1 - (p.n - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+
+            // Cari telemetri sensor
+            const uid = p.uniqueId.toLowerCase();
+            const extId = p.extensoId.toLowerCase();
+            const liveSensor = allSensors.find(s => 
+                (s.uniqueId && s.uniqueId.toLowerCase() === uid) ||
+                (s.sensorName && s.sensorName.toLowerCase().includes(uid)) ||
+                (s.sensorCode && s.sensorCode.toLowerCase() === extId)
+            );
+
+            const dispVal = liveSensor ? Math.max(Math.abs(liveSensor.latestValue || 0), Math.abs(liveSensor.accumulativeDisplacement || 0)) : 0;
+            const isCritical = dispVal > 200 || (liveSensor && liveSensor.alertStatus === 'CRITICAL');
+            const isWarning = !isCritical && (liveSensor && liveSensor.alertStatus === 'WARNING');
+
+            renderedPinCoords.push({
+                x: px,
+                y: py,
+                pin: p,
+                sensor: liveSensor,
+                dispVal,
+                isCritical,
+                isWarning
+            });
+
+            // Efek gelombang radar pulsa
+            const pulseR = isCritical ? 18 : 10;
+            ctx.beginPath();
+            ctx.arc(px, py, pulseR, 0, Math.PI * 2);
+            ctx.fillStyle = isCritical ? 'rgba(239, 68, 68, 0.25)' : (isWarning ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.15)');
+            ctx.fill();
+
+            // Lingkaran pin luar
+            ctx.beginPath();
+            ctx.arc(px, py, 6, 0, Math.PI * 2);
+            ctx.fillStyle = isCritical ? '#ef4444' : (isWarning ? '#fbbf24' : '#10b981');
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Titik tengah
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            // Label Kapsul Sensor
+            const labelText = `${p.uniqueId} (${dispVal.toFixed(0)}mm)`;
+            ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+            const textWidth = ctx.measureText(labelText).width;
+            const padX = 5;
+            const pillH = 15;
+            const pillY = py - 20;
+            const pillX = px - (textWidth / 2) - padX;
+
+            ctx.fillStyle = isCritical ? 'rgba(239, 68, 68, 0.85)' : 'rgba(15, 23, 42, 0.85)';
+            ctx.strokeStyle = isCritical ? '#ff6666' : (isWarning ? '#fbbf24' : 'rgba(56, 189, 248, 0.4)');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, textWidth + padX * 2, pillH, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(labelText, px, pillY + 11);
+        });
+    }
+
+    function checkPinHover(mouseX, mouseY) {
+        const tooltip = document.getElementById('mapPinTooltip');
+        const wrapper = document.getElementById('pitCanvasWrapper');
+        if (!tooltip || !wrapper) return;
+
+        let found = null;
+        for (const item of renderedPinCoords) {
+            const dist = Math.hypot(item.x - mouseX, item.y - mouseY);
+            if (dist <= 14) {
+                found = item;
+                break;
+            }
+        }
+
+        if (found) {
+            wrapper.style.cursor = 'pointer';
+            const p = found.pin;
+            const s = found.sensor;
+            const statusBadge = found.isCritical 
+                ? '<span class="badge bg-danger text-white">KRITIS &gt; 200 mm</span>' 
+                : (found.isWarning ? '<span class="badge bg-warning text-dark">Waspada</span>' : '<span class="badge bg-success text-white">Normal</span>');
+
+            tooltip.innerHTML = `
+                <div class="fw-bold text-info mb-1" style="font-size: 12px;">
+                    <i class="bi bi-geo-alt-fill text-purple me-1"></i>${escapeHtml(p.uniqueId)} (${escapeHtml(p.extensoId)})
+                </div>
+                <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">
+                    Area: <strong class="text-white">${escapeHtml(p.area)}</strong> &bull; Lokasi: ${escapeHtml(p.location)}
+                </div>
+                <div class="font-monospace text-warning small mb-1" style="font-size: 10.5px;">
+                    N: ${p.n.toLocaleString('id-ID')} &bull; E: ${p.e.toLocaleString('id-ID')}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top border-secondary">
+                    <span>Pergeseran: <strong class="${found.isCritical ? 'text-danger' : 'text-success'}">${found.dispVal.toFixed(1)} mm</strong></span>
+                    ${statusBadge}
+                </div>
+                ${s ? `<div class="text-muted small mt-1" style="font-size: 9.5px;">Kecepatan: ${s.velocityPerHour.toFixed(2)} mm/jam &bull; Tren: ${s.movementTrend}</div>` : ''}
+            `;
+
+            tooltip.style.left = `${Math.min(wrapper.clientWidth - 270, Math.max(10, found.x + 12))}px`;
+            tooltip.style.top = `${Math.min(wrapper.clientHeight - 130, Math.max(10, found.y - 40))}px`;
+            tooltip.style.display = 'block';
+        } else {
+            wrapper.style.cursor = isMapDragging ? 'grabbing' : 'grab';
+            tooltip.style.display = 'none';
+        }
     }
 
     function openCoordModal() {
