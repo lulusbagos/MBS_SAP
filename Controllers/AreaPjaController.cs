@@ -52,6 +52,29 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetSummaryStats()
+        {
+            if (!CheckIsAdmin())
+            {
+                return Forbid();
+            }
+
+            var totalArea = await _context.MasterAreas.CountAsync();
+            var areaKhususCount = await _context.MasterAreas.CountAsync(a => !a.IsAllKaryawan);
+            var areaAllCount = await _context.MasterAreas.CountAsync(a => a.IsAllKaryawan);
+            var totalPjaAssigned = await _context.AreaPjaRelations.CountAsync();
+
+            return Ok(new
+            {
+                success = true,
+                totalArea,
+                areaKhususCount,
+                areaAllCount,
+                totalPjaAssigned
+            });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetAreasData([FromQuery] string? search, [FromQuery] string? filterType, [FromQuery] int page = 1, [FromQuery] int pageSize = 15)
         {
             if (!CheckIsAdmin())
