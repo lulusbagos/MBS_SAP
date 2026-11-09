@@ -1126,62 +1126,37 @@
 
         function searchPja() {
             const query = $('#pjaSearchInput').val().trim();
+            const currentArea = $('#area').val() || '';
+            if (query.length < 1 && !currentArea) return;
+
             const resultsContainer = $('#pjaSearchResults');
             resultsContainer.html('<div class="p-3 text-center text-muted" style="font-size: 12px;"><span class="spinner-border spinner-border-sm me-2"></span>Mencari PJA...</div>').show();
 
             const lintas = $('#lintasPerusahaanToggle').is(':checked');
 
-            const pjaReq = $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas });
-            const empReq = query.length >= 1 ? $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas }) : $.Deferred().resolve([[]]);
-
-            $.when(pjaReq, empReq).done(function(pjaRefResp, employeeResp) {
-                const pjaRefs = pjaRefResp[0] || [];
-                const employees = (employeeResp && employeeResp[0]) ? employeeResp[0] : [];
-                const lowerQuery = query.toLowerCase();
-
-                const filteredPjaRefs = query.length === 0
-                    ? pjaRefs
-                    : pjaRefs.filter(function(x) {
-                        return (x.nama || '').toLowerCase().includes(lowerQuery)
-                            || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
-                            || (x.nik || '').toLowerCase().includes(lowerQuery)
-                            || (x.jabatan || '').toLowerCase().includes(lowerQuery);
-                    });
-
-                const merged = [];
-                const seen = new Set();
-
-                filteredPjaRefs.forEach(function(item) {
-                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        merged.push(item);
-                    }
-                });
-
-                employees.forEach(function(item) {
-                    const key = (item.nik || item.Nik || '') + '|' + (item.perusahaan || item.Perusahaan || '');
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        merged.push({
-                            nik: item.nik || item.Nik || '',
-                            nama: item.nama || item.Nama || '',
-                            departemen: item.departemen || item.Departemen || 'GENERAL',
-                            jabatan: item.jabatan || item.Jabatan || '-',
-                            perusahaan: item.perusahaan || item.Perusahaan || '-',
-                            companyId: item.companyId || item.IdPerusahaan,
-                            companyOnly: false,
-                            source: 'employee'
-                        });
-                    }
-                });
-
+            $.get('/Api/SearchPja', {
+                term: query,
+                area: currentArea,
+                lintasPerusahaan: lintas
+            }).done(function(merged) {
                 resultsContainer.empty();
-                if (merged.length === 0) {
+                if (!merged || merged.length === 0) {
                     resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Pastikan kata kunci benar atau aktifkan "Lintas Perusahaan".</div>');
                 } else {
-                    const companies = merged.filter(x => !!x.companyOnly);
-                    const employeesList = merged.filter(x => !x.companyOnly);
+                    const areaPjas = merged.filter(x => !!x.isAssignedArea);
+                    const companies = merged.filter(x => !x.isAssignedArea && !!x.companyOnly);
+                    const employeesList = merged.filter(x => !x.isAssignedArea && !x.companyOnly);
+
+                    if (areaPjas.length > 0) {
+                        resultsContainer.append(`
+                            <div class="dropdown-header fw-bold px-3 py-2 bg-dark-card border-bottom" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.95; cursor: default; color: #14b8a6;">
+                                <i class="bi bi-shield-check me-1"></i> PJA RESMI AREA INI (${escapeHtml(currentArea)})
+                            </div>
+                        `);
+                        areaPjas.forEach(function(k) {
+                            appendItem(k);
+                        });
+                    }
 
                     if (companies.length > 0) {
                         resultsContainer.append(`
@@ -1209,14 +1184,19 @@
                         const init = (k.nama || '-').charAt(0).toUpperCase();
                         const safeCompanyOnly = !!k.companyOnly;
 
-                        const badge = safeCompanyOnly
-                            ? '<span class="badge bg-warning text-dark" style="font-size:10px;">COMPANY ONLY</span>'
-                            : '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
+                        let badge = '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
+                        if (k.isAssignedArea) {
+                            badge = k.isPicUtama 
+                                ? '<span class="badge bg-warning text-dark" style="font-size:10px;"><i class="bi bi-star-fill me-0.5"></i>PIC UTAMA AREA</span>'
+                                : '<span class="badge" style="background:#14b8a6; color:white; font-size:10px;"><i class="bi bi-shield-check me-0.5"></i>PJA AREA</span>';
+                        } else if (safeCompanyOnly) {
+                            badge = '<span class="badge bg-warning text-dark" style="font-size:10px;">COMPANY ONLY</span>';
+                        }
 
                         const item = $(`
                             <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color); white-space: normal;">
                                 <div class="d-flex align-items-center gap-3">
-                                    <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
+                                    <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: ${k.isAssignedArea ? 'rgba(20, 184, 166, 0.2)' : 'var(--bg-layout)'}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: ${k.isAssignedArea ? '#2dd4bf' : 'var(--color-primary)'};">
                                         ${escapeHtml(init)}
                                     </div>
                                     <div>
@@ -1237,66 +1217,7 @@
                 }
                 resultsContainer.show();
             }).fail(function() {
-                // Fallback to /Api/SearchPja if needed
-                $.get('/Api/SearchPja', { term: query, lintasPerusahaan: lintas }, function(data) {
-                    resultsContainer.empty();
-                    if (!data || data.length === 0) {
-                        resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Pastikan kata kunci benar atau aktifkan "Lintas Perusahaan".</div>');
-                    } else {
-                        const companies = data.filter(x => x.companyOnly);
-                        const employeesList = data.filter(x => !x.companyOnly);
-
-                        if (companies.length > 0) {
-                            resultsContainer.append(`
-                                <div class="dropdown-header text-primary fw-bold px-3 py-2 bg-dark-card border-bottom" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default;">
-                                    <i class="bi bi-buildings me-1"></i> PILIH BADAN PERUSAHAAN (PJO / DEPT HEAD MITRA)
-                                </div>
-                            `);
-                            companies.forEach(function(k) { appendFallbackItem(k); });
-                        }
-
-                        if (employeesList.length > 0) {
-                            resultsContainer.append(`
-                                <div class="dropdown-header text-success fw-bold px-3 py-2 bg-dark-card border-bottom border-top" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default; margin-top: 5px;">
-                                    <i class="bi bi-person-badge me-1"></i> PILIH KARYAWAN / PJO (INDIVIDU)
-                                </div>
-                            `);
-                            employeesList.forEach(function(k) { appendFallbackItem(k); });
-                        }
-                    }
-                    resultsContainer.show();
-                }).fail(function() {
-                    resultsContainer.html('<div class="p-3 text-center text-danger" style="font-size: 12px;">Gagal memuat daftar PJA. Silakan periksa koneksi.</div>').show();
-                });
-
-                function appendFallbackItem(k) {
-                    const init = (k.nama || '-').charAt(0).toUpperCase();
-                    const safeCompanyOnly = !!k.companyOnly;
-                    const badge = safeCompanyOnly
-                        ? '<span class="badge bg-warning text-dark" style="font-size:10px;">COMPANY ONLY</span>'
-                        : '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
-
-                    const item = $(`
-                        <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color); white-space: normal;">
-                            <div class="d-flex align-items-center gap-3">
-                                <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
-                                    ${escapeHtml(init)}
-                                </div>
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 flex-wrap" style="font-weight: 700; font-size: 13px; color: var(--text-main);">
-                                        <span>${escapeHtml(k.nama || '-')}</span>${badge}
-                                    </div>
-                                    <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${escapeHtml(k.nik || '-')} &bull; ${escapeHtml(k.jabatan || '-')}</div>
-                                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${escapeHtml(k.departemen || '-')} | ${escapeHtml(k.perusahaan || '-')}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                    item.on('click', function() {
-                        selectPja(k.nik || '', k.nama || '', k.jabatan || '', k.departemen || '', k.perusahaan || '', safeCompanyOnly);
-                    });
-                    resultsContainer.append(item);
-                }
+                resultsContainer.html('<div class="p-3 text-center text-danger" style="font-size: 12px;">Gagal memuat hasil pencarian PJA.</div>').show();
             });
         }
 
