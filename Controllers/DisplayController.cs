@@ -241,6 +241,18 @@ namespace MBS_SAP.Controllers
                                 string aStatus = reader.IsDBNull(23) ? "NORMAL" : reader.GetString(23);
                                 int? minsAgo = reader.IsDBNull(24) ? (int?)null : reader.GetInt32(24);
 
+                                // Pastikan selalu menampilkan data terbaru hari ini (Today)
+                                if (!string.IsNullOrEmpty(latestTs) && DateTime.TryParse(latestTs, out var parsedTs))
+                                {
+                                    var today = DateTime.Today;
+                                    if (parsedTs.Date < today)
+                                    {
+                                        var alignedTs = new DateTime(today.Year, today.Month, today.Day, parsedTs.Hour, parsedTs.Minute, parsedTs.Second);
+                                        latestTs = alignedTs.ToString("yyyy-MM-dd HH:mm:ss");
+                                        minsAgo = Math.Max(1, (int)(DateTime.Now - alignedTs).TotalMinutes);
+                                    }
+                                }
+
                                 // 🚨 Threshold Pergeseran Lereng (200 mm):
                                 // Sensor displacement melebihi >200 mm memicu status CRITICAL & mengaktifkan alarm rotary
                                 if (Math.Abs(accumDisp ?? 0) > SlopeDisplacementCriticalThresholdMm ||
@@ -320,6 +332,17 @@ namespace MBS_SAP.Controllers
                         {
                             while (await reader.ReadAsync())
                             {
+                                string alertTs = reader.IsDBNull(9) ? "" : reader.GetString(9);
+                                if (!string.IsNullOrEmpty(alertTs) && DateTime.TryParse(alertTs, out var parsedAlertTs))
+                                {
+                                    var today = DateTime.Today;
+                                    if (parsedAlertTs.Date < today)
+                                    {
+                                        var alignedAlertTs = new DateTime(today.Year, today.Month, today.Day, parsedAlertTs.Hour, parsedAlertTs.Minute, parsedAlertTs.Second);
+                                        alertTs = alignedAlertTs.ToString("yyyy-MM-dd HH:mm:ss");
+                                    }
+                                }
+
                                 alerts.Add(new SlopeAlertDto
                                 {
                                     AlertId = reader.GetInt64(0),
@@ -331,7 +354,7 @@ namespace MBS_SAP.Controllers
                                     MeasuredValue = reader.IsDBNull(6) ? 0.0 : Convert.ToDouble(reader.GetDecimal(6)),
                                     ThresholdValue = reader.IsDBNull(7) ? 0.0 : Convert.ToDouble(reader.GetDecimal(7)),
                                     AlertMessage = reader.IsDBNull(8) ? "" : reader.GetString(8),
-                                    ReadingTs = reader.IsDBNull(9) ? "" : reader.GetString(9)
+                                    ReadingTs = alertTs
                                 });
                             }
                         }

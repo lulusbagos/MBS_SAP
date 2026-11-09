@@ -2203,13 +2203,20 @@
             if (footerLastUpdateEl) footerLastUpdateEl.innerText = `${formattedDate} ${fullTimePart} WITA (${agoText})`;
         }
 
-        // Helper: Format waktu update terakhir per titik sensor geoteknik
+        // Helper: Format waktu update terakhir per titik sensor geoteknik (Memastikan data hari ini)
         function formatSensorUpdateTime(latestTs, minutesAgo) {
             if (!latestTs) return { full: '-', short: '-', timeOnly: '--:--', ago: 'Belum ada data' };
             const raw = String(latestTs).trim();
             const datePart = raw.substring(0, 10);
             const timePart = raw.substring(11, 16);
             const fullTime = raw.length >= 19 ? raw.substring(11, 19) : `${timePart}:00`;
+
+            // Tanggal hari ini
+            const now = new Date();
+            const todayYear = now.getFullYear();
+            const todayMonth = String(now.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
 
             let formattedDate = datePart;
             try {
@@ -2221,15 +2228,19 @@
                 }
             } catch(e) {}
 
+            const isToday = (datePart === todayStr);
+            const dayLabel = isToday ? 'Hari Ini' : formattedDate;
+
             const ago = (minutesAgo != null && minutesAgo <= 5)
                 ? 'Realtime'
                 : (minutesAgo != null ? `${minutesAgo}m lalu` : 'Sinkron');
 
             return {
-                full: `${formattedDate} ${fullTime} WITA`,
-                short: `${formattedDate} ${timePart}`,
+                full: `${dayLabel}, ${fullTime} WITA`,
+                short: `${dayLabel}, ${timePart}`,
                 timeOnly: `${timePart} WITA`,
-                ago: ago
+                ago: ago,
+                isToday: isToday
             };
         }
 
