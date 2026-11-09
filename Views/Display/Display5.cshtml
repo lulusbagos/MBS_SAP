@@ -1274,8 +1274,8 @@
                         <div class="d-flex flex-column align-items-end gap-1">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="view-switch-capsule">
-                                    <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="manualSwitchLeftView('cards')" title="Tampilan Kartu Telemetri">
-                                        <i class="bi bi-grid-3x3-gap-fill text-purple"></i> Kartu
+                                    <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="manualSwitchLeftView('cards')" title="Tampilan Kartu Telemetri dengan Auto-Scroll Otomatis">
+                                        <i class="bi bi-grid-3x3-gap-fill text-purple"></i> Kartu <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 8px; padding: 1px 4px; margin-left: 2px;"><i class="bi bi-arrow-down-up me-1"></i>Auto-Scroll</span>
                                     </button>
                                     <button type="button" class="view-tab-btn" id="btnViewMap" onclick="manualSwitchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
                                         <i class="bi bi-map-fill text-info"></i> Peta 2D
@@ -1284,7 +1284,7 @@
                                         <i class="bi bi-box-fill text-warning"></i> Model 3D
                                     </button>
                                     <button type="button" class="view-tab-btn" id="btnAutoCycle" onclick="toggleAutoCycleLeftView()" title="Status Putar Bergantian Otomatis: Kartu -> Peta 2D -> Model 3D" style="border-left: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8; background: rgba(56, 189, 248, 0.08);">
-                                        <i class="bi bi-arrow-repeat text-info me-1" id="iconAutoCycle"></i> <span id="textAutoCycle">Auto (12s)</span>
+                                        <i class="bi bi-arrow-repeat text-info me-1" id="iconAutoCycle"></i> <span id="textAutoCycle">Auto (16s)</span>
                                     </button>
                                 </div>
                                 <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
@@ -2327,7 +2327,9 @@
                 </div>`;
             });
 
+            const prevScroll = devContainer.scrollTop;
             devContainer.innerHTML = html;
+            if (prevScroll > 0) devContainer.scrollTop = prevScroll;
         }
 
         // 3. Render Alerts
@@ -2477,11 +2479,86 @@
 
     // ── Auto-Cycle Left Views (Cards -> Peta 2D -> Model 3D) ──
     const CYCLE_VIEWS = ['cards', 'map', '3d'];
-    const CYCLE_DURATION = 12; // 12 detik bergantian secara otomatis
+    const CYCLE_DURATION = 16; // 16 detik bergantian secara otomatis
     let autoCycleEnabled = true;
     let autoCycleRemaining = CYCLE_DURATION;
     let autoCycleTimer = null;
     let manualPauseRemaining = 0; // Jeda jika user klik tab secara manual
+
+    /* ── AUTO-SCROLL ENGINE STATUS SENSOR (DEVICES CONTAINER) ── */
+    let autoScrollRafId = null;
+    let isAutoScrollPaused = false;
+    let autoScrollDirection = 'down'; // 'down' atau 'up'
+    let autoScrollPauseUntil = 0;
+    const AUTO_SCROLL_SPEED = 0.65; // Kecepatan linear smooth per frame
+
+    function startDevicesAutoScroll() {
+        stopDevicesAutoScroll();
+        const container = document.getElementById('devicesContainer');
+        if (!container) return;
+
+        container.scrollTop = 0;
+        autoScrollDirection = 'down';
+        autoScrollPauseUntil = Date.now() + 1200; // Jeda 1.2 detik di posisi atas sebelum turun
+
+        function scrollStep() {
+            if (activeLeftView !== 'cards') {
+                stopDevicesAutoScroll();
+                return;
+            }
+
+            const now = Date.now();
+            if (!isAutoScrollPaused && now >= autoScrollPauseUntil) {
+                const maxScroll = container.scrollHeight - container.clientHeight;
+                if (maxScroll > 10) {
+                    if (autoScrollDirection === 'down') {
+                        container.scrollTop += AUTO_SCROLL_SPEED;
+                        if (container.scrollTop >= maxScroll - 2) {
+                            container.scrollTop = maxScroll;
+                            autoScrollDirection = 'up';
+                            autoScrollPauseUntil = now + 1800; // Jeda 1.8 detik saat di bawah
+                        }
+                    } else {
+                        container.scrollTop -= (AUTO_SCROLL_SPEED * 1.5); // Naik perlahan
+                        if (container.scrollTop <= 2) {
+                            container.scrollTop = 0;
+                            autoScrollDirection = 'down';
+                            autoScrollPauseUntil = now + 1800; // Jeda 1.8 detik saat di puncak
+                        }
+                    }
+                }
+            }
+
+            autoScrollRafId = requestAnimationFrame(scrollStep);
+        }
+
+        autoScrollRafId = requestAnimationFrame(scrollStep);
+    }
+
+    function stopDevicesAutoScroll() {
+        if (autoScrollRafId) {
+            cancelAnimationFrame(autoScrollRafId);
+            autoScrollRafId = null;
+        }
+    }
+
+    function initDevicesAutoScrollEvents() {
+        const container = document.getElementById('devicesContainer');
+        if (!container || container._autoScrollEventsInited) return;
+        container._autoScrollEventsInited = true;
+
+        container.addEventListener('mouseenter', () => { isAutoScrollPaused = true; });
+        container.addEventListener('mouseleave', () => { isAutoScrollPaused = false; });
+        container.addEventListener('touchstart', () => { isAutoScrollPaused = true; }, { passive: true });
+        container.addEventListener('touchend', () => {
+            setTimeout(() => { isAutoScrollPaused = false; }, 2000);
+        });
+        container.addEventListener('wheel', () => {
+            isAutoScrollPaused = true;
+            clearTimeout(container._wheelPauseTimeout);
+            container._wheelPauseTimeout = setTimeout(() => { isAutoScrollPaused = false; }, 2500);
+        }, { passive: true });
+    }
 
     function initAutoCycleLeftView() {
         if (autoCycleTimer) clearInterval(autoCycleTimer);
@@ -2563,6 +2640,7 @@
         [devContainer, mapContainer, pit3dContainer].forEach(c => { if (c) c.classList.add('d-none'); });
 
         if (mode === '3d') {
+            stopDevicesAutoScroll();
             if (btn3D) btn3D.classList.add('active');
             if (pit3dContainer) pit3dContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer';
@@ -2576,6 +2654,7 @@
                 }
             }, 60);
         } else if (mode === 'map') {
+            stopDevicesAutoScroll();
             if (btnMap) btnMap.classList.add('active');
             if (mapContainer) mapContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Peta Ortofoto Spasial Pit (25 Titik Extensometer ECW)';
@@ -2589,6 +2668,7 @@
             if (devContainer) devContainer.classList.remove('d-none');
             if (panelTitle) panelTitle.innerText = 'Status Sensor Extensometer Per Lokasi';
             if (panelIcon) panelIcon.className = 'bi bi-grid-3x3-gap-fill text-purple';
+            startDevicesAutoScroll();
         }
     }
 
@@ -3668,6 +3748,8 @@
         initSlopeChart();
         fetchDisplay5Data();
         setInterval(() => fetchDisplay5Data(), 10000);
+        initDevicesAutoScrollEvents(); // Listener pause/resume saat hover/wheel
+        startDevicesAutoScroll(); // Mulai auto-scroll kartu status sensor
         initAutoCycleLeftView(); // Memulai rotasi otomatis bergantian: Kartu -> Peta 2D -> Model 3D
     });
     </script>
