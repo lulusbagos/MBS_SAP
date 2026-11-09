@@ -2203,6 +2203,36 @@
             if (footerLastUpdateEl) footerLastUpdateEl.innerText = `${formattedDate} ${fullTimePart} WITA (${agoText})`;
         }
 
+        // Helper: Format waktu update terakhir per titik sensor geoteknik
+        function formatSensorUpdateTime(latestTs, minutesAgo) {
+            if (!latestTs) return { full: '-', short: '-', timeOnly: '--:--', ago: 'Belum ada data' };
+            const raw = String(latestTs).trim();
+            const datePart = raw.substring(0, 10);
+            const timePart = raw.substring(11, 16);
+            const fullTime = raw.length >= 19 ? raw.substring(11, 19) : `${timePart}:00`;
+
+            let formattedDate = datePart;
+            try {
+                const parts = datePart.split('-');
+                if (parts.length === 3) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    const mIdx = parseInt(parts[1], 10) - 1;
+                    formattedDate = `${parts[2]} ${months[mIdx] || parts[1]}`;
+                }
+            } catch(e) {}
+
+            const ago = (minutesAgo != null && minutesAgo <= 5)
+                ? 'Realtime'
+                : (minutesAgo != null ? `${minutesAgo}m lalu` : 'Sinkron');
+
+            return {
+                full: `${formattedDate} ${fullTime} WITA`,
+                short: `${formattedDate} ${timePart}`,
+                timeOnly: `${timePart} WITA`,
+                ago: ago
+            };
+        }
+
         // 2. Render Devices Grid
         const devContainer = document.getElementById('devicesContainer');
         if (devContainer) {
@@ -2225,7 +2255,7 @@
                     <table class="sensor-table">
                         <thead>
                             <tr>
-                                <th>Sensor</th>
+                                <th>Sensor &amp; Terakhir Update</th>
                                 <th class="text-end">Terkini</th>
                                 <th class="text-end">Akumulasi</th>
                                 <th class="text-end">Kecepatan</th>
@@ -2240,6 +2270,7 @@
                                         Math.abs(s.accumulativeDisplacement) > THRESHOLD_ROTARY_MM || 
                                         Math.abs(s.lateralDisplacement || 0) > THRESHOLD_ROTARY_MM;
                     const dispColor = isExceed200 ? 'critical' : (sStatus === 'critical' ? 'critical' : (sStatus === 'warning' ? 'warning' : 'normal'));
+                    const sTime = formatSensorUpdateTime(s.latestTs, s.minutesSinceLastReading);
 
                     let trendBadge = `<span style="color: rgba(148, 163, 184, 0.6); font-size: 9.5px;"><i class="bi bi-dash"></i> 0.00</span>`;
                     if (s.movementTrend === 'UP') {
@@ -2254,9 +2285,15 @@
                     html += `
                             <tr ${isExceed200 ? 'style="background: rgba(239, 68, 68, 0.16);"' : ''}>
                                 <td class="sensor-name-cell" title="${escapeHtml(s.sensorName)}">
-                                    <i class="bi bi-reception-4 text-purple me-1" style="font-size: 8px;"></i>${escapeHtml(s.sensorName)}
-                                    ${coordTag}
-                                    ${rotaryBadge}
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <i class="bi bi-reception-4 text-purple me-1" style="font-size: 8px;"></i>
+                                        <strong>${escapeHtml(s.sensorName)}</strong>
+                                        ${coordTag}
+                                        ${rotaryBadge}
+                                    </div>
+                                    <div style="font-size: 9px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin-top: 2px;">
+                                        <i class="bi bi-clock-history me-1 text-info"></i>${sTime.short} WITA <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 7.5px; padding: 1px 4px; margin-left: 2px;">${sTime.ago}</span>
+                                    </div>
                                 </td>
                                 <td class="text-end disp-val ${dispColor}">
                                     ${s.latestValue.toFixed(0)} <span style="font-size: 9px; font-weight: normal; color: #94a3b8;">${s.unitSuffix}</span>
@@ -2919,7 +2956,9 @@
 
             // ── 3D. KAPSUL NAMA SENSOR SANGAT JELAS & TEGAS (FONT 11PX DENGAN GLOWING SHADOW) ──
             const dispStr = `${dispVal.toFixed(0)}mm`;
-            const labelText = `${p.uniqueId} (${dispStr})`;
+            const sTime = liveSensor ? formatSensorUpdateTime(liveSensor.latestTs, liveSensor.minutesSinceLastReading) : null;
+            const timeBadgeStr = (sTime && sTime.timeOnly !== '--:--') ? ` \u2022 ${sTime.timeOnly}` : '';
+            const labelText = `${p.uniqueId} (${dispStr})${timeBadgeStr}`;
             ctx.font = 'bold 11px "JetBrains Mono", monospace';
             const textWidth = ctx.measureText(labelText).width;
             const pillW = textWidth + 24;
@@ -2988,6 +3027,7 @@
             wrapper.style.cursor = 'pointer';
             const p = found.pin;
             const s = found.sensor;
+            const sTime = s ? formatSensorUpdateTime(s.latestTs, s.minutesSinceLastReading) : null;
             const statusBadge = found.isCritical 
                 ? '<span class="badge bg-danger text-white">KRITIS &gt; 200 mm</span>' 
                 : (found.isWarning ? '<span class="badge bg-warning text-dark">Waspada</span>' : '<span class="badge bg-success text-white">Normal</span>');
@@ -3007,6 +3047,11 @@
                     ${statusBadge}
                 </div>
                 ${s ? `<div class="text-muted small mt-1" style="font-size: 9.5px;">Kecepatan: ${s.velocityPerHour.toFixed(2)} mm/jam &bull; Tren: ${s.movementTrend}</div>` : ''}
+                ${sTime && sTime.short !== '-' ? `
+                <div class="mt-2 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                    <span class="text-muted"><i class="bi bi-clock-history me-1 text-info"></i>Terakhir Update:</span>
+                    <strong class="text-info font-monospace">${sTime.full} (${sTime.ago})</strong>
+                </div>` : ''}
             `;
 
             tooltip.style.left = `${Math.min(wrapper.clientWidth - 270, Math.max(10, found.x + 12))}px`;
@@ -3415,6 +3460,7 @@
                 const data = hitGroup.userData;
                 const p = data.pin;
                 const s = data.sensor;
+                const sTime3d = s ? formatSensorUpdateTime(s.latestTs, s.minutesSinceLastReading) : null;
                 const statusBadge = data.isCritical 
                     ? '<span class="badge bg-danger text-white">KRITIS &gt; 200 mm</span>' 
                     : (data.isWarning ? '<span class="badge bg-warning text-dark">Waspada</span>' : '<span class="badge bg-success text-white">Normal</span>');
@@ -3434,6 +3480,11 @@
                         ${statusBadge}
                     </div>
                     ${s ? `<div class="text-muted small mt-1" style="font-size: 9.5px;">Kecepatan: ${s.velocityPerHour.toFixed(2)} mm/jam &bull; Tren: ${s.movementTrend}</div>` : ''}
+                    ${sTime3d && sTime3d.short !== '-' ? `
+                    <div class="mt-2 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                        <span class="text-muted"><i class="bi bi-clock-history me-1 text-warning"></i>Terakhir Update:</span>
+                        <strong class="text-warning font-monospace">${sTime3d.full} (${sTime3d.ago})</strong>
+                    </div>` : ''}
                 `;
                 tooltip.style.left = `${Math.min(container.clientWidth - 270, Math.max(10, e.clientX - rect.left + 15))}px`;
                 tooltip.style.top = `${Math.min(container.clientHeight - 130, Math.max(10, e.clientY - rect.top - 40))}px`;
@@ -3560,6 +3611,8 @@
             );
 
             let statusBadge = `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 10px;"><i class="bi bi-clock-history me-1"></i>Terkonfigurasi</span>`;
+            let lastUpdateCell = `<span class="text-muted" style="font-size: 10px;">Belum Ada Bacaan</span>`;
+
             if (matched) {
                 const val = Math.max(Math.abs(matched.latestValue || 0), Math.abs(matched.accumulativeDisplacement || 0));
                 if (val > 200) {
@@ -3568,6 +3621,16 @@
                     statusBadge = `<span class="badge bg-warning text-dark font-monospace" style="font-size: 10px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>${val.toFixed(0)} mm (Warning)</span>`;
                 } else {
                     statusBadge = `<span class="badge bg-success text-white font-monospace" style="font-size: 10px;"><i class="bi bi-check-circle-fill me-1"></i>${val.toFixed(0)} mm (Normal)</span>`;
+                }
+
+                const sTimeCoord = formatSensorUpdateTime(matched.latestTs, matched.minutesSinceLastReading);
+                if (sTimeCoord && sTimeCoord.short !== '-') {
+                    lastUpdateCell = `
+                        <div class="font-monospace text-info fw-bold" style="font-size: 10.5px;">
+                            <i class="bi bi-clock-history me-1 text-info"></i>${sTimeCoord.short} WITA
+                        </div>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 8px;">${sTimeCoord.ago}</span>
+                    `;
                 }
             }
 
@@ -3581,6 +3644,7 @@
                     <td class="text-end font-monospace text-warning">${c.n ? c.n.toLocaleString('id-ID') : '-'}</td>
                     <td class="text-end font-monospace text-warning">${c.e ? c.e.toLocaleString('id-ID') : '-'}</td>
                     <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">${lastUpdateCell}</td>
                 </tr>`;
         });
 
@@ -3635,7 +3699,8 @@
                                     <th>Location</th>
                                     <th class="text-end font-monospace">Northing (N)</th>
                                     <th class="text-end font-monospace">Easting (E)</th>
-                                    <th class="text-center" style="width: 170px;">Status Live</th>
+                                    <th class="text-center" style="width: 160px;">Status Live</th>
+                                    <th class="text-center" style="width: 150px;">Terakhir Update</th>
                                 </tr>
                             </thead>
                             <tbody id="coordTableBody">
