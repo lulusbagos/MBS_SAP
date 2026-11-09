@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Setting PJA Area Utama";
+    ViewData["Title"] = "Area Utama";
     ViewData["ActiveTab"] = "AreaPjaAdmin";
 }
 
@@ -18,10 +18,10 @@
                 </span>
             </div>
             <h2 class="fw-bold mt-2 mb-1" style="color: var(--text-main, #0f172a); font-size: 24px;">
-                Pengaturan PJA Area Utama
+                Area Utama
             </h2>
             <p class="text-muted mb-0" style="font-size: 13.5px;">
-                Atur penanggung jawab area (PJA) untuk masing-masing area kerja. Area dapat memiliki PJA khusus atau mengizinkan pencarian semua karyawan.
+                Kelola daftar Area Utama dan Penanggung Jawab Area (PJA). Setiap area dapat memiliki satu atau lebih PJA khusus, serta opsi izin pencarian semua karyawan.
             </p>
         </div>
         <div class="d-flex gap-2 w-100 w-md-auto">
@@ -29,7 +29,7 @@
                 <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
             <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm" onclick="openCreateModal()">
-                <i class="bi bi-plus-circle-fill"></i> Tambah Area & PJA
+                <i class="bi bi-plus-circle-fill"></i> Tambah Area Utama
             </button>
         </div>
     </div>
@@ -159,7 +159,7 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
                 <div>
-                    <h5 class="modal-title fw-bold" id="areaModalLabel">Setting PJA Area Utama</h5>
+                    <h5 class="modal-title fw-bold" id="areaModalLabel">Area Utama</h5>
                     <p class="text-muted small mb-0" id="modalSubTitle">Tentukan penanggung jawab area (PJA) untuk area ini.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -434,7 +434,7 @@
         document.getElementById('switchAllKaryawan').checked = true;
         document.getElementById('empSearchInput').value = '';
         document.getElementById('empSearchResults').classList.add('d-none');
-        document.getElementById('areaModalLabel').innerText = 'Tambah Area & PJA Baru';
+        document.getElementById('areaModalLabel').innerText = 'Tambah Area Utama';
         document.getElementById('modalSubTitle').innerText = 'Daftarkan nama area kerja utama baru dan tentukan penugasan PJA-nya.';
         selectedPjas = [];
         renderPjaChips();

@@ -34,7 +34,7 @@ namespace MBS_SAP.Controllers
                 return Forbid();
             }
 
-            ViewData["HeaderTitle"] = "Setting PJA Area Utama";
+            ViewData["HeaderTitle"] = "Area Utama";
             ViewData["ActiveTab"] = "AreaPjaAdmin";
 
             // Quick summary statistics
