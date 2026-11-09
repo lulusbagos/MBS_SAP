@@ -1262,14 +1262,17 @@
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <div class="view-switch-capsule">
-                                <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="switchLeftView('cards')" title="Tampilan Kartu Telemetri">
+                                <button type="button" class="view-tab-btn active" id="btnViewCards" onclick="manualSwitchLeftView('cards')" title="Tampilan Kartu Telemetri">
                                     <i class="bi bi-grid-3x3-gap-fill"></i> Kartu
                                 </button>
-                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="switchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
+                                <button type="button" class="view-tab-btn" id="btnViewMap" onclick="manualSwitchLeftView('map')" title="Tampilan Peta Spasial 2D Ortofoto ECW">
                                     <i class="bi bi-map-fill"></i> Peta 2D
                                 </button>
-                                <button type="button" class="view-tab-btn" id="btnView3D" onclick="switchLeftView('3d')" title="Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer">
+                                <button type="button" class="view-tab-btn" id="btnView3D" onclick="manualSwitchLeftView('3d')" title="Model 3 Dimensi Relief Lereng Tambang & Titik Extensometer">
                                     <i class="bi bi-box-fill text-warning"></i> Model 3D Pit
+                                </button>
+                                <button type="button" class="view-tab-btn" id="btnAutoCycle" onclick="toggleAutoCycleLeftView()" title="Putar Bergantian Otomatis: Kartu -> Peta 2D -> Model 3D" style="border-left: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8;">
+                                    <i class="bi bi-arrow-repeat text-info me-1" id="iconAutoCycle"></i> <span id="textAutoCycle">Auto (20s)</span>
                                 </button>
                             </div>
                             <span class="panel-badge" id="badgeDeviceCount">7 Lokasi Terpasang</span>
@@ -2305,6 +2308,65 @@
         { no: 25, uniqueId: "D3_PE_HW", extensoId: "S_D3", area: "PE", location: "PE_HW", n: 112927, e: 574389 }
     ];
 
+    // ── Auto-Cycle Left Views (Cards -> Peta 2D -> Model 3D) ──
+    const CYCLE_VIEWS = ['cards', 'map', '3d'];
+    const CYCLE_DURATION = 20; // 20 detik per tampilan
+    let autoCycleEnabled = true;
+    let autoCycleRemaining = CYCLE_DURATION;
+    let autoCycleTimer = null;
+    let manualPauseRemaining = 0; // Waktu jeda jika user klik manual
+
+    function initAutoCycleLeftView() {
+        if (autoCycleTimer) clearInterval(autoCycleTimer);
+        autoCycleTimer = setInterval(() => {
+            if (!autoCycleEnabled) return;
+
+            if (manualPauseRemaining > 0) {
+                manualPauseRemaining--;
+                const txt = document.getElementById('textAutoCycle');
+                if (txt) txt.innerText = `Jeda (${manualPauseRemaining}s)`;
+                return;
+            }
+
+            autoCycleRemaining--;
+            const txt = document.getElementById('textAutoCycle');
+            if (txt) txt.innerText = `Auto (${autoCycleRemaining}s)`;
+
+            if (autoCycleRemaining <= 0) {
+                autoCycleRemaining = CYCLE_DURATION;
+                const curIdx = CYCLE_VIEWS.indexOf(activeLeftView);
+                const nextIdx = (curIdx + 1) % CYCLE_VIEWS.length;
+                switchLeftView(CYCLE_VIEWS[nextIdx]);
+            }
+        }, 1000);
+    }
+
+    function manualSwitchLeftView(mode) {
+        switchLeftView(mode);
+        // Jeda auto-cycle selama 45 detik saat user berinteraksi manual
+        if (autoCycleEnabled) {
+            manualPauseRemaining = 45;
+            const txt = document.getElementById('textAutoCycle');
+            if (txt) txt.innerText = `Jeda (45s)`;
+        }
+    }
+
+    function toggleAutoCycleLeftView() {
+        autoCycleEnabled = !autoCycleEnabled;
+        const icon = document.getElementById('iconAutoCycle');
+        const txt = document.getElementById('textAutoCycle');
+        const btn = document.getElementById('btnAutoCycle');
+        if (btn) btn.classList.toggle('active', autoCycleEnabled);
+        if (icon) icon.className = autoCycleEnabled ? 'bi bi-arrow-repeat text-info me-1' : 'bi bi-pause-circle-fill text-muted me-1';
+        if (txt) {
+            txt.innerText = autoCycleEnabled ? `Auto (${CYCLE_DURATION}s)` : 'Auto (OFF)';
+        }
+        if (autoCycleEnabled) {
+            manualPauseRemaining = 0;
+            autoCycleRemaining = CYCLE_DURATION;
+        }
+    }
+
     function switchLeftView(mode) {
         activeLeftView = mode;
         const btnCards = document.getElementById('btnViewCards');
@@ -2367,6 +2429,19 @@
     }
 
     let mapCanvasInited = false;
+    let animFrame2dId = null;
+
+    function start2DMapAnimation() {
+        if (animFrame2dId) cancelAnimationFrame(animFrame2dId);
+        function loop() {
+            if (activeLeftView === 'map') {
+                renderPitMap();
+            }
+            animFrame2dId = requestAnimationFrame(loop);
+        }
+        animFrame2dId = requestAnimationFrame(loop);
+    }
+
     function initPitMapCanvas() {
         if (mapCanvasInited) return;
         const wrapper = document.getElementById('pitCanvasWrapper');
@@ -2431,6 +2506,9 @@
         window.addEventListener('resize', () => {
             if (activeLeftView === 'map') renderPitMap();
         });
+
+        // Jalankan loop animasi kontinu untuk kedip merah dan radar pulsa
+        start2DMapAnimation();
     }
 
     let renderedPinCoords = [];
@@ -2473,51 +2551,105 @@
             ctx.drawImage(orthoImg, imgX, imgY, imgW, imgH);
             
             // Border & label ortofoto
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(imgX, imgY, imgW, imgH);
 
-            ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
-            ctx.font = 'bold 9px "JetBrains Mono", monospace';
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.95)';
+            ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
             ctx.fillText('CITRA ORTOFOTO UDARA PIT CENTRAL (EOM OKTOBER 2026)', imgX + 8, imgY + 16);
             ctx.restore();
         }
 
-        // Grid lines (setiap 2,000 meter)
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
-        ctx.lineWidth = 1;
-        ctx.font = '9px "JetBrains Mono", monospace';
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        // ── GARIS PEMBANTU KOORDINAT TAMBANG (MINE GRID LINES) ── LEBIH JELAS & TEGAS
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([6, 6]);
 
+        // Vertikal (Easting lines setiap 2,000 meter)
         for (let e = 570000; e <= 588000; e += 2000) {
             const gx = startX + ((e - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
             ctx.beginPath();
             ctx.moveTo(gx, startY);
             ctx.lineTo(gx, startY + drawH);
             ctx.stroke();
-            ctx.fillText(`${(e / 1000).toFixed(0)}k E`, gx + 3, startY + 12);
+
+            // Label Kapsul Koordinat E di bagian atas (Kontras & Sangat Terbaca)
+            ctx.save();
+            ctx.setLineDash([]);
+            const eText = `${(e / 1000).toFixed(0)}k E`;
+            ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+            const tw = ctx.measureText(eText).width;
+            ctx.fillStyle = 'rgba(6, 11, 26, 0.92)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(gx - (tw / 2) - 5, startY + 4, tw + 10, 16, 4);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#38bdf8';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(eText, gx, startY + 12);
+            ctx.restore();
         }
 
+        // Horisontal (Northing lines setiap 2,000 meter)
         for (let n = 100000; n <= 122000; n += 2000) {
             const gy = startY + (1 - (n - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
             ctx.beginPath();
             ctx.moveTo(startX, gy);
             ctx.lineTo(startX + drawW, gy);
             ctx.stroke();
-            ctx.fillText(`${(n / 1000).toFixed(0)}k N`, startX + 4, gy - 3);
+
+            // Label Kapsul Koordinat N di sisi kiri (Kontras & Sangat Terbaca)
+            ctx.save();
+            ctx.setLineDash([]);
+            const nText = `${(n / 1000).toFixed(0)}k N`;
+            ctx.font = 'bold 9.5px "JetBrains Mono", monospace';
+            const tw = ctx.measureText(nText).width;
+            ctx.fillStyle = 'rgba(6, 11, 26, 0.92)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(startX + 4, gy - 8, tw + 10, 16, 4);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#38bdf8';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nText, startX + 4 + (tw + 10) / 2, gy);
+            ctx.restore();
+        }
+
+        // Tanda silang crosshair (+) di setiap perpotongan koordinat grid
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+        ctx.lineWidth = 1.4;
+        for (let e = 570000; e <= 588000; e += 2000) {
+            const gx = startX + ((e - MINE_BOUNDS.minE) / (MINE_BOUNDS.maxE - MINE_BOUNDS.minE)) * drawW;
+            for (let n = 100000; n <= 122000; n += 2000) {
+                const gy = startY + (1 - (n - MINE_BOUNDS.minN) / (MINE_BOUNDS.maxN - MINE_BOUNDS.minN)) * drawH;
+                ctx.beginPath();
+                ctx.moveTo(gx - 5, gy);
+                ctx.lineTo(gx + 5, gy);
+                ctx.moveTo(gx, gy - 5);
+                ctx.lineTo(gx, gy + 5);
+                ctx.stroke();
+            }
         }
 
         // 2. Gambar Zona Sektor Tambang (Sektor Pit & Hauling)
         const SECTORS = [
-            { name: "SEKTOR CENTRAL", e: 575000, n: 121900, r: 42, color: "rgba(168, 85, 247, 0.15)", border: "#c084fc" },
-            { name: "SEKTOR GAM / GPE", e: 577400, n: 120150, r: 38, color: "rgba(56, 189, 248, 0.12)", border: "#38bdf8" },
-            { name: "SEKTOR T4 KPP", e: 571200, n: 115700, r: 45, color: "rgba(16, 185, 129, 0.12)", border: "#34d399" },
-            { name: "SEKTOR T6 SOUTH", e: 573000, n: 114800, r: 40, color: "rgba(245, 158, 11, 0.12)", border: "#fbbf24" },
-            { name: "DISPOSAL WD9", e: 570900, n: 113000, r: 36, color: "rgba(239, 68, 68, 0.12)", border: "#f87171" },
-            { name: "JL MAWAR 5.5", e: 575080, n: 113940, r: 30, color: "rgba(14, 165, 233, 0.12)", border: "#0ea5e9" },
-            { name: "SEKTOR PE_HW", e: 574400, n: 113000, r: 28, color: "rgba(217, 70, 239, 0.12)", border: "#d946ef" },
-            { name: "HAULING KM 15-17", e: 587100, n: 100800, r: 46, color: "rgba(234, 179, 8, 0.12)", border: "#eab308" },
-            { name: "BASE KONTAINER", e: 574550, n: 109263, r: 32, color: "rgba(148, 163, 184, 0.12)", border: "#94a3b8" }
+            { name: "SEKTOR CENTRAL", e: 575000, n: 121900, r: 42, color: "rgba(168, 85, 247, 0.18)", border: "#c084fc" },
+            { name: "SEKTOR GAM / GPE", e: 577400, n: 120150, r: 38, color: "rgba(56, 189, 248, 0.15)", border: "#38bdf8" },
+            { name: "SEKTOR T4 KPP", e: 571200, n: 115700, r: 45, color: "rgba(16, 185, 129, 0.15)", border: "#34d399" },
+            { name: "SEKTOR T6 SOUTH", e: 573000, n: 114800, r: 40, color: "rgba(245, 158, 11, 0.15)", border: "#fbbf24" },
+            { name: "DISPOSAL WD9", e: 570900, n: 113000, r: 36, color: "rgba(239, 68, 68, 0.15)", border: "#f87171" },
+            { name: "JL MAWAR 5.5", e: 575080, n: 113940, r: 30, color: "rgba(14, 165, 233, 0.15)", border: "#0ea5e9" },
+            { name: "SEKTOR PE_HW", e: 574400, n: 113000, r: 28, color: "rgba(217, 70, 239, 0.15)", border: "#d946ef" },
+            { name: "HAULING KM 15-17", e: 587100, n: 100800, r: 46, color: "rgba(234, 179, 8, 0.15)", border: "#eab308" },
+            { name: "BASE KONTAINER", e: 574550, n: 109263, r: 32, color: "rgba(148, 163, 184, 0.15)", border: "#94a3b8" }
         ];
 
         SECTORS.forEach(sec => {
@@ -2531,18 +2663,18 @@
             ctx.fill();
             ctx.strokeStyle = sec.border;
             ctx.setLineDash([4, 4]);
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.4;
             ctx.stroke();
             ctx.setLineDash([]);
 
             // Label sektor
-            ctx.font = 'bold 9.5px "Outfit", sans-serif';
+            ctx.font = 'bold 10px "Outfit", sans-serif';
             ctx.fillStyle = sec.border;
             ctx.textAlign = 'center';
             ctx.fillText(sec.name, sx, sy - sr - 4);
         });
 
-        // 3. Render 25 Pin Sensor Extensometer ECW
+        // 3. Render 25 Pin Sensor Extensometer ECW (NAMA DIPERJELAS & MERAH BERKEDIP)
         renderedPinCoords = [];
 
         // Gabungkan dengan telemetri live
@@ -2550,6 +2682,14 @@
         (window.latestDevicesData || []).forEach(d => {
             (d.sensors || []).forEach(s => allSensors.push(s));
         });
+
+        const nowMs = performance.now();
+        // Siklus kedip strobo cepat (4 kali per detik)
+        const isCriticalStrobe = (Math.sin(nowMs * 0.012) > 0);
+        // Gelombang radar membesar terus-menerus
+        const radarWaveCycle = (nowMs * 0.002) % 1;
+        const radarWaveR = 8 + radarWaveCycle * 32;
+        const radarWaveAlpha = Math.max(0, 1 - radarWaveCycle);
 
         ECW_PINS.forEach(p => {
             if (mapFilterArea !== 'ALL' && !p.area.toLowerCase().includes(mapFilterArea.toLowerCase())) {
@@ -2582,48 +2722,112 @@
                 isWarning
             });
 
-            // Efek gelombang radar pulsa
-            const pulseR = isCritical ? 18 : 10;
-            ctx.beginPath();
-            ctx.arc(px, py, pulseR, 0, Math.PI * 2);
-            ctx.fillStyle = isCritical ? 'rgba(239, 68, 68, 0.25)' : (isWarning ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.15)');
-            ctx.fill();
+            // ── 3A. EFEK GELOMBANG RADAR MERAH BERKEDIP & MELUAS ──
+            if (isCritical) {
+                // Gelombang kejut membesar keluar
+                ctx.beginPath();
+                ctx.arc(px, py, radarWaveR, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(239, 68, 68, ${0.4 * radarWaveAlpha})`;
+                ctx.fill();
+                ctx.strokeStyle = `rgba(255, 68, 68, ${0.85 * radarWaveAlpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
 
-            // Lingkaran pin luar
+                // Lingkaran halo strobo merah berkedip
+                ctx.beginPath();
+                ctx.arc(px, py, isCriticalStrobe ? 22 : 14, 0, Math.PI * 2);
+                ctx.fillStyle = isCriticalStrobe ? 'rgba(239, 68, 68, 0.7)' : 'rgba(239, 68, 68, 0.25)';
+                ctx.fill();
+            } else if (isWarning) {
+                ctx.beginPath();
+                ctx.arc(px, py, 12, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(px, py, 10, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+                ctx.fill();
+            }
+
+            // ── 3B. TITIK PIN TENGAH ──
             ctx.beginPath();
-            ctx.arc(px, py, 6, 0, Math.PI * 2);
-            ctx.fillStyle = isCritical ? '#ef4444' : (isWarning ? '#fbbf24' : '#10b981');
+            ctx.arc(px, py, isCritical ? (isCriticalStrobe ? 8.5 : 6.5) : 6, 0, Math.PI * 2);
+            ctx.fillStyle = isCritical ? (isCriticalStrobe ? '#ff0033' : '#ef4444') : (isWarning ? '#fbbf24' : '#10b981');
             ctx.fill();
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = isCritical ? (isCriticalStrobe ? '#ffffff' : '#ff9999') : '#ffffff';
+            ctx.lineWidth = isCritical ? 2.5 : 1.5;
             ctx.stroke();
 
-            // Titik tengah
+            // Titik inti putih
             ctx.beginPath();
             ctx.arc(px, py, 2.5, 0, Math.PI * 2);
             ctx.fillStyle = '#ffffff';
             ctx.fill();
 
-            // Label Kapsul Sensor
-            const labelText = `${p.uniqueId} (${dispVal.toFixed(0)}mm)`;
-            ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
-            const textWidth = ctx.measureText(labelText).width;
-            const padX = 5;
-            const pillH = 15;
-            const pillY = py - 20;
-            const pillX = px - (textWidth / 2) - padX;
+            // ── 3C. GARIS PENUNJUK (LEADER LINE) SUPAYA NAMA TIDAK MENUMPUK ──
+            // Stagger vertikal berbasis nomor urut (0, 1, 2) agar sensor yang berdekatan tidak tumpang tindih
+            const staggerIdx = p.no % 3;
+            const leaderH = 22 + (staggerIdx * 16);
+            const leaderEndY = py - leaderH;
 
-            ctx.fillStyle = isCritical ? 'rgba(239, 68, 68, 0.85)' : 'rgba(15, 23, 42, 0.85)';
-            ctx.strokeStyle = isCritical ? '#ff6666' : (isWarning ? '#fbbf24' : 'rgba(56, 189, 248, 0.4)');
-            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.roundRect(pillX, pillY, textWidth + padX * 2, pillH, 4);
-            ctx.fill();
+            ctx.moveTo(px, py - 6);
+            ctx.lineTo(px, leaderEndY);
+            ctx.strokeStyle = isCritical ? (isCriticalStrobe ? '#ffffff' : '#ff3344') : (isWarning ? '#fbbf24' : 'rgba(56, 189, 248, 0.85)');
+            ctx.lineWidth = isCritical ? 2 : 1.2;
             ctx.stroke();
 
+            // ── 3D. KAPSUL NAMA SENSOR SANGAT JELAS & TEGAS (FONT 11PX DENGAN GLOWING SHADOW) ──
+            const dispStr = `${dispVal.toFixed(0)}mm`;
+            const labelText = `${p.uniqueId} (${dispStr})`;
+            ctx.font = 'bold 11px "JetBrains Mono", monospace';
+            const textWidth = ctx.measureText(labelText).width;
+            const pillW = textWidth + 24;
+            const pillH = 22;
+            const pillX = px - (pillW / 2);
+            const pillY = leaderEndY - pillH;
+
+            // Efek shadow glowing
+            ctx.save();
+            if (isCritical) {
+                ctx.shadowColor = isCriticalStrobe ? '#ff0033' : '#ff4444';
+                ctx.shadowBlur = isCriticalStrobe ? 18 : 8;
+            } else if (isWarning) {
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 6;
+            } else {
+                ctx.shadowColor = '#0ea5e9';
+                ctx.shadowBlur = 6;
+            }
+
+            // Latar belakang kapsul pekat gelap 95% opacity agar terbaca jelas di atas tekstur drone
+            ctx.fillStyle = isCritical 
+                ? (isCriticalStrobe ? 'rgba(185, 28, 28, 0.96)' : 'rgba(15, 23, 42, 0.95)') 
+                : 'rgba(6, 11, 25, 0.95)';
+            ctx.strokeStyle = isCritical 
+                ? (isCriticalStrobe ? '#ffffff' : '#ff2244') 
+                : (isWarning ? '#fbbf24' : '#38bdf8');
+            ctx.lineWidth = isCritical ? 2.5 : 1.5;
+
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, pillW, pillH, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Titik status indikator di dalam kapsul
+            ctx.beginPath();
+            ctx.arc(pillX + 11, pillY + 11, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = isCritical ? (isCriticalStrobe ? '#ffffff' : '#ff4444') : (isWarning ? '#fbbf24' : '#34d399');
+            ctx.fill();
+
+            // Teks Nama & Nilai MM
             ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(labelText, px, pillY + 11);
+            ctx.font = 'bold 11px "JetBrains Mono", monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(labelText, pillX + 19, pillY + 11);
         });
     }
 
@@ -3250,6 +3454,7 @@
         initSlopeChart();
         fetchDisplay5Data();
         setInterval(() => fetchDisplay5Data(), 10000);
+        initAutoCycleLeftView(); // Memulai rotasi otomatis bergantian: Kartu -> Peta 2D -> Model 3D
     });
     </script>
 
