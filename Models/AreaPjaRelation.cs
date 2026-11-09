@@ -56,3 +56,4 @@ namespace MBS_SAP.Models
         public virtual MasterArea? Area { get; set; }
     }
 }
+

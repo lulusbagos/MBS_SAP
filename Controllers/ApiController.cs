@@ -78,16 +78,123 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchPja(string term, bool lintasPerusahaan = true)
+        public async Task<IActionResult> GetAreaPjas(string area)
         {
-            if (string.IsNullOrWhiteSpace(term))
+            if (string.IsNullOrWhiteSpace(area))
+            {
+                return Json(new { hasArea = false, isAllKaryawan = true, pjas = new object[] { } });
+            }
+
+            var cleanArea = area.Trim();
+            var areaEntity = await _context.MasterAreas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea.ToLower());
+
+            var assignedPjas = await _context.AreaPjaRelations
+                .AsNoTracking()
+                .Where(p => p.NamaArea.ToLower() == cleanArea.ToLower() || (areaEntity != null && p.AreaId == areaEntity.Id))
+                .OrderByDescending(p => p.IsPicUtama)
+                .ThenBy(p => p.NamaPja)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    nik = p.NikPja,
+                    nama = p.NamaPja,
+                    jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
+                    departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
+                    perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
+                    isPicUtama = p.IsPicUtama,
+                    isAssignedArea = true
+                })
+                .ToListAsync();
+
+            bool isAllKaryawan = areaEntity?.IsAllKaryawan ?? (assignedPjas.Count == 0);
+
+            return Json(new
+            {
+                hasArea = true,
+                area = areaEntity?.NamaArea ?? cleanArea,
+                isAllKaryawan = isAllKaryawan,
+                pjas = assignedPjas
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchPja(string term, string? area = null, bool lintasPerusahaan = true)
+        {
+            var cleanTerm = (term ?? "").Trim().ToLower();
+            var cleanArea = (area ?? "").Trim().ToLower();
+
+            // Jika query kosong tetapi area diisi, kembalikan daftar PJA khusus area tersebut
+            if (string.IsNullOrWhiteSpace(cleanTerm) && !string.IsNullOrWhiteSpace(cleanArea))
+            {
+                var areaOnlyPjas = await _context.AreaPjaRelations
+                    .AsNoTracking()
+                    .Where(p => p.NamaArea.ToLower() == cleanArea)
+                    .OrderByDescending(p => p.IsPicUtama)
+                    .ThenBy(p => p.NamaPja)
+                    .Select(p => new
+                    {
+                        nik = p.NikPja,
+                        nama = p.NamaPja,
+                        departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
+                        jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
+                        perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
+                        companyOnly = false,
+                        isAssignedArea = true,
+                        isPicUtama = p.IsPicUtama,
+                        source = "AreaPja"
+                    })
+                    .ToListAsync();
+
+                return Json(areaOnlyPjas);
+            }
+
+            if (string.IsNullOrWhiteSpace(cleanTerm))
             {
                 return Json(new object[] { });
             }
 
-            var cleanTerm = term.Trim().ToLower();
+            var merged = new List<object>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Prioritaskan PJA yang ditugaskan khusus pada area yang dipilih
+            if (!string.IsNullOrWhiteSpace(cleanArea))
+            {
+                var areaMatches = await _context.AreaPjaRelations
+                    .AsNoTracking()
+                    .Where(p => p.NamaArea.ToLower() == cleanArea &&
+                               (p.NamaPja.ToLower().Contains(cleanTerm) ||
+                                p.NikPja.ToLower().Contains(cleanTerm) ||
+                                (p.JabatanPja != null && p.JabatanPja.ToLower().Contains(cleanTerm)) ||
+                                (p.DepartemenPja != null && p.DepartemenPja.ToLower().Contains(cleanTerm))))
+                    .OrderByDescending(p => p.IsPicUtama)
+                    .ThenBy(p => p.NamaPja)
+                    .ToListAsync();
+
+                foreach (var p in areaMatches)
+                {
+                    var key = $"{p.NikPja}|{p.PerusahaanPja}";
+                    if (seen.Add(key))
+                    {
+                        merged.Add(new
+                        {
+                            nik = p.NikPja,
+                            nama = p.NamaPja,
+                            departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
+                            jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
+                            perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
+                            companyOnly = false,
+                            isAssignedArea = true,
+                            isPicUtama = p.IsPicUtama,
+                            source = "AreaPja"
+                        });
+                    }
+                }
+            }
+
             var pjaRefsTask = GetPjaReference(lintasPerusahaan);
-            var empTask = SearchEmployee(term, lintasPerusahaan);
+            var empTask = SearchEmployee(cleanTerm, lintasPerusahaan);
 
             await Task.WhenAll(pjaRefsTask, empTask);
 
@@ -96,9 +203,6 @@ namespace MBS_SAP.Controllers
 
             var pjaList = (pjaRefJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
             var empList = (empJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
-
-            var merged = new List<object>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var item in pjaList)
             {
