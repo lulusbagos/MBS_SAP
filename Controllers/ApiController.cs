@@ -31,50 +31,57 @@ namespace MBS_SAP.Controllers
                 return Json(new object[] { });
             }
 
-            query = query.ToLower();
-            
-            int? userCompanyId = null;
-            if (!lintasPerusahaan)
+            try
             {
-                var compIdClaim = User.FindFirst("CompanyId")?.Value;
-                if (int.TryParse(compIdClaim, out int cid) && cid > 0)
+                query = query.ToLower();
+                
+                int? userCompanyId = null;
+                if (!lintasPerusahaan)
                 {
-                    userCompanyId = cid;
+                    var compIdClaim = User.FindFirst("CompanyId")?.Value;
+                    if (int.TryParse(compIdClaim, out int cid) && cid > 0)
+                    {
+                        userCompanyId = cid;
+                    }
                 }
+
+                // Perform search on Database Views with AsNoTracking
+                var employeesQuery = from k in _context.Karyawans.AsNoTracking()
+                                     join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                                     join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                                     from j in jg.DefaultIfEmpty()
+                                     join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into dg
+                                     from d in dg.DefaultIfEmpty()
+                                     join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                                     from c in cg.DefaultIfEmpty()
+                                     where k.StatusAktif == true &&
+                                           (p.NamaLengkap.ToLower().Contains(query) || 
+                                            k.NoNik.ToLower().Contains(query) || 
+                                            (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(query)) ||
+                                            (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(query)))
+                                     select new
+                                     {
+                                         Nik = k.NoNik,
+                                         Nama = p.NamaLengkap,
+                                         Departemen = d.NamaDepartemen,
+                                         Jabatan = j.NamaJabatan,
+                                         Perusahaan = c.NamaPerusahaan,
+                                         IdPerusahaan = k.IdPerusahaan
+                                     };
+
+                if (userCompanyId.HasValue)
+                {
+                    employeesQuery = employeesQuery.Where(e => e.IdPerusahaan == userCompanyId.Value);
+                }
+
+                var employees = await employeesQuery.Take(25).ToListAsync();
+
+                return Json(employees);
             }
-
-            // Perform search on Database Views (vw_karyawan, vw_personal, etc)
-            var employeesQuery = from k in _context.Karyawans
-                                 join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                 join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
-                                 from j in jg.DefaultIfEmpty()
-                                 join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                                 from d in dg.DefaultIfEmpty()
-                                 join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
-                                 from c in cg.DefaultIfEmpty()
-                                 where k.StatusAktif == true &&
-                                       (p.NamaLengkap.ToLower().Contains(query) || 
-                                        k.NoNik.ToLower().Contains(query) || 
-                                        (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(query)) ||
-                                        (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(query)))
-                                 select new
-                                 {
-                                     Nik = k.NoNik,
-                                     Nama = p.NamaLengkap,
-                                     Departemen = d.NamaDepartemen,
-                                     Jabatan = j.NamaJabatan,
-                                     Perusahaan = c.NamaPerusahaan,
-                                     IdPerusahaan = k.IdPerusahaan
-                                 };
-
-            if (userCompanyId.HasValue)
+            catch (Exception)
             {
-                employeesQuery = employeesQuery.Where(e => e.IdPerusahaan == userCompanyId.Value);
+                return Json(new object[] { });
             }
-
-            var employees = await employeesQuery.Take(25).ToListAsync();
-
-            return Json(employees);
         }
 
         [HttpGet]
@@ -85,108 +92,94 @@ namespace MBS_SAP.Controllers
                 return Json(new { hasArea = false, isAllKaryawan = true, pjas = new object[] { } });
             }
 
-            var cleanArea = area.Trim();
-            var areaEntity = await _context.MasterAreas
-                .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea.ToLower());
-
-            var assignedPjas = await _context.AreaPjaRelations
-                .AsNoTracking()
-                .Where(p => p.NamaArea.ToLower() == cleanArea.ToLower() || (areaEntity != null && p.AreaId == areaEntity.Id))
-                .OrderByDescending(p => p.IsPicUtama)
-                .ThenBy(p => p.NamaPja)
-                .Select(p => new
-                {
-                    id = p.Id,
-                    nik = p.NikPja,
-                    nama = p.NamaPja,
-                    jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
-                    departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
-                    perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
-                    isPicUtama = p.IsPicUtama,
-                    isAssignedArea = true
-                })
-                .ToListAsync();
-
-            bool isAllKaryawan = areaEntity?.IsAllKaryawan ?? (assignedPjas.Count == 0);
-
-            return Json(new
+            try
             {
-                hasArea = true,
-                area = areaEntity?.NamaArea ?? cleanArea,
-                isAllKaryawan = isAllKaryawan,
-                pjas = assignedPjas
-            });
+                var cleanArea = area.Trim();
+                var areaEntity = await _context.MasterAreas
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea.ToLower());
+
+                var assignedPjas = await _context.AreaPjaRelations
+                    .AsNoTracking()
+                    .Where(p => p.NamaArea.ToLower() == cleanArea.ToLower() || (areaEntity != null && p.AreaId == areaEntity.Id))
+                    .OrderByDescending(p => p.IsPicUtama)
+                    .ThenBy(p => p.NamaPja)
+                    .Select(p => new
+                    {
+                        id = p.Id,
+                        nik = p.NikPja,
+                        nama = p.NamaPja,
+                        jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
+                        departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
+                        perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
+                        isPicUtama = p.IsPicUtama,
+                        isAssignedArea = true
+                    })
+                    .ToListAsync();
+
+                bool isAllKaryawan = areaEntity?.IsAllKaryawan ?? (assignedPjas.Count == 0);
+
+                return Json(new
+                {
+                    hasArea = true,
+                    area = areaEntity?.NamaArea ?? cleanArea,
+                    isAllKaryawan = isAllKaryawan,
+                    pjas = assignedPjas
+                });
+            }
+            catch (Exception)
+            {
+                return Json(new { hasArea = true, area = area, isAllKaryawan = true, pjas = new object[] { } });
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> SearchPja(string term, string? area = null, bool lintasPerusahaan = true)
         {
-            var cleanTerm = (term ?? "").Trim().ToLower();
-            var cleanArea = (area ?? "").Trim().ToLower();
-
-            // Jika query kosong tetapi area diisi, kembalikan daftar PJA khusus area tersebut
-            if (string.IsNullOrWhiteSpace(cleanTerm) && !string.IsNullOrWhiteSpace(cleanArea))
-            {
-                var areaOnlyPjas = await _context.AreaPjaRelations
-                    .AsNoTracking()
-                    .Where(p => p.NamaArea.ToLower() == cleanArea)
-                    .OrderByDescending(p => p.IsPicUtama)
-                    .ThenBy(p => p.NamaPja)
-                    .Select(p => new
-                    {
-                        nik = p.NikPja,
-                        nama = p.NamaPja,
-                        departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
-                        jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
-                        perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
-                        companyOnly = false,
-                        isAssignedArea = true,
-                        isPicUtama = p.IsPicUtama,
-                        source = "AreaPja"
-                    })
-                    .ToListAsync();
-
-                return Json(areaOnlyPjas);
-            }
-
-            if (string.IsNullOrWhiteSpace(cleanTerm))
-            {
-                return Json(new object[] { });
-            }
-
             var merged = new List<object>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            bool isAllKaryawanAllowed = true;
 
-            // Prioritaskan PJA yang ditugaskan khusus pada area yang dipilih
-            if (!string.IsNullOrWhiteSpace(cleanArea))
+            try
             {
-                var areaEntity = await _context.MasterAreas
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea);
-                if (areaEntity != null)
+                var cleanTerm = (term ?? "").Trim().ToLower();
+                var cleanArea = (area ?? "").Trim().ToLower();
+
+                // 1. Cek konfigurasi Master Area & Area PJA Relations dari modul AreaPja
+                MasterArea? areaEntity = null;
+                List<AreaPjaRelation> assignedAreaPjas = new List<AreaPjaRelation>();
+                bool isAllKaryawanAllowed = true;
+
+                if (!string.IsNullOrWhiteSpace(cleanArea))
                 {
-                    isAllKaryawanAllowed = areaEntity.IsAllKaryawan;
+                    areaEntity = await _context.MasterAreas
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(a => a.NamaArea.ToLower() == cleanArea);
+
+                    var areaId = areaEntity?.Id ?? 0;
+
+                    assignedAreaPjas = await _context.AreaPjaRelations
+                        .AsNoTracking()
+                        .Where(p => p.NamaArea.ToLower() == cleanArea || (areaId > 0 && p.AreaId == areaId))
+                        .OrderByDescending(p => p.IsPicUtama)
+                        .ThenBy(p => p.NamaPja)
+                        .ToListAsync();
+
+                    if (areaEntity != null)
+                    {
+                        isAllKaryawanAllowed = areaEntity.IsAllKaryawan;
+                    }
+                    else if (assignedAreaPjas.Count == 0)
+                    {
+                        isAllKaryawanAllowed = true;
+                    }
                 }
 
-                var areaMatches = await _context.AreaPjaRelations
-                    .AsNoTracking()
-                    .Where(p => p.NamaArea.ToLower() == cleanArea &&
-                               (p.NamaPja.ToLower().Contains(cleanTerm) ||
-                                p.NikPja.ToLower().Contains(cleanTerm) ||
-                                (p.JabatanPja != null && p.JabatanPja.ToLower().Contains(cleanTerm)) ||
-                                (p.DepartemenPja != null && p.DepartemenPja.ToLower().Contains(cleanTerm))))
-                    .OrderByDescending(p => p.IsPicUtama)
-                    .ThenBy(p => p.NamaPja)
-                    .ToListAsync();
-
-                foreach (var p in areaMatches)
+                // 2. Jika query kosong tetapi area diisi, kembalikan daftar PJA khusus area tersebut
+                if (string.IsNullOrWhiteSpace(cleanTerm))
                 {
-                    var key = $"{p.NikPja}|{p.PerusahaanPja}";
-                    if (seen.Add(key))
+                    if (assignedAreaPjas.Count > 0)
                     {
-                        merged.Add(new
+                        var areaOnlyPjas = assignedAreaPjas.Select(p => new
                         {
                             nik = p.NikPja,
                             nama = p.NamaPja,
@@ -197,82 +190,170 @@ namespace MBS_SAP.Controllers
                             isAssignedArea = true,
                             isPicUtama = p.IsPicUtama,
                             source = "AreaPja"
+                        }).ToList();
+
+                        return Json(areaOnlyPjas);
+                    }
+
+                    return Json(new object[] { });
+                }
+
+                // 3. Filter PJA yang ditugaskan khusus pada area yang dipilih (Prioritas Utama)
+                if (assignedAreaPjas.Count > 0)
+                {
+                    var areaMatches = assignedAreaPjas.Where(p =>
+                        (p.NamaPja != null && p.NamaPja.ToLower().Contains(cleanTerm)) ||
+                        (p.NikPja != null && p.NikPja.ToLower().Contains(cleanTerm)) ||
+                        (p.JabatanPja != null && p.JabatanPja.ToLower().Contains(cleanTerm)) ||
+                        (p.DepartemenPja != null && p.DepartemenPja.ToLower().Contains(cleanTerm)) ||
+                        (p.PerusahaanPja != null && p.PerusahaanPja.ToLower().Contains(cleanTerm))
+                    );
+
+                    foreach (var p in areaMatches)
+                    {
+                        var key = $"{p.NikPja}|{p.PerusahaanPja}";
+                        if (seen.Add(key))
+                        {
+                            merged.Add(new
+                            {
+                                nik = p.NikPja,
+                                nama = p.NamaPja,
+                                departemen = !string.IsNullOrEmpty(p.DepartemenPja) ? p.DepartemenPja : "GENERAL",
+                                jabatan = !string.IsNullOrEmpty(p.JabatanPja) ? p.JabatanPja : "-",
+                                perusahaan = !string.IsNullOrEmpty(p.PerusahaanPja) ? p.PerusahaanPja : "-",
+                                companyOnly = false,
+                                isAssignedArea = true,
+                                isPicUtama = p.IsPicUtama,
+                                source = "AreaPja"
+                            });
+                        }
+                    }
+                }
+
+                // 4. ATURAN BARU AREA PJA:
+                // Jika area dikonfigurasi sebagai "PJA Khusus" (is_all_karyawan == false) dan memiliki PJA terdaftar,
+                // batasi pilihan HANYA pada PJA area tersebut (jangan tampilkan karyawan/perusahaan lain)!
+                if (!isAllKaryawanAllowed && assignedAreaPjas.Count > 0)
+                {
+                    return Json(merged);
+                }
+
+                // 5. Jika All Karyawan diizinkan (atau belum memilih area), cari Perusahaan yang cocok (Company PJA)
+                int? userCompanyId = null;
+                if (!lintasPerusahaan)
+                {
+                    var compIdClaim = User.FindFirst("CompanyId")?.Value;
+                    if (int.TryParse(compIdClaim, out int cid) && cid > 0)
+                    {
+                        userCompanyId = cid;
+                    }
+                }
+
+                var compQuery = _context.Perusahaans
+                    .AsNoTracking()
+                    .Where(c => c.StatusAktif &&
+                        ((c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(cleanTerm)) ||
+                         (c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(cleanTerm)) ||
+                         (c.NamaPjo != null && c.NamaPjo.ToLower().Contains(cleanTerm))));
+
+                if (userCompanyId.HasValue)
+                {
+                    compQuery = compQuery.Where(c => c.PerusahaanId == userCompanyId.Value);
+                }
+
+                var matchedCompanies = await compQuery.Take(10).ToListAsync();
+                foreach (var c in matchedCompanies)
+                {
+                    var pjoText = !string.IsNullOrEmpty(c.NamaPjo) ? $"PJO: {c.NamaPjo}" : "PJO BELUM TERDAFTAR";
+                    var key = $"COMPANY:{c.PerusahaanId}";
+                    if (seen.Add(key))
+                    {
+                        merged.Add(new
+                        {
+                            nik = $"COMPANY:{c.PerusahaanId}",
+                            nama = c.NamaPerusahaan ?? "-",
+                            departemen = "PERUSAHAAN",
+                            jabatan = pjoText,
+                            perusahaan = c.NamaPerusahaan ?? "-",
+                            companyId = c.PerusahaanId,
+                            companyOnly = true,
+                            source = "vw_perusahaan"
+                        });
+                    }
+
+                    // Jika PJO cocok dengan pencarian, tampilkan juga sebagai personal entry
+                    if (!string.IsNullOrEmpty(c.NamaPjo) && c.NamaPjo.ToLower().Contains(cleanTerm))
+                    {
+                        var pjoKey = $"PJO:{c.PerusahaanId}|{c.NamaPjo}";
+                        if (seen.Add(pjoKey))
+                        {
+                            merged.Add(new
+                            {
+                                nik = $"PJO:{c.PerusahaanId}",
+                                nama = c.NamaPjo,
+                                departemen = "PJO",
+                                jabatan = $"PJO {c.NamaPerusahaan}",
+                                perusahaan = c.NamaPerusahaan ?? "-",
+                                companyId = c.PerusahaanId,
+                                companyOnly = false,
+                                source = "vw_perusahaan.nama_pjo"
+                            });
+                        }
+                    }
+                }
+
+                // 6. Cari Karyawan Individual dari Database Views
+                var employeesQuery = from k in _context.Karyawans.AsNoTracking()
+                                     join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                                     join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                                     from j in jg.DefaultIfEmpty()
+                                     join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into dg
+                                     from d in dg.DefaultIfEmpty()
+                                     join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                                     from c in cg.DefaultIfEmpty()
+                                     where k.StatusAktif == true &&
+                                           (p.NamaLengkap.ToLower().Contains(cleanTerm) || 
+                                            k.NoNik.ToLower().Contains(cleanTerm) || 
+                                            (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(cleanTerm)) ||
+                                            (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(cleanTerm)))
+                                     select new
+                                     {
+                                         Nik = k.NoNik,
+                                         Nama = p.NamaLengkap,
+                                         Departemen = d.NamaDepartemen,
+                                         Jabatan = j.NamaJabatan,
+                                         Perusahaan = c.NamaPerusahaan,
+                                         IdPerusahaan = k.IdPerusahaan
+                                     };
+
+                if (userCompanyId.HasValue)
+                {
+                    employeesQuery = employeesQuery.Where(e => e.IdPerusahaan == userCompanyId.Value);
+                }
+
+                var employees = await employeesQuery.Take(25).ToListAsync();
+                foreach (var emp in employees)
+                {
+                    var key = $"{emp.Nik}|{emp.Perusahaan}";
+                    if (seen.Add(key))
+                    {
+                        merged.Add(new
+                        {
+                            nik = emp.Nik,
+                            nama = emp.Nama,
+                            departemen = !string.IsNullOrEmpty(emp.Departemen) ? emp.Departemen : "GENERAL",
+                            jabatan = !string.IsNullOrEmpty(emp.Jabatan) ? emp.Jabatan : "-",
+                            perusahaan = !string.IsNullOrEmpty(emp.Perusahaan) ? emp.Perusahaan : "-",
+                            companyId = emp.IdPerusahaan,
+                            companyOnly = false,
+                            source = "SearchEmployee"
                         });
                     }
                 }
-
-                // Jika area belum punya penugasan PJA, otomatis izinkan seluruh karyawan
-                var totalAssignedForArea = await _context.AreaPjaRelations
-                    .AsNoTracking()
-                    .CountAsync(p => p.NamaArea.ToLower() == cleanArea);
-                if (totalAssignedForArea == 0)
-                {
-                    isAllKaryawanAllowed = true;
-                }
             }
-
-            // Jika area memiliki PJA khusus dan opsi "All Karyawan" dinonaktifkan oleh Admin,
-            // batasi hasil hanya pada PJA area tersebut
-            if (!isAllKaryawanAllowed && merged.Count > 0)
+            catch (Exception)
             {
-                return Json(merged);
-            }
-
-            var pjaRefAction = await GetPjaReference(lintasPerusahaan);
-            var empAction = await SearchEmployee(cleanTerm, lintasPerusahaan);
-
-            var pjaRefJson = pjaRefAction as JsonResult;
-            var empJson = empAction as JsonResult;
-
-            var pjaList = (pjaRefJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
-            var empList = (empJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
-
-            foreach (var item in pjaList)
-            {
-                var type = item.GetType();
-                var nama = type.GetProperty("nama")?.GetValue(item, null)?.ToString() ?? "";
-                var perusahaan = type.GetProperty("perusahaan")?.GetValue(item, null)?.ToString() ?? "";
-                var nik = type.GetProperty("nik")?.GetValue(item, null)?.ToString() ?? "";
-                var jabatan = type.GetProperty("jabatan")?.GetValue(item, null)?.ToString() ?? "";
-
-                if (nama.ToLower().Contains(cleanTerm) ||
-                    perusahaan.ToLower().Contains(cleanTerm) ||
-                    nik.ToLower().Contains(cleanTerm) ||
-                    jabatan.ToLower().Contains(cleanTerm))
-                {
-                    var key = $"{nik}|{perusahaan}";
-                    if (seen.Add(key))
-                    {
-                        merged.Add(item);
-                    }
-                }
-            }
-
-            foreach (var item in empList)
-            {
-                var type = item.GetType();
-                var nama = type.GetProperty("Nama")?.GetValue(item, null)?.ToString() ?? "";
-                var perusahaan = type.GetProperty("Perusahaan")?.GetValue(item, null)?.ToString() ?? "";
-                var nik = type.GetProperty("Nik")?.GetValue(item, null)?.ToString() ?? "";
-                var dept = type.GetProperty("Departemen")?.GetValue(item, null)?.ToString() ?? "";
-                var jabatan = type.GetProperty("Jabatan")?.GetValue(item, null)?.ToString() ?? "";
-                var idPerusahaan = type.GetProperty("IdPerusahaan")?.GetValue(item, null);
-
-                var key = $"{nik}|{perusahaan}";
-                if (seen.Add(key))
-                {
-                    merged.Add(new
-                    {
-                        nik = nik,
-                        nama = nama,
-                        departemen = !string.IsNullOrEmpty(dept) ? dept : "GENERAL",
-                        jabatan = !string.IsNullOrEmpty(jabatan) ? jabatan : "-",
-                        perusahaan = !string.IsNullOrEmpty(perusahaan) ? perusahaan : "-",
-                        companyId = idPerusahaan,
-                        companyOnly = false,
-                        source = "SearchEmployee"
-                    });
-                }
+                // Fallback graceful
             }
 
             return Json(merged);
@@ -294,152 +375,71 @@ namespace MBS_SAP.Controllers
                     var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                     if (!string.IsNullOrEmpty(userNik))
                     {
-                        var k = await _context.Karyawans.FirstOrDefaultAsync(x => x.NoNik == userNik && x.StatusAktif);
+                        var k = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(x => x.NoNik == userNik && x.StatusAktif);
                         if (k != null) userCompanyId = k.IdPerusahaan;
                     }
                 }
             }
 
-            var refs = new List<PjaCompanyRef>();
-
-            // Source list sesuai kebutuhan: tbl_m_perusahaan (status aktif + PJO)
-            var conn = _context.Database.GetDbConnection();
-            bool wasClosed = conn.State == System.Data.ConnectionState.Closed;
-            if (wasClosed)
+            var cacheKey = $"pja_company_refs_{lintasPerusahaan}_{userCompanyId?.ToString() ?? "all"}";
+            if (_cache.TryGetValue(cacheKey, out List<object>? cachedList) && cachedList != null)
             {
-                await conn.OpenAsync();
-            }
-            try
-            {
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = @"
-SELECT id, nama_perusahaan, pjo, id_pjo
-FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan]
-WHERE status_aktif = '1'
-" + (userCompanyId.HasValue ? " AND id = @companyId" : "") + @"
-ORDER BY nama_perusahaan";
-
-                if (userCompanyId.HasValue)
-                {
-                    var p = cmd.CreateParameter();
-                    p.ParameterName = "@companyId";
-                    p.Value = userCompanyId.Value;
-                    cmd.Parameters.Add(p);
-                }
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    refs.Add(new PjaCompanyRef
-                    {
-                        PerusahaanId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        NamaPerusahaan = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                        Pjo = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        IdPjo = reader.IsDBNull(3) ? null : reader.GetInt32(3)
-                    });
-                }
-            }
-            finally
-            {
-                if (wasClosed)
-                {
-                    await conn.CloseAsync();
-                }
+                return Json(cachedList);
             }
 
             var result = new List<object>();
-            
-            foreach (var item in refs)
+            try
             {
-                var pjoName = (item.Pjo ?? string.Empty).Trim();
+                var compQuery = _context.Perusahaans
+                    .AsNoTracking()
+                    .Where(p => p.StatusAktif);
 
-                // 1. Selalu tambahkan Perusahaan sebagai opsi PJA langsung
-                result.Add(new
+                if (userCompanyId.HasValue)
                 {
-                    nik = $"COMPANY:{item.PerusahaanId}",
-                    nama = item.NamaPerusahaan,
-                    departemen = "PERUSAHAAN",
-                    jabatan = !string.IsNullOrEmpty(pjoName) ? $"PJO: {pjoName}" : "PJO BELUM TERDAFTAR",
-                    perusahaan = item.NamaPerusahaan,
-                    companyId = item.PerusahaanId,
-                    companyOnly = true,
-                    source = "tbl_m_perusahaan (Company PJA)"
-                });
+                    compQuery = compQuery.Where(p => p.PerusahaanId == userCompanyId.Value);
+                }
 
-                // 2. Jika ada PJO, tambahkan juga PJO sebagai opsi individu
-                if (item.IdPjo.HasValue && item.IdPjo.Value > 0)
+                var companies = await compQuery.OrderBy(p => p.NamaPerusahaan).ToListAsync();
+
+                foreach (var item in companies)
                 {
-                    var mappedById = await (from k in _context.Karyawans
-                                            join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                            join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                                            from d in dg.DefaultIfEmpty()
-                                            where k.StatusAktif == true
-                                                  && k.IdKaryawan == item.IdPjo.Value
-                                            select new
-                                            {
-                                                nik = k.NoNik,
-                                                nama = p.NamaLengkap,
-                                                departemen = d != null ? d.NamaDepartemen : "GENERAL",
-                                                jabatan = "PJO (INDIVIDU)",
-                                                perusahaan = item.NamaPerusahaan,
-                                                companyId = item.PerusahaanId,
-                                                companyOnly = false,
-                                                source = "tbl_m_perusahaan.id_pjo"
-                                            }).FirstOrDefaultAsync();
+                    var pjoName = (item.NamaPjo ?? string.Empty).Trim();
 
-                    if (mappedById != null)
+                    // 1. Selalu tambahkan Perusahaan sebagai opsi PJA
+                    result.Add(new
                     {
-                        result.Add(mappedById);
+                        nik = $"COMPANY:{item.PerusahaanId}",
+                        nama = item.NamaPerusahaan ?? "-",
+                        departemen = "PERUSAHAAN",
+                        jabatan = !string.IsNullOrEmpty(pjoName) ? $"PJO: {pjoName}" : "PJO BELUM TERDAFTAR",
+                        perusahaan = item.NamaPerusahaan ?? "-",
+                        companyId = item.PerusahaanId,
+                        companyOnly = true,
+                        source = "vw_perusahaan (Company PJA)"
+                    });
+
+                    // 2. Jika ada nama PJO, tambahkan juga sebagai entri PJO
+                    if (!string.IsNullOrEmpty(pjoName))
+                    {
+                        result.Add(new
+                        {
+                            nik = $"PJO:{item.PerusahaanId}",
+                            nama = pjoName,
+                            departemen = "PJO",
+                            jabatan = $"PJO {item.NamaPerusahaan}",
+                            perusahaan = item.NamaPerusahaan ?? "-",
+                            companyId = item.PerusahaanId,
+                            companyOnly = false,
+                            source = "vw_perusahaan.nama_pjo"
+                        });
                     }
                 }
 
-                if (!string.IsNullOrEmpty(pjoName))
-                {
-                    var mapped = await (from k in _context.Karyawans
-                                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                                        from d in dg.DefaultIfEmpty()
-                                        where k.StatusAktif == true
-                                              && k.IdPerusahaan == item.PerusahaanId
-                                              && p.NamaLengkap.ToLower() == pjoName.ToLower()
-                                        select new
-                                        {
-                                            nik = k.NoNik,
-                                            nama = p.NamaLengkap,
-                                            departemen = d != null ? d.NamaDepartemen : "GENERAL",
-                                            jabatan = "PJO (INDIVIDU)",
-                                            perusahaan = item.NamaPerusahaan,
-                                            companyId = item.PerusahaanId,
-                                            companyOnly = false,
-                                            source = "tbl_m_perusahaan.pjo"
-                                        }).FirstOrDefaultAsync();
-
-                    if (mapped == null)
-                    {
-                        mapped = await (from k in _context.Karyawans
-                                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                                        from d in dg.DefaultIfEmpty()
-                                        where k.StatusAktif == true
-                                              && p.NamaLengkap.ToLower() == pjoName.ToLower()
-                                        select new
-                                        {
-                                            nik = k.NoNik,
-                                            nama = p.NamaLengkap,
-                                            departemen = d != null ? d.NamaDepartemen : "GENERAL",
-                                            jabatan = "PJO (INDIVIDU)",
-                                            perusahaan = item.NamaPerusahaan,
-                                            companyId = item.PerusahaanId,
-                                            companyOnly = false,
-                                            source = "tbl_m_perusahaan.pjo.global"
-                                        }).FirstOrDefaultAsync();
-                    }
-
-                    if (mapped != null)
-                    {
-                        result.Add(mapped);
-                    }
-                }
+                _cache.Set(cacheKey, result, TimeSpan.FromMinutes(15));
+            }
+            catch (Exception)
+            {
+                // Fallback graceful
             }
 
             return Json(result);

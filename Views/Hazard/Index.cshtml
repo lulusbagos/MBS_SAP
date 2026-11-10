@@ -220,10 +220,13 @@
                             <span class="fw-bold" style="font-size: 11.5px; color: #14b8a6;">
                                 <i class="bi bi-shield-check me-1"></i> PJA Area Utama: <span id="areaPjaTitle" class="text-white"></span>
                             </span>
-                            <span class="badge" style="background: rgba(20, 184, 166, 0.2); color: #2dd4bf; font-size: 10px;" id="areaPjaCountBadge">0 PJA</span>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <span class="badge" style="background: rgba(20, 184, 166, 0.2); color: #2dd4bf; font-size: 10px;" id="areaPjaCountBadge">0 PJA</span>
+                                <span class="badge d-none" id="areaPjaAccessBadge" style="font-size: 9.5px;"></span>
+                            </div>
                         </div>
                         <div class="d-flex flex-wrap gap-1.5" id="areaPjaChips"></div>
-                        <div class="mt-2 text-muted" style="font-size: 10.5px;">
+                        <div class="mt-2 text-muted" id="areaPjaInfoText" style="font-size: 10.5px;">
                             <i class="bi bi-info-circle me-1"></i> Klik chip nama di atas untuk memilih langsung, atau cari karyawan lain di kolom bawah.
                         </div>
                     </div>
@@ -853,17 +856,32 @@
             const query = $(this).val();
             
             if (query.length < 1) {
-                $('#pjaSearchResults').hide();
+                const currentArea = $('#area').val() || '';
+                if (currentArea) {
+                    searchPja();
+                } else {
+                    $('#pjaSearchResults').hide();
+                }
                 return;
             }
 
             pjaTimeout = setTimeout(searchPja, 300);
         });
 
+        $('#pjaSearchInput').on('focus', function() {
+            const query = $(this).val();
+            const currentArea = $('#area').val() || '';
+            if (query.length === 0 && currentArea) {
+                searchPja();
+            }
+        });
+
         function loadAreaPjas(namaArea) {
             if (!namaArea || namaArea.trim() === '') {
                 $('#areaPjaContainer').addClass('d-none');
                 $('#areaPjaChips').empty();
+                $('#areaPjaAccessBadge').addClass('d-none');
+                $('#pjaSearchInput').attr('placeholder', 'Ketik NIK atau Nama PJA...');
                 return;
             }
 
@@ -877,8 +895,29 @@
                         $('#areaPjaTitle').text(res.area || namaArea);
                         $('#areaPjaCountBadge').text(res.pjas.length + ' PJA');
 
+                        const isKhusus = res.isAllKaryawan === false;
+                        const accessBadge = $('#areaPjaAccessBadge');
+                        const infoText = $('#areaPjaInfoText');
+
+                        if (isKhusus) {
+                            accessBadge.removeClass('d-none bg-success text-success border-success')
+                                       .addClass('bg-warning bg-opacity-25 text-warning border border-warning')
+                                       .html('<i class="bi bi-lock-fill me-1"></i>PJA Khusus Area');
+                            infoText.html('<i class="bi bi-shield-lock-fill text-warning me-1"></i> <strong class="text-warning">Aturan Area: PJA Khusus.</strong> Hanya PJA terdaftar di area ini yang dapat dipilih.');
+                            $('#pjaSearchInput').attr('placeholder', 'Cari di antara ' + res.pjas.length + ' PJA khusus area ini...');
+                        } else {
+                            accessBadge.removeClass('d-none bg-warning text-warning border-warning')
+                                       .addClass('bg-success bg-opacity-25 text-success border border-success')
+                                       .html('<i class="bi bi-people-fill me-1"></i>All Karyawan');
+                            infoText.html('<i class="bi bi-info-circle me-1"></i> Klik chip nama di atas untuk memilih langsung, atau cari karyawan lain di kolom bawah.');
+                            $('#pjaSearchInput').attr('placeholder', 'Ketik NIK atau Nama PJA...');
+                        }
+
+                        let picUtama = null;
                         res.pjas.forEach(function(p) {
                             const isPicUtama = !!p.isPicUtama;
+                            if (isPicUtama && !picUtama) picUtama = p;
+
                             const badgeClass = isPicUtama 
                                 ? 'border border-warning text-warning bg-warning bg-opacity-10' 
                                 : 'border border-info text-info bg-info bg-opacity-10';
@@ -899,13 +938,32 @@
                             chipsBox.append(chip);
                         });
 
+                        // Aturan pemilihan: jika belum ada PJA terpilih dan ada PIC Utama, auto-pilih PIC Utama
+                        const currentNik = $('#nikPja').val();
+                        if (!currentNik && picUtama) {
+                            selectPja(picUtama.nik, picUtama.nama, picUtama.jabatan, picUtama.departemen, picUtama.perusahaan, false);
+                        } else if (isKhusus && currentNik) {
+                            // Jika aturan area adalah PJA Khusus tapi PJA yang sebelumnya dipilih tidak ada dalam daftar PJA area, alihkan ke PIC Utama
+                            const isCurrentValid = res.pjas.some(p => p.nik === currentNik);
+                            if (!isCurrentValid) {
+                                if (picUtama) {
+                                    selectPja(picUtama.nik, picUtama.nama, picUtama.jabatan, picUtama.departemen, picUtama.perusahaan, false);
+                                } else {
+                                    clearSelectedPja();
+                                }
+                            }
+                        }
+
                         container.removeClass('d-none');
                     } else {
                         container.addClass('d-none');
+                        $('#areaPjaAccessBadge').addClass('d-none');
+                        $('#pjaSearchInput').attr('placeholder', 'Ketik NIK atau Nama PJA...');
                     }
                 })
                 .fail(function() {
                     $('#areaPjaContainer').addClass('d-none');
+                    $('#areaPjaAccessBadge').addClass('d-none');
                 });
         }
 
@@ -924,7 +982,7 @@
             }).done(function(merged) {
                 resultsContainer.empty();
                 if (!merged || merged.length === 0) {
-                    resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan.</div>');
+                    resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Silakan gunakan nama atau NIK lain.</div>');
                 } else {
                     const areaPjas = merged.filter(x => !!x.isAssignedArea);
                     const companies = merged.filter(x => !x.isAssignedArea && !!x.companyOnly);
@@ -1002,7 +1060,12 @@
                 }
                 resultsContainer.show();
             }).fail(function() {
-                resultsContainer.html('<div class="p-3 text-center text-danger" style="font-size: 12px;">Gagal memuat hasil pencarian PJA.</div>').show();
+                resultsContainer.html(`
+                    <div class="p-3 text-center text-muted" style="font-size: 12px;">
+                        <i class="bi bi-wifi-off text-warning me-1"></i>Koneksi bermasalah atau pencarian terganggu.
+                        <div class="mt-1"><a href="javascript:void(0)" onclick="searchPja()" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 11px;">Coba Lagi</a></div>
+                    </div>
+                `).show();
             });
         }
 
