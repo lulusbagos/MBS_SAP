@@ -311,40 +311,8 @@
                 reassignTimeout = setTimeout(function() {
                     var lintas = $('#reassignLintasPerusahaan').is(':checked');
 
-                    $.when(
-                        $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas }),
-                        $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas })
-                    ).done(function(pjaResp, empResp) {
-                        var pjaRefs = pjaResp[0] || [];
-                        var employees = empResp[0] || [];
-                        var lower = String(query || '').toLowerCase();
-
-                        var filteredPja = pjaRefs.filter(function(x) {
-                            return String(x.nama || '').toLowerCase().includes(lower)
-                                || String(x.perusahaan || '').toLowerCase().includes(lower)
-                                || String(x.nik || '').toLowerCase().includes(lower)
-                                || String(x.jabatan || '').toLowerCase().includes(lower);
-                        });
-
-                        var merged = [];
-                        var seen = new Set();
-                        filteredPja.forEach(function(item) {
-                            var key = String(item.nik || '') + '|' + String(item.perusahaan || '');
-                            if (!seen.has(key)) {
-                                seen.add(key);
-                                merged.push(item);
-                            }
-                        });
-
-                        employees.forEach(function(item) {
-                            var key = String(item.nik || '') + '|' + String(item.perusahaan || '');
-                            if (!seen.has(key)) {
-                                seen.add(key);
-                                item.companyOnly = false;
-                                merged.push(item);
-                            }
-                        });
-
+                    $.get('/Api/SearchPja', { term: query, lintasPerusahaan: lintas })
+                    .done(function(merged) {
                         $('#reassignSearchResults').empty();
                         if (merged && merged.length > 0) {
                             merged.forEach(function(emp) {

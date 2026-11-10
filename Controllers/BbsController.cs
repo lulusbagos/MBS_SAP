@@ -499,47 +499,54 @@ namespace MBS_SAP.Controllers
                 return Json(new object[] { });
             }
 
-            var queryLower = q.Trim().ToLower();
-
-            var query = from k in _context.Karyawans
-                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                        join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
-                        from j in jg.DefaultIfEmpty()
-                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                        from d in dg.DefaultIfEmpty()
-                        join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
-                        from c in cg.DefaultIfEmpty()
-                        where k.StatusAktif == true &&
-                              (p.NamaLengkap.ToLower().Contains(queryLower) ||
-                               k.NoNik.ToLower().Contains(queryLower))
-                        select new
-                        {
-                            k,
-                            p,
-                            j,
-                            d,
-                            c
-                        };
-
-            if (companyId.HasValue && companyId.Value > 0)
+            try
             {
-                query = query.Where(x => x.k.IdPerusahaan == companyId.Value);
-            }
+                var queryLower = q.Trim().ToLower();
 
-            var workers = await query
-                .Take(20)
-                .Select(x => new
+                var query = from k in _context.Karyawans.AsNoTracking()
+                            join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                            join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                            from j in jg.DefaultIfEmpty()
+                            join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into dg
+                            from d in dg.DefaultIfEmpty()
+                            join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                            from c in cg.DefaultIfEmpty()
+                            where k.StatusAktif == true &&
+                                  (p.NamaLengkap.ToLower().Contains(queryLower) ||
+                                   k.NoNik.ToLower().Contains(queryLower))
+                            select new
+                            {
+                                k,
+                                p,
+                                j,
+                                d,
+                                c
+                            };
+
+                if (companyId.HasValue && companyId.Value > 0)
                 {
-                    nik = x.k.NoNik.Trim(),
-                    nama = x.p.NamaLengkap.Trim(),
-                    jabatan = x.j != null ? x.j.NamaJabatan : "",
-                    departemen = x.d != null ? x.d.NamaDepartemen : "",
-                    perusahaanId = x.k.IdPerusahaan,
-                    perusahaan = x.c != null ? x.c.NamaPerusahaan : ""
-                })
-                .ToListAsync();
+                    query = query.Where(x => x.k.IdPerusahaan == companyId.Value);
+                }
 
-            return Json(workers);
+                var workers = await query
+                    .Take(20)
+                    .Select(x => new
+                    {
+                        nik = x.k.NoNik.Trim(),
+                        nama = x.p.NamaLengkap.Trim(),
+                        jabatan = x.j != null ? x.j.NamaJabatan : "",
+                        departemen = x.d != null ? x.d.NamaDepartemen : "",
+                        perusahaanId = x.k.IdPerusahaan,
+                        perusahaan = x.c != null ? x.c.NamaPerusahaan : ""
+                    })
+                    .ToListAsync();
+
+                return Json(workers);
+            }
+            catch (Exception)
+            {
+                return Json(new object[] { });
+            }
         }
 
         // ==========================================

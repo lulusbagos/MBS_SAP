@@ -327,35 +327,42 @@ namespace MBS_SAP.Controllers
             if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
                 return Json(new List<object>());
 
-            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(userCompanyIdStr, out var ucid) && ucid > 0 ? ucid : null;
-
-            // Determine all active companies
-            var activeCompanyIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
-
-            var term = q.Trim().ToLower();
-
-            var empQuery = from k in _context.Karyawans
-                           join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                           join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
-                           from c in cg.DefaultIfEmpty()
-                           where k.StatusAktif && activeCompanyIds.Contains(k.IdPerusahaan)
-                                 && (p.NamaLengkap.ToLower().Contains(term) || k.NoNik.ToLower().Contains(term))
-                           select new
-                           {
-                               nik = k.NoNik,
-                               nama = p.NamaLengkap,
-                               companyId = k.IdPerusahaan,
-                               companyName = c != null ? c.NamaPerusahaan : "—"
-                           };
-
-            if (companyId.HasValue && companyId.Value > 0)
+            try
             {
-                empQuery = empQuery.Where(e => e.companyId == companyId.Value);
-            }
+                var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(userCompanyIdStr, out var ucid) && ucid > 0 ? ucid : null;
 
-            var result = await empQuery.OrderBy(e => e.nama).Take(30).ToListAsync();
-            return Json(result);
+                // Determine all active companies with AsNoTracking
+                var activeCompanyIds = await _context.Perusahaans.AsNoTracking().Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
+
+                var term = q.Trim().ToLower();
+
+                var empQuery = from k in _context.Karyawans.AsNoTracking()
+                               join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                               join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                               from c in cg.DefaultIfEmpty()
+                               where k.StatusAktif && activeCompanyIds.Contains(k.IdPerusahaan)
+                                     && (p.NamaLengkap.ToLower().Contains(term) || k.NoNik.ToLower().Contains(term))
+                               select new
+                               {
+                                   nik = k.NoNik,
+                                   nama = p.NamaLengkap,
+                                   companyId = k.IdPerusahaan,
+                                   companyName = c != null ? c.NamaPerusahaan : "—"
+                               };
+
+                if (companyId.HasValue && companyId.Value > 0)
+                {
+                    empQuery = empQuery.Where(e => e.companyId == companyId.Value);
+                }
+
+                var result = await empQuery.OrderBy(e => e.nama).Take(30).ToListAsync();
+                return Json(result);
+            }
+            catch (Exception)
+            {
+                return Json(new List<object>());
+            }
         }
 
         // POST: Coaching/Delete/5

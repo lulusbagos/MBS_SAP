@@ -511,32 +511,39 @@ namespace MBS_SAP.Controllers
             if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 1)
                 return Json(new List<object>());
 
-            var query = q.Trim().ToLower();
-            var employees = await (from k in _context.Karyawans
-                                   join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                   join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
-                                   from j in jg.DefaultIfEmpty()
-                                   join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
-                                   from d in dg.DefaultIfEmpty()
-                                   join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
-                                   from c in cg.DefaultIfEmpty()
-                                   where k.StatusAktif == true &&
-                                         (p.NamaLengkap.ToLower().Contains(query) ||
-                                          k.NoNik.ToLower().Contains(query) ||
-                                          (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(query)) ||
-                                          (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(query)))
-                                   select new
-                                   {
-                                       nik = k.NoNik,
-                                       nama = p.NamaLengkap,
-                                       jabatan = j != null ? j.NamaJabatan : "",
-                                       departemen = d != null ? d.NamaDepartemen : "",
-                                       perusahaan = c != null ? c.NamaPerusahaan : ""
-                                   })
-                                   .Take(25)
-                                   .ToListAsync();
+            try
+            {
+                var query = q.Trim().ToLower();
+                var employees = await (from k in _context.Karyawans.AsNoTracking()
+                                       join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                                       join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                                       from j in jg.DefaultIfEmpty()
+                                       join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into dg
+                                       from d in dg.DefaultIfEmpty()
+                                       join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                                       from c in cg.DefaultIfEmpty()
+                                       where k.StatusAktif == true &&
+                                             (p.NamaLengkap.ToLower().Contains(query) ||
+                                              k.NoNik.ToLower().Contains(query) ||
+                                              (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(query)) ||
+                                              (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(query)))
+                                       select new
+                                       {
+                                           nik = k.NoNik,
+                                           nama = p.NamaLengkap,
+                                           jabatan = j != null ? j.NamaJabatan : "",
+                                           departemen = d != null ? d.NamaDepartemen : "",
+                                           perusahaan = c != null ? c.NamaPerusahaan : ""
+                                       })
+                                       .Take(25)
+                                       .ToListAsync();
 
-            return Json(employees);
+                return Json(employees);
+            }
+            catch (Exception)
+            {
+                return Json(new List<object>());
+            }
         }
 
         [HttpPost]
