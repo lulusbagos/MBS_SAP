@@ -2484,9 +2484,14 @@ namespace MBS_SAP.Controllers
             var rawList = await hazardQuery
                 .Select(h => new
                 {
+                    Id = h.Id,
+                    Tanggal = h.Tanggal,
                     Area = string.IsNullOrWhiteSpace(h.Area) ? "Tidak Terdefinisi" : h.Area.Trim(),
                     Lokasi = h.Lokasi ?? "",
                     DetilLokasi = h.DetilLokasi ?? "",
+                    Temuan = h.Temuan ?? "",
+                    Perbaikan = !string.IsNullOrEmpty(h.Perbaikan) ? h.Perbaikan : (h.TindakanPerbaikan ?? ""),
+                    KategoriBahaya = h.KategoriBahaya ?? "",
                     TingkatResiko = h.TingkatResiko ?? "",
                     StatusTemuan = h.StatusTemuan ?? "Open",
                     Nama = h.Nama,
@@ -2815,9 +2820,14 @@ namespace MBS_SAP.Controllers
             var rawList = await hazardQuery
                 .Select(h => new
                 {
+                    Id = h.Id,
+                    Tanggal = h.Tanggal,
                     Area = string.IsNullOrWhiteSpace(h.Area) ? "Tidak Terdefinisi" : h.Area.Trim(),
                     Lokasi = h.Lokasi ?? "",
                     DetilLokasi = h.DetilLokasi ?? "",
+                    Temuan = h.Temuan ?? "",
+                    Perbaikan = !string.IsNullOrEmpty(h.Perbaikan) ? h.Perbaikan : (h.TindakanPerbaikan ?? ""),
+                    KategoriBahaya = h.KategoriBahaya ?? "",
                     TingkatResiko = h.TingkatResiko ?? "",
                     StatusTemuan = h.StatusTemuan ?? "Open",
                     Nama = h.Nama,
@@ -3003,46 +3013,264 @@ namespace MBS_SAP.Controllers
 
             using (var workbook = new XLWorkbook())
             {
-                // ==================== SHEET 1: PEMETAAN & BREAKDOWN DETAIL LOKASI ====================
+                // Helper local styling lambdas
+                void ApplyBadgeColor(IXLCell cell, string level)
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    if (level.Equals("Kritis", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+                        cell.Style.Font.FontColor = XLColor.FromHtml("#991b1b");
+                    }
+                    else if (level.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) || level.Equals("High", StringComparison.OrdinalIgnoreCase) || level.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
+                        cell.Style.Font.FontColor = XLColor.FromHtml("#9a3412");
+                    }
+                    else if (level.Equals("Sedang", StringComparison.OrdinalIgnoreCase) || level.Equals("Medium", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#fef9c3");
+                        cell.Style.Font.FontColor = XLColor.FromHtml("#854d0e");
+                    }
+                    else
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#dcfce7");
+                        cell.Style.Font.FontColor = XLColor.FromHtml("#166534");
+                    }
+                }
+
+                void SetupPrint(IXLWorksheet ws)
+                {
+                    ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+                    ws.PageSetup.FitToPages(1, 0);
+                }
+
+                double overallCloseRate = totalAllReports > 0 ? Math.Round(((double)totalClosedReports / totalAllReports) * 100.0, 1) : 0.0;
+                int totalSubLocationsCount = areaResults.Sum(a => a.SubLocationsCount);
+
+                // ==================== SHEET 1: EXECUTIVE SUMMARY & PRIORITAS TAKE-UP ====================
+                var wsExec = workbook.Worksheets.Add("Executive Summary");
+                wsExec.ShowGridLines = true;
+
+                // Corporate Banner
+                wsExec.Range(1, 1, 1, 10).Merge().Value = "LAPORAN EKSEKUTIF PEMETAAN RISIKO & TINDAK LANJUT TEMUAN (SAP)";
+                wsExec.Range(1, 1, 1, 10).Style.Font.Bold = true;
+                wsExec.Range(1, 1, 1, 10).Style.Font.FontSize = 15;
+                wsExec.Range(1, 1, 1, 10).Style.Font.FontColor = XLColor.White;
+                wsExec.Range(1, 1, 1, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                wsExec.Range(1, 1, 1, 10).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                wsExec.Row(1).Height = 32;
+
+                wsExec.Range(2, 1, 2, 10).Merge().Value = $"Periode: {periodStr}   |   Perusahaan: {selectedCompanyName}   |   Dicetak: {DateTime.Now:dd MMM yyyy HH:mm}";
+                wsExec.Range(2, 1, 2, 10).Style.Font.Italic = true;
+                wsExec.Range(2, 1, 2, 10).Style.Font.FontSize = 10;
+                wsExec.Range(2, 1, 2, 10).Style.Font.FontColor = XLColor.FromHtml("#e2e8f0");
+                wsExec.Range(2, 1, 2, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
+                wsExec.Range(2, 1, 2, 10).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                wsExec.Row(2).Height = 20;
+
+                // KPI Cards (Rows 4-5)
+                var kpiDefs = new (int c1, int c2, string title, object val, string bgHex, string fgHex)[]
+                {
+                    (1, 2, "TOTAL TEMUAN BAHAYA", totalAllReports, "#eff6ff", "#1d4ed8"),
+                    (3, 4, "RISIKO TINGGI / KRITIS", totalHighRisk, "#fef2f2", "#b91c1c"),
+                    (5, 6, "BELUM CLOSE (OPEN)", totalOpenReports, "#fff7ed", "#c2410c"),
+                    (7, 8, "% CLOSE RATE", $"{overallCloseRate}%", "#ecfdf5", "#047857"),
+                    (9, 10, "CAKUPAN AREA / TITIK", $"{areaResults.Count} Area / {totalSubLocationsCount} Titik", "#f8fafc", "#334155")
+                };
+
+                wsExec.Row(4).Height = 18;
+                wsExec.Row(5).Height = 26;
+                foreach (var k in kpiDefs)
+                {
+                    var rngTitle = wsExec.Range(4, k.c1, 4, k.c2).Merge();
+                    rngTitle.Value = k.title;
+                    rngTitle.Style.Font.Bold = true;
+                    rngTitle.Style.Font.FontSize = 9;
+                    rngTitle.Style.Font.FontColor = XLColor.FromHtml("#475569");
+                    rngTitle.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                    rngTitle.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rngTitle.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    var rngVal = wsExec.Range(5, k.c1, 5, k.c2).Merge();
+                    rngVal.Value = XLCellValue.FromObject(k.val);
+                    rngVal.Style.Font.Bold = true;
+                    rngVal.Style.Font.FontSize = 14;
+                    rngVal.Style.Font.FontColor = XLColor.FromHtml(k.fgHex);
+                    rngVal.Style.Fill.BackgroundColor = XLColor.FromHtml(k.bgHex);
+                    rngVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rngVal.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    var box = wsExec.Range(4, k.c1, 5, k.c2);
+                    box.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    box.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                }
+
+                // Section: Top 15 Action-Required Sub-Locations
+                wsExec.Range(7, 1, 7, 10).Merge().Value = "PRIORITAS TINDAK LANJUT (TOP 15 TITIK LOKASI DENGAN TEMUAN OPEN & BAHAYA TERTINGGI)";
+                wsExec.Range(7, 1, 7, 10).Style.Font.Bold = true;
+                wsExec.Range(7, 1, 7, 10).Style.Font.FontSize = 11;
+                wsExec.Range(7, 1, 7, 10).Style.Font.FontColor = XLColor.FromHtml("#9a3412");
+                wsExec.Range(7, 1, 7, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
+                wsExec.Row(7).Height = 22;
+
+                string[] prioHeaders = new[]
+                {
+                    "Prioritas", "Perusahaan", "Area Utama", "Detail Titik Lokasi", "Tingkat Bahaya",
+                    "Open (Belum Close)", "Risiko Tinggi", "% Selesai", "PJA Penanggung Jawab", "Rekomendasi Take Up"
+                };
+                for (int c = 0; c < prioHeaders.Length; c++)
+                {
+                    var cell = wsExec.Cell(8, c + 1);
+                    cell.Value = prioHeaders[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 9.5;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#b45309");
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                wsExec.Row(8).Height = 22;
+
+                var prioritySubLocs = areaResults
+                    .SelectMany(a => a.SubLocations.Select(s => new { Area = a.AreaName, Sub = s }))
+                    .Where(x => x.Sub.OpenCount > 0 || x.Sub.HighRisk > 0)
+                    .OrderByDescending(x => x.Sub.OpenCount)
+                    .ThenByDescending(x => x.Sub.HighRisk)
+                    .ThenByDescending(x => x.Sub.DangerScore)
+                    .Take(15)
+                    .ToList();
+
+                int eRow = 9;
+                if (prioritySubLocs.Any())
+                {
+                    int pIdx = 1;
+                    foreach (var p in prioritySubLocs)
+                    {
+                        string prioLabel = p.Sub.OpenCount >= 5 || p.Sub.DangerLevel == "Kritis" ? $"P1 - URGENT (#{pIdx})" : $"P2 - TINGGI (#{pIdx})";
+                        string actionRec = p.Sub.OpenCount > 0
+                            ? $"Segera close {p.Sub.OpenCount} temuan open (koordinasi PJA: {p.Sub.PjaName})"
+                            : $"Lakukan inspeksi & kontrol area risiko tinggi ({p.Sub.HighRisk} temuan tinggi)";
+
+                        wsExec.Cell(eRow, 1).Value = prioLabel;
+                        wsExec.Cell(eRow, 2).Value = p.Sub.PerusahaanName;
+                        wsExec.Cell(eRow, 3).Value = p.Area;
+                        wsExec.Cell(eRow, 4).Value = p.Sub.DetailLokasi;
+                        wsExec.Cell(eRow, 5).Value = p.Sub.DangerLevel;
+                        wsExec.Cell(eRow, 6).Value = p.Sub.OpenCount;
+                        wsExec.Cell(eRow, 7).Value = p.Sub.HighRisk;
+                        wsExec.Cell(eRow, 8).Value = $"{p.Sub.CloseRate}%";
+                        wsExec.Cell(eRow, 9).Value = p.Sub.PjaName;
+                        wsExec.Cell(eRow, 10).Value = actionRec;
+
+                        wsExec.Cell(eRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsExec.Cell(eRow, 1).Style.Font.Bold = true;
+                        if (prioLabel.StartsWith("P1")) wsExec.Cell(eRow, 1).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+                        ApplyBadgeColor(wsExec.Cell(eRow, 5), p.Sub.DangerLevel);
+                        wsExec.Cell(eRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsExec.Cell(eRow, 6).Style.Font.Bold = true;
+                        if (p.Sub.OpenCount > 0) wsExec.Cell(eRow, 6).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+                        wsExec.Cell(eRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsExec.Cell(eRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                        if (eRow % 2 == 0) wsExec.Range(eRow, 1, eRow, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#fffbeb");
+                        eRow++;
+                        pIdx++;
+                    }
+                }
+                else
+                {
+                    wsExec.Range(eRow, 1, eRow, 10).Merge().Value = "Tidak ada temuan Open atau Risiko Tinggi yang mendesak pada periode ini.";
+                    wsExec.Cell(eRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    eRow++;
+                }
+
+                var prioRange = wsExec.Range(8, 1, eRow - 1, 10);
+                prioRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                prioRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                prioRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                prioRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+
+                // Section: Top 7 Reporters
+                int repTitleRow = eRow + 2;
+                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Merge().Value = "TOP 7 KONTRIBUTOR PELAPOR BAHAYA TERAKTIF";
+                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.Bold = true;
+                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.FontSize = 11;
+                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.FontColor = XLColor.FromHtml("#065f46");
+                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Fill.BackgroundColor = XLColor.FromHtml("#d1fae5");
+                wsExec.Row(repTitleRow).Height = 22;
+
+                string[] repHeaders = new[] { "Rank", "Nama Pelapor", "NIK", "Departemen", "Perusahaan", "Total Laporan" };
+                int repHeadRow = repTitleRow + 1;
+                for (int c = 0; c < repHeaders.Length; c++)
+                {
+                    var cell = wsExec.Cell(repHeadRow, c + 1);
+                    cell.Value = repHeaders[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#047857");
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+
+                var execTopReporters = rawList
+                    .Where(h => !string.IsNullOrEmpty(h.Nama))
+                    .GroupBy(h => new { h.Nama, h.Nik, h.Departemen, h.PerusahaanId })
+                    .OrderByDescending(g => g.Count())
+                    .Take(7)
+                    .ToList();
+
+                int rRow = repHeadRow + 1;
+                int rRank = 1;
+                foreach (var r in execTopReporters)
+                {
+                    string comp = (r.Key.PerusahaanId.HasValue && companyDict.TryGetValue(r.Key.PerusahaanId.Value, out var cn)) ? cn : "-";
+                    wsExec.Cell(rRow, 1).Value = rRank;
+                    wsExec.Cell(rRow, 2).Value = r.Key.Nama;
+                    wsExec.Cell(rRow, 3).Value = r.Key.Nik;
+                    wsExec.Cell(rRow, 4).Value = r.Key.Departemen;
+                    wsExec.Cell(rRow, 5).Value = comp;
+                    wsExec.Cell(rRow, 6).Value = r.Count();
+                    wsExec.Cell(rRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsExec.Cell(rRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsExec.Cell(rRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsExec.Cell(rRow, 6).Style.Font.Bold = true;
+                    rRow++;
+                    rRank++;
+                }
+
+                if (rRow > repHeadRow + 1)
+                {
+                    var repRange = wsExec.Range(repHeadRow, 1, rRow - 1, 6);
+                    repRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    repRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    repRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    repRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                }
+
+                wsExec.Columns().AdjustToContents(10, 50);
+                SetupPrint(wsExec);
+
+                // ==================== SHEET 2: PEMETAAN & BREAKDOWN DETAIL LOKASI ====================
                 var wsDetail = workbook.Worksheets.Add("Pemetaan Detail Lokasi");
                 wsDetail.ShowGridLines = true;
+                wsDetail.Outline.SummaryVLocation = XLOutlineSummaryVLocation.Top;
 
-                // Title
-                wsDetail.Cell(1, 1).Value = "LAPORAN PEMETAAN RISIKO & BREAKDOWN DETAIL LOKASI KERJA";
-                wsDetail.Cell(1, 1).Style.Font.Bold = true;
-                wsDetail.Cell(1, 1).Style.Font.FontSize = 14;
-                wsDetail.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                wsDetail.Range(1, 1, 1, 16).Merge().Value = "LAPORAN PEMETAAN RISIKO & BREAKDOWN DETAIL LOKASI KERJA";
+                wsDetail.Range(1, 1, 1, 16).Style.Font.Bold = true;
+                wsDetail.Range(1, 1, 1, 16).Style.Font.FontSize = 14;
+                wsDetail.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
+                wsDetail.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                wsDetail.Row(1).Height = 28;
 
-                wsDetail.Cell(2, 1).Value = $"Periode: {periodStr} | Perusahaan: {selectedCompanyName} | Dicetak: {DateTime.Now:dd/MM/yyyy HH:mm}";
-                wsDetail.Cell(2, 1).Style.Font.Italic = true;
-                wsDetail.Cell(2, 1).Style.Font.FontSize = 10;
-                wsDetail.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+                wsDetail.Range(2, 1, 2, 16).Merge().Value = $"Periode: {periodStr}  |  Perusahaan: {selectedCompanyName}  |  Tips: Gunakan tombol [+] / [-] di sisi kiri Excel untuk melipat/membuka detail titik lokasi.";
+                wsDetail.Range(2, 1, 2, 16).Style.Font.Italic = true;
+                wsDetail.Range(2, 1, 2, 16).Style.Font.FontSize = 9.5;
+                wsDetail.Range(2, 1, 2, 16).Style.Font.FontColor = XLColor.FromHtml("#e2e8f0");
+                wsDetail.Range(2, 1, 2, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
+                wsDetail.Row(2).Height = 19;
 
-                // Summary KPI Row 4-5
-                wsDetail.Range(4, 1, 4, 3).Merge().Value = "TOTAL TEMUAN";
-                wsDetail.Cell(5, 1).Value = totalAllReports;
-                wsDetail.Range(4, 4, 4, 6).Merge().Value = "RISIKO TINGGI / KRITIS";
-                wsDetail.Cell(5, 4).Value = totalHighRisk;
-                wsDetail.Range(4, 7, 4, 9).Merge().Value = "BELUM SELESAI (OPEN)";
-                wsDetail.Cell(5, 7).Value = totalOpenReports;
-                wsDetail.Range(4, 10, 4, 14).Merge().Value = "PENYELESAIAN (CLOSE RATE)";
-                wsDetail.Cell(5, 10).Value = totalAllReports > 0 ? $"{Math.Round(((double)totalClosedReports / totalAllReports) * 100.0, 1)}%" : "0%";
-
-                wsDetail.Range(4, 1, 4, 14).Style.Font.Bold = true;
-                wsDetail.Range(4, 1, 4, 14).Style.Font.FontSize = 9;
-                wsDetail.Range(4, 1, 4, 14).Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
-                wsDetail.Range(4, 1, 4, 14).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                wsDetail.Range(5, 1, 5, 3).Merge();
-                wsDetail.Range(5, 4, 5, 6).Merge();
-                wsDetail.Range(5, 7, 5, 9).Merge();
-                wsDetail.Range(5, 10, 5, 14).Merge();
-                wsDetail.Range(5, 1, 5, 14).Style.Font.Bold = true;
-                wsDetail.Range(5, 1, 5, 14).Style.Font.FontSize = 13;
-                wsDetail.Range(5, 1, 5, 14).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                // Table Headers Row 7
-                int headerRow = 7;
+                int headerRow = 4;
                 string[] detailHeaders = new[]
                 {
                     "No", "Perusahaan", "Area Utama", "Detail Titik Lokasi", "Tingkat Bahaya",
@@ -3064,13 +3292,13 @@ namespace MBS_SAP.Controllers
                 }
                 wsDetail.Row(headerRow).Height = 24;
 
-                int curRow = 8;
+                int curRow = 5;
                 foreach (var area in areaResults)
                 {
                     // Master Area Row
                     wsDetail.Cell(curRow, 1).Value = area.Rank;
                     wsDetail.Cell(curRow, 2).Value = string.Join(", ", area.Companies);
-                    wsDetail.Cell(curRow, 3).Value = $"[AREA UTAMA] {area.AreaName} ({area.SubLocationsCount} Titik Lokasi)";
+                    wsDetail.Cell(curRow, 3).Value = $"[AREA UTAMA] {area.AreaName} ({area.SubLocationsCount} Titik)";
                     wsDetail.Cell(curRow, 4).Value = "Seluruh Titik di Area";
                     wsDetail.Cell(curRow, 5).Value = area.DangerLevel;
                     wsDetail.Cell(curRow, 6).Value = area.TotalReports;
@@ -3087,24 +3315,18 @@ namespace MBS_SAP.Controllers
 
                     wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Font.Bold = true;
                     wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e0f2fe");
-                    wsDetail.Cell(curRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsDetail.Cell(curRow, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                    if (area.DangerLevel == "Kritis") wsDetail.Cell(curRow, 5).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                    else if (area.DangerLevel == "Tinggi") wsDetail.Cell(curRow, 5).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+                    for (int col = 1; col <= 15; col++)
+                    {
+                        if (col == 2 || col == 3 || col == 4 || col == 13 || col == 14) continue;
+                        wsDetail.Cell(curRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    ApplyBadgeColor(wsDetail.Cell(curRow, 5), area.DangerLevel);
                     if (area.OpenCount > 0) wsDetail.Cell(curRow, 10).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+                    wsDetail.Cell(curRow, 12).Style.Font.FontColor = XLColor.FromHtml(area.CloseRate >= 80 ? "#166534" : (area.CloseRate >= 50 ? "#854d0e" : "#991b1b"));
 
                     curRow++;
 
-                    // SubLocation Rows
+                    // SubLocation Rows with Outline Grouping
                     int subIndex = 1;
                     foreach (var sub in area.SubLocations)
                     {
@@ -3125,60 +3347,160 @@ namespace MBS_SAP.Controllers
                         wsDetail.Cell(curRow, 15).Value = sub.TopReporterCount > 0 ? sub.TopReporterCount.ToString() : "-";
                         wsDetail.Cell(curRow, 16).Value = sub.PjaName;
 
-                        wsDetail.Cell(curRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsDetail.Cell(curRow, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsDetail.Row(curRow).OutlineLevel = 1;
 
-                        if (sub.DangerLevel == "Kritis")
+                        for (int col = 1; col <= 15; col++)
                         {
-                            wsDetail.Cell(curRow, 5).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                            wsDetail.Cell(curRow, 5).Style.Font.Bold = true;
-                        }
-                        else if (sub.DangerLevel == "Tinggi")
-                        {
-                            wsDetail.Cell(curRow, 5).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
-                        }
-
-                        if (sub.OpenCount > 0)
-                        {
-                            wsDetail.Cell(curRow, 10).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+                            if (col == 2 || col == 3 || col == 4 || col == 13 || col == 14) continue;
+                            wsDetail.Cell(curRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         }
 
                         if (curRow % 2 == 0)
                         {
                             wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
                         }
+                        ApplyBadgeColor(wsDetail.Cell(curRow, 5), sub.DangerLevel);
+                        if (sub.OpenCount > 0)
+                        {
+                            wsDetail.Cell(curRow, 10).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+                            wsDetail.Cell(curRow, 10).Style.Font.Bold = true;
+                        }
+                        wsDetail.Cell(curRow, 12).Style.Font.FontColor = XLColor.FromHtml(sub.CloseRate >= 80 ? "#166534" : (sub.CloseRate >= 50 ? "#854d0e" : "#991b1b"));
 
                         curRow++;
                         subIndex++;
                     }
                 }
 
-                if (curRow > 8)
+                if (curRow > 5)
                 {
                     var tableRange = wsDetail.Range(headerRow, 1, curRow - 1, detailHeaders.Length);
                     tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                     tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
                     tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                    tableRange.SetAutoFilter();
                 }
 
-                wsDetail.Columns().AdjustToContents(10, 55);
+                wsDetail.SheetView.FreezeRows(headerRow);
+                wsDetail.Columns().AdjustToContents(10, 50);
+                SetupPrint(wsDetail);
 
-                // ==================== SHEET 2: REKAPITULASI AREA UTAMA ====================
+                // ==================== SHEET 3: DAFTAR TEMUAN OPEN (SIAP TAKE UP) ====================
+                var wsOpen = workbook.Worksheets.Add("Temuan Open (Take Up)");
+                wsOpen.ShowGridLines = true;
+
+                wsOpen.Range(1, 1, 1, 14).Merge().Value = "DAFTAR RINCI TEMUAN BAHAYA BELUM SELESAI (OPEN) - SIAP TINDAK LANJUT";
+                wsOpen.Range(1, 1, 1, 14).Style.Font.Bold = true;
+                wsOpen.Range(1, 1, 1, 14).Style.Font.FontSize = 14;
+                wsOpen.Range(1, 1, 1, 14).Style.Font.FontColor = XLColor.White;
+                wsOpen.Range(1, 1, 1, 14).Style.Fill.BackgroundColor = XLColor.FromHtml("#9a3412");
+                wsOpen.Row(1).Height = 28;
+
+                wsOpen.Range(2, 1, 2, 14).Merge().Value = $"Periode: {periodStr}  |  Perusahaan: {selectedCompanyName}  |  Total Temuan Open: {totalOpenReports}";
+                wsOpen.Range(2, 1, 2, 14).Style.Font.Italic = true;
+                wsOpen.Range(2, 1, 2, 14).Style.Font.FontSize = 9.5;
+                wsOpen.Range(2, 1, 2, 14).Style.Font.FontColor = XLColor.FromHtml("#ffedd5");
+                wsOpen.Range(2, 1, 2, 14).Style.Fill.BackgroundColor = XLColor.FromHtml("#7c2d12");
+                wsOpen.Row(2).Height = 19;
+
+                string[] openHeaders = new[]
+                {
+                    "No", "ID", "Tanggal Lapor", "Umur (Hari)", "Perusahaan", "Area Utama", "Detail Titik Lokasi",
+                    "Tingkat Risiko", "Status", "Kategori", "Deskripsi Temuan", "Rekomendasi Perbaikan",
+                    "Pelapor (Dept)", "PJA Penanggung Jawab"
+                };
+
+                for (int c = 0; c < openHeaders.Length; c++)
+                {
+                    var cell = wsOpen.Cell(4, c + 1);
+                    cell.Value = openHeaders[c];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c");
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                wsOpen.Row(4).Height = 24;
+
+                var openItems = rawList
+                    .Where(h => h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) || h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(h =>
+                        h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ? 4 :
+                        (h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase) ? 3 :
+                        (h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase) ? 2 : 1)))
+                    .ThenBy(h => h.Tanggal)
+                    .ToList();
+
+                int oRow = 5;
+                int oIdx = 1;
+                foreach (var item in openItems)
+                {
+                    string comp = (item.PerusahaanId.HasValue && companyDict.TryGetValue(item.PerusahaanId.Value, out var cn)) ? cn : "-";
+                    string subLoc = !string.IsNullOrWhiteSpace(item.DetilLokasi) ? item.DetilLokasi.Trim() : (!string.IsNullOrWhiteSpace(item.Lokasi) ? item.Lokasi.Trim() : "-");
+                    int ageDays = Math.Max(0, (DateTime.Today - item.Tanggal.Date).Days);
+
+                    wsOpen.Cell(oRow, 1).Value = oIdx;
+                    wsOpen.Cell(oRow, 2).Value = item.Id;
+                    wsOpen.Cell(oRow, 3).Value = item.Tanggal.ToString("dd/MM/yyyy");
+                    wsOpen.Cell(oRow, 4).Value = ageDays;
+                    wsOpen.Cell(oRow, 5).Value = comp;
+                    wsOpen.Cell(oRow, 6).Value = item.Area;
+                    wsOpen.Cell(oRow, 7).Value = subLoc;
+                    wsOpen.Cell(oRow, 8).Value = string.IsNullOrEmpty(item.TingkatResiko) ? "-" : item.TingkatResiko;
+                    wsOpen.Cell(oRow, 9).Value = item.StatusTemuan;
+                    wsOpen.Cell(oRow, 10).Value = string.IsNullOrEmpty(item.KategoriBahaya) ? "-" : item.KategoriBahaya;
+                    wsOpen.Cell(oRow, 11).Value = item.Temuan;
+                    wsOpen.Cell(oRow, 12).Value = string.IsNullOrEmpty(item.Perbaikan) ? "-" : item.Perbaikan;
+                    wsOpen.Cell(oRow, 13).Value = $"{item.Nama} ({item.Departemen})";
+                    wsOpen.Cell(oRow, 14).Value = string.IsNullOrEmpty(item.Pja) ? "-" : item.Pja;
+
+                    wsOpen.Cell(oRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOpen.Cell(oRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOpen.Cell(oRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOpen.Cell(oRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOpen.Cell(oRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    if (ageDays >= 14)
+                    {
+                        wsOpen.Cell(oRow, 4).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+                        wsOpen.Cell(oRow, 4).Style.Font.Bold = true;
+                    }
+                    ApplyBadgeColor(wsOpen.Cell(oRow, 8), item.TingkatResiko);
+                    wsOpen.Cell(oRow, 11).Style.Alignment.WrapText = true;
+                    wsOpen.Cell(oRow, 12).Style.Alignment.WrapText = true;
+
+                    if (oRow % 2 == 0) wsOpen.Range(oRow, 1, oRow, openHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#fff7ed");
+                    oRow++;
+                    oIdx++;
+                }
+
+                if (oRow > 5)
+                {
+                    var openRange = wsOpen.Range(4, 1, oRow - 1, openHeaders.Length);
+                    openRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    openRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    openRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    openRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                    openRange.SetAutoFilter();
+                }
+
+                wsOpen.SheetView.FreezeRows(4);
+                wsOpen.Columns().AdjustToContents(10, 48);
+                wsOpen.Column(11).Width = 42;
+                wsOpen.Column(12).Width = 38;
+                SetupPrint(wsOpen);
+
+                // ==================== SHEET 4: REKAPITULASI AREA UTAMA ====================
                 var wsMain = workbook.Worksheets.Add("Rekap Area Utama");
                 wsMain.ShowGridLines = true;
 
-                wsMain.Cell(1, 1).Value = "REKAPITULASI AREA UTAMA & TINGKAT BAHAYA";
-                wsMain.Cell(1, 1).Style.Font.Bold = true;
-                wsMain.Cell(1, 1).Style.Font.FontSize = 14;
+                wsMain.Range(1, 1, 1, 16).Merge().Value = "REKAPITULASI AREA UTAMA & TINGKAT BAHAYA";
+                wsMain.Range(1, 1, 1, 16).Style.Font.Bold = true;
+                wsMain.Range(1, 1, 1, 16).Style.Font.FontSize = 14;
+                wsMain.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
+                wsMain.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                wsMain.Row(1).Height = 28;
 
                 string[] mainHeaders = new[]
                 {
@@ -3196,6 +3518,7 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontColor = XLColor.White;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 }
                 wsMain.Row(3).Height = 24;
 
@@ -3219,38 +3542,54 @@ namespace MBS_SAP.Controllers
                     wsMain.Cell(mRow, 15).Value = area.TopReporterCount > 0 ? area.TopReporterCount.ToString() : "-";
                     wsMain.Cell(mRow, 16).Value = area.PjaName;
 
-                    wsMain.Cell(mRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMain.Cell(mRow, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    for (int col = 1; col <= 15; col++)
+                    {
+                        if (col == 2 || col == 3 || col == 13 || col == 14) continue;
+                        wsMain.Cell(mRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
 
                     if (mRow % 2 == 0) wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                    ApplyBadgeColor(wsMain.Cell(mRow, 5), area.DangerLevel);
                     mRow++;
                 }
 
+                // Grand Total Row
                 if (mRow > 4)
                 {
-                    var tableRange = wsMain.Range(3, 1, mRow - 1, mainHeaders.Length);
+                    wsMain.Range(mRow, 1, mRow, 3).Merge().Value = "GRAND TOTAL";
+                    wsMain.Cell(mRow, 4).Value = totalSubLocationsCount;
+                    wsMain.Cell(mRow, 5).Value = "-";
+                    wsMain.Cell(mRow, 6).Value = totalAllReports;
+                    wsMain.Cell(mRow, 7).Value = totalHighRisk;
+                    wsMain.Cell(mRow, 8).Value = areaResults.Sum(a => a.MediumRisk);
+                    wsMain.Cell(mRow, 9).Value = areaResults.Sum(a => a.LowRisk);
+                    wsMain.Cell(mRow, 10).Value = totalOpenReports;
+                    wsMain.Cell(mRow, 11).Value = totalClosedReports;
+                    wsMain.Cell(mRow, 12).Value = $"{overallCloseRate}%";
+                    wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Font.Bold = true;
+                    wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                    for (int col = 1; col <= 12; col++) wsMain.Cell(mRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var tableRange = wsMain.Range(3, 1, mRow, mainHeaders.Length);
                     tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                     tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
                     tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                    wsMain.Range(3, 1, mRow - 1, mainHeaders.Length).SetAutoFilter();
                 }
+                wsMain.SheetView.FreezeRows(3);
                 wsMain.Columns().AdjustToContents(10, 45);
+                SetupPrint(wsMain);
 
-                // ==================== SHEET 3: REKAP PERUSAHAAN ====================
+                // ==================== SHEET 5: REKAP PERUSAHAAN ====================
                 var wsComp = workbook.Worksheets.Add("Rekap Perusahaan");
                 wsComp.ShowGridLines = true;
-                wsComp.Cell(1, 1).Value = "REKAPITULASI TEMUAN BAHAYA PER PERUSAHAAN";
-                wsComp.Cell(1, 1).Style.Font.Bold = true;
-                wsComp.Cell(1, 1).Style.Font.FontSize = 14;
+                wsComp.Range(1, 1, 1, 8).Merge().Value = "REKAPITULASI TEMUAN BAHAYA PER PERUSAHAAN";
+                wsComp.Range(1, 1, 1, 8).Style.Font.Bold = true;
+                wsComp.Range(1, 1, 1, 8).Style.Font.FontSize = 14;
+                wsComp.Range(1, 1, 1, 8).Style.Font.FontColor = XLColor.White;
+                wsComp.Range(1, 1, 1, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
+                wsComp.Row(1).Height = 28;
 
                 string[] compHeaders = new[] { "No", "Perusahaan", "Jumlah Area Kerja", "Total Temuan", "Risiko Tinggi", "Belum Selesai (Open)", "Sudah Selesai", "% Close Rate" };
                 for (int c = 0; c < compHeaders.Length; c++)
@@ -3261,6 +3600,7 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontColor = XLColor.White;
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#047857");
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 }
                 wsComp.Row(3).Height = 24;
 
@@ -3295,13 +3635,16 @@ namespace MBS_SAP.Controllers
                     wsComp.Cell(cpRow, 7).Value = cClosed;
                     wsComp.Cell(cpRow, 8).Value = $"{cRate}%";
 
-                    wsComp.Cell(cpRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsComp.Cell(cpRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    for (int col = 1; col <= 8; col++)
+                    {
+                        if (col == 2) continue;
+                        wsComp.Cell(cpRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    if (cOpen > 0)
+                    {
+                        wsComp.Cell(cpRow, 6).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+                        wsComp.Cell(cpRow, 6).Style.Font.Bold = true;
+                    }
 
                     if (cpRow % 2 == 0) wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
                     cpRow++;
@@ -3310,23 +3653,36 @@ namespace MBS_SAP.Controllers
 
                 if (cpRow > 4)
                 {
-                    var tableRange = wsComp.Range(3, 1, cpRow - 1, compHeaders.Length);
+                    wsComp.Range(cpRow, 1, cpRow, 2).Merge().Value = "GRAND TOTAL";
+                    wsComp.Cell(cpRow, 3).Value = areaResults.Count;
+                    wsComp.Cell(cpRow, 4).Value = totalAllReports;
+                    wsComp.Cell(cpRow, 5).Value = totalHighRisk;
+                    wsComp.Cell(cpRow, 6).Value = totalOpenReports;
+                    wsComp.Cell(cpRow, 7).Value = totalClosedReports;
+                    wsComp.Cell(cpRow, 8).Value = $"{overallCloseRate}%";
+                    wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Font.Bold = true;
+                    wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                    for (int col = 1; col <= 8; col++) wsComp.Cell(cpRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var tableRange = wsComp.Range(3, 1, cpRow, compHeaders.Length);
                     tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                     tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
                     tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
+                    wsComp.Range(3, 1, cpRow - 1, compHeaders.Length).SetAutoFilter();
                 }
+                wsComp.SheetView.FreezeRows(3);
                 wsComp.Columns().AdjustToContents(10, 45);
+                SetupPrint(wsComp);
 
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
                     string safeCompName = selectedCompanyName.Replace(" ", "_").Replace(".", "");
-                    string fileName = $"Pemetaan_Risiko_Area_SAP_{safeCompName}_{selectedYear}_{(isAllYear ? "YTD" : selectedMonth.ToString("D2"))}.xlsx";
+                    string fileName = $"Laporan_Risiko_Area_SAP_{safeCompName}_{selectedYear}_{(isAllYear ? "YTD" : selectedMonth.ToString("D2"))}.xlsx";
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
-
             }
         }
 
