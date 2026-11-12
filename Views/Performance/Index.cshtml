@@ -3385,21 +3385,33 @@
     <div id="sectionAreaRisk" style="display: none;">
         <!-- Area Risk Filter & Actions Toolbar -->
         <div class="analytics-toolbar mb-4">
-            <div class="row g-3 align-items-center">
+            <div class="row g-2 align-items-center">
                 <!-- Company Selector -->
-                <div class="col-12 col-md-4 col-lg-3">
+                <div class="col-12 col-md-3 col-lg-3">
                     <div class="analytics-filter-group">
                         <label class="analytics-filter-label" for="selAreaRiskCompany">
                             <i class="bi bi-building me-1"></i>Perusahaan:
                         </label>
-                        <select id="selAreaRiskCompany" class="form-select analytics-select" onchange="loadAreaRiskTab(true)">
-                            <option value="0">Semua Perusahaan (Site-Wide)</option>
+                        <select id="selAreaRiskCompany" class="form-select analytics-select" onchange="onAreaRiskCompanyChange()">
+                            <option value="0">Memuat perusahaan...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Department Selector -->
+                <div class="col-12 col-md-3 col-lg-2">
+                    <div class="analytics-filter-group">
+                        <label class="analytics-filter-label" for="selAreaRiskDept">
+                            <i class="bi bi-diagram-3 me-1"></i>Departemen:
+                        </label>
+                        <select id="selAreaRiskDept" class="form-select analytics-select" onchange="loadAreaRiskTab(false)">
+                            <option value="ALL">Semua Departemen</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Month Selector -->
-                <div class="col-6 col-md-3 col-lg-2">
+                <div class="col-6 col-md-2 col-lg-2">
                     <div class="analytics-filter-group">
                         <label class="analytics-filter-label" for="selAreaRiskMonth">
                             <i class="bi bi-calendar-month me-1"></i>Bulan:
@@ -3423,10 +3435,10 @@
                 </div>
 
                 <!-- Year Selector -->
-                <div class="col-6 col-md-2 col-lg-2">
+                <div class="col-6 col-md-2 col-lg-1">
                     <div class="analytics-filter-group">
                         <label class="analytics-filter-label" for="selAreaRiskYear">
-                            <i class="bi bi-calendar-event me-1"></i>Tahun:
+                            Tahun:
                         </label>
                         <select id="selAreaRiskYear" class="form-select analytics-select" onchange="loadAreaRiskTab(true)">
                             <option value="2026" selected>2026</option>
@@ -3437,16 +3449,16 @@
                 </div>
 
                 <!-- Instant Search Filter -->
-                <div class="col-12 col-md-3 col-lg-3">
+                <div class="col-12 col-md-4 col-lg-2">
                     <div class="analytics-search-wrap">
                         <i class="bi bi-search"></i>
-                        <input type="text" id="inputAreaRiskSearch" class="form-control analytics-search-input" placeholder="Cari nama area..." onkeyup="filterAreaRiskTable()">
+                        <input type="text" id="inputAreaRiskSearch" class="form-control analytics-search-input" placeholder="Cari dept / area / temuan..." onkeyup="filterAreaRiskTable()">
                     </div>
                 </div>
 
                 <!-- Action Buttons: Download Excel & Refresh -->
                 <div class="col-12 col-md-12 col-lg-2 d-flex justify-content-lg-end gap-2">
-                    <button type="button" class="btn btn-success d-inline-flex align-items-center gap-1.5 flex-fill flex-lg-grow-0" onclick="exportAreaRiskExcel()" style="background: linear-gradient(135deg, #059669, #10b981); border: none; font-weight: 700; border-radius: 10px; font-size: 12.5px; padding: 8px 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+                    <button type="button" class="btn btn-success d-inline-flex align-items-center gap-1.5 flex-fill flex-lg-grow-0" onclick="exportAreaRiskExcel()" style="background: linear-gradient(135deg, #059669, #10b981); border: none; font-weight: 700; border-radius: 10px; font-size: 12.5px; padding: 8px 14px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
                         <i class="bi bi-file-earmark-excel-fill"></i> Excel
                     </button>
                     <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="loadAreaRiskTab(true)" style="border-radius: 10px; font-size: 12.5px; padding: 8px 12px;" title="Muat ulang data">
@@ -3464,22 +3476,22 @@
                         <i class="bi bi-clipboard2-data-fill"></i>
                     </div>
                     <div>
-                        <div class="kpi-label-v2">Total Temuan Bahaya</div>
+                        <div class="kpi-label-v2">Total Aktivitas Lapangan</div>
                         <div class="kpi-value-v2" id="kpiAreaTotalReports">-</div>
-                        <div class="kpi-sub-v2"><span id="kpiAreaActiveCount">-</span> area kerja aktif</div>
+                        <div class="kpi-sub-v2" id="kpiAreaProgramBreakdown">-</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-12 col-sm-6 col-lg-3">
                 <div class="kpi-card-v2" style="background: var(--bg-card);">
-                    <div class="kpi-icon-wrap" style="background: rgba(220, 38, 38, 0.12); color: #ef4444;">
-                        <i class="bi bi-exclamation-octagon-fill"></i>
+                    <div class="kpi-icon-wrap" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
+                        <i class="bi bi-diagram-3-fill"></i>
                     </div>
-                    <div style="overflow: hidden;">
-                        <div class="kpi-label-v2">Area Paling Berbahaya</div>
-                        <div class="kpi-value-v2 text-truncate" id="kpiAreaTopDanger" style="font-size: 15px; font-weight: 800;" title="-">-</div>
-                        <div class="kpi-sub-v2" id="kpiAreaTopDangerSub">-</div>
+                    <div>
+                        <div class="kpi-label-v2">Departemen &amp; Area Aktif</div>
+                        <div class="kpi-value-v2" id="kpiAreaDeptCount">-</div>
+                        <div class="kpi-sub-v2"><span id="kpiAreaActiveCount">-</span> area utama terpantau</div>
                     </div>
                 </div>
             </div>
@@ -3490,7 +3502,7 @@
                         <i class="bi bi-clock-history"></i>
                     </div>
                     <div>
-                        <div class="kpi-label-v2">Belum Selesai (Open)</div>
+                        <div class="kpi-label-v2">Hazard Open (Follow-Up)</div>
                         <div class="kpi-value-v2" id="kpiAreaOpenReports" style="color: #f97316;">-</div>
                         <div class="kpi-sub-v2" id="kpiAreaCloseRate">-</div>
                     </div>
@@ -3499,27 +3511,61 @@
 
             <div class="col-12 col-sm-6 col-lg-3">
                 <div class="kpi-card-v2" style="background: var(--bg-card);">
-                    <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
-                        <i class="bi bi-award-fill"></i>
+                    <div class="kpi-icon-wrap" style="background: rgba(220, 38, 38, 0.12); color: #ef4444;">
+                        <i class="bi bi-exclamation-octagon-fill"></i>
                     </div>
                     <div style="overflow: hidden;">
-                        <div class="kpi-label-v2">Top Pelapor Bahaya</div>
-                        <div class="kpi-value-v2 text-truncate" id="kpiAreaTopReporter" style="font-size: 14.5px; font-weight: 800;" title="-">-</div>
-                        <div class="kpi-sub-v2" id="kpiAreaTopReporterSub">-</div>
+                        <div class="kpi-label-v2">Area Paling Kritis</div>
+                        <div class="kpi-value-v2 text-truncate" id="kpiAreaTopDanger" style="font-size: 14px; font-weight: 800;" title="-">-</div>
+                        <div class="kpi-sub-v2" id="kpiAreaTopDangerSub">-</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Card: Table and Top Contributors -->
+        <!-- Ringkasan per Departemen -->
         <div class="premium-card p-4 mb-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
                 <div>
                     <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 2px;">
-                        <i class="bi bi-shield-exclamation text-warning me-2"></i>Peringkat Area Berisiko &amp; Pemetaan Titik Lokasi
+                        <i class="bi bi-building-check text-primary me-2"></i>Rekap Aktivitas Safety per Departemen (<span id="areaRiskCompanyTitle">-</span>)
                     </h6>
                     <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
-                        Pemetaan hierarki Area Utama &rarr; Breakdown Detail Titik Lokasi per entitas perusahaan, tingkat bahaya, dan progres penutupan temuan. <span class="text-primary fw-semibold"><i class="bi bi-hand-index-thumb me-1"></i>Klik baris area untuk melihat detail titik lokasi.</span>
+                        Jumlah <strong>Hazard Report</strong>, <strong>Inspeksi</strong>, dan <strong>Observasi</strong> per departemen beserta status penutupan temuan. Klik departemen untuk memfilter.
+                    </p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="area-risk-table" id="tableAreaDeptSummary">
+                    <thead>
+                        <tr>
+                            <th>Departemen</th>
+                            <th style="text-align: center;">Area Aktif</th>
+                            <th style="text-align: center;">Hazard Report</th>
+                            <th style="text-align: center;">Inspeksi</th>
+                            <th style="text-align: center;">Observasi</th>
+                            <th style="text-align: center;">Total Aktivitas</th>
+                            <th style="text-align: center;">Hazard Open</th>
+                            <th style="text-align: center;">Hazard Closed</th>
+                            <th style="min-width: 120px;">% Close Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="areaDeptSummaryBody">
+                        <tr><td colspan="9" class="text-center text-muted py-3">Memuat ringkasan departemen...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Main Card: Hierarchy Departemen & Area Utama -> Detail Lokasi -->
+        <div class="premium-card p-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div>
+                    <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 2px;">
+                        <i class="bi bi-shield-exclamation text-warning me-2"></i>Pemetaan Area Utama &amp; Detail Lokasi per Departemen
+                    </h6>
+                    <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
+                        Breakdown <strong>Departemen &amp; Area Utama &rarr; Detail Lokasi</strong> untuk jumlah Hazard, Inspeksi, Observasi &amp; progres close rate. <span class="text-primary fw-semibold"><i class="bi bi-hand-index-thumb me-1"></i>Klik baris untuk melihat detail titik lokasi.</span>
                     </p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -3535,13 +3581,13 @@
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Memuat data...</span>
                 </div>
-                <div class="text-muted mt-2" style="font-size: 12px; font-weight: 600;">Memuat pemetaan risiko area...</div>
+                <div class="text-muted mt-2" style="font-size: 12px; font-weight: 600;">Memuat pemetaan departemen &amp; area...</div>
             </div>
 
             <!-- Empty State -->
             <div id="areaRiskEmptyState" class="text-center py-5 d-none">
                 <i class="bi bi-clipboard-x text-muted" style="font-size: 42px;"></i>
-                <div class="mt-2 text-muted fw-bold" style="font-size: 13px;">Tidak ada data temuan bahaya untuk filter yang dipilih.</div>
+                <div class="mt-2 text-muted fw-bold" style="font-size: 13px;">Tidak ada data Hazard, Inspeksi, atau Observasi untuk filter yang dipilih.</div>
             </div>
 
             <!-- Data Table Container -->
@@ -3551,14 +3597,14 @@
                         <tr>
                             <th style="width: 38px; text-align: center;"></th>
                             <th style="width: 45px; text-align: center;">#</th>
-                            <th>Area Utama &amp; Perusahaan</th>
+                            <th>Departemen &amp; Area Utama</th>
                             <th style="text-align: center;">Tingkat Bahaya</th>
-                            <th style="text-align: center;">Total Laporan</th>
-                            <th>Distribusi Risiko</th>
-                            <th style="text-align: center;">Belum Close</th>
-                            <th style="text-align: center;">Selesai</th>
-                            <th style="min-width: 130px;">% Close Rate</th>
-                            <th>Pelapor Terbanyak</th>
+                            <th style="text-align: center;">Hazard</th>
+                            <th style="text-align: center;">Inspeksi</th>
+                            <th style="text-align: center;">Observasi</th>
+                            <th style="text-align: center;">Total</th>
+                            <th style="text-align: center;">Hazard Open</th>
+                            <th style="min-width: 120px;">% Close Rate</th>
                             <th>PJA Area</th>
                         </tr>
                     </thead>
@@ -3568,16 +3614,43 @@
             </div>
         </div>
 
-        <!-- Top Contributors Leaderboard Card -->
+        <!-- Follow-Up Detail Temuan & Aktivitas Card -->
         <div class="premium-card p-4">
-            <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
-                <i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Kontributor Pelapor Bahaya Teraktif
-            </h6>
-            <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 16px;">
-                Karyawan yang paling proaktif mengidentifikasi dan melaporkan potensi bahaya di area kerja.
-            </p>
-            <div class="row g-3" id="areaRiskTopReportersList">
-                <div class="text-center text-muted py-3">Memuat peringkat kontributor...</div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div>
+                    <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 2px;">
+                        <i class="bi bi-list-check text-danger me-2"></i>Log Detail Temuan &amp; Aktivitas Safety (Follow-Up Team Safety)
+                    </h6>
+                    <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
+                        Menampilkan tanggal, jenis program, departemen, area &amp; detail lokasi, detail temuan, serta status temuan untuk memudahkan follow-up.
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap gap-1" id="followUpFilterBtns">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold follow-filter-btn" data-filter="ALL" onclick="setFollowUpFilter('ALL', this)" style="font-size: 11px; border-radius: 8px;">Semua</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold follow-filter-btn" data-filter="OPEN" onclick="setFollowUpFilter('OPEN', this)" style="font-size: 11px; border-radius: 8px;">Hazard Open</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning fw-bold follow-filter-btn" data-filter="HIGH" onclick="setFollowUpFilter('HIGH', this)" style="font-size: 11px; border-radius: 8px;">Risiko Tinggi</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold follow-filter-btn" data-filter="Hazard Report" onclick="setFollowUpFilter('Hazard Report', this)" style="font-size: 11px; border-radius: 8px;">Hazard</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold follow-filter-btn" data-filter="Inspeksi" onclick="setFollowUpFilter('Inspeksi', this)" style="font-size: 11px; border-radius: 8px;">Inspeksi</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold follow-filter-btn" data-filter="Observasi" onclick="setFollowUpFilter('Observasi', this)" style="font-size: 11px; border-radius: 8px;">Observasi</button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 460px; overflow-y: auto;">
+                <table class="area-risk-table" id="tableFollowUpSafety">
+                    <thead style="position: sticky; top: 0; z-index: 2; background: var(--bg-card);">
+                        <tr>
+                            <th style="width: 105px;">Tanggal</th>
+                            <th style="width: 110px; text-align: center;">Program</th>
+                            <th>Departemen</th>
+                            <th>Area &amp; Detail Lokasi</th>
+                            <th style="min-width: 240px;">Detail Temuan / Kegiatan</th>
+                            <th style="width: 120px; text-align: center;">Status</th>
+                            <th>Pelapor &amp; PJA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="followUpTableBody">
+                        <tr><td colspan="7" class="text-center text-muted py-3">Memuat detail temuan...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -7516,13 +7589,29 @@
     // =========================================================================
     let _areaRiskData = null;
     let _areaRiskCompaniesLoaded = false;
+    let _followUpFilter = 'ALL';
+
+    function onAreaRiskCompanyChange() {
+        const selDept = document.getElementById('selAreaRiskDept');
+        if (selDept) selDept.value = 'ALL';
+        loadAreaRiskTab(true);
+    }
+
+    function selectAreaRiskDept(deptName) {
+        const selDept = document.getElementById('selAreaRiskDept');
+        if (!selDept) return;
+        selDept.value = (selDept.value === deptName) ? 'ALL' : deptName;
+        loadAreaRiskTab(false);
+    }
 
     async function loadAreaRiskTab(forceRefresh = false) {
         const selCompany = document.getElementById('selAreaRiskCompany');
+        const selDept = document.getElementById('selAreaRiskDept');
         const selMonth = document.getElementById('selAreaRiskMonth');
         const selYear = document.getElementById('selAreaRiskYear');
 
         const companyId = selCompany ? selCompany.value : 0;
+        const dept = selDept ? selDept.value : 'ALL';
         const month = selMonth ? selMonth.value : ('@ViewBag.SelectedMonth' || (new Date().getMonth() + 1));
         const year = selYear ? selYear.value : ('@ViewBag.SelectedYear' || new Date().getFullYear());
 
@@ -7536,7 +7625,7 @@
 
         try {
             const refreshParam = forceRefresh ? '&refresh=true' : '';
-            const res = await fetch(`/Performance/GetAreaRiskAnalyticsData?year=${year}&month=${month}&companyId=${companyId}${refreshParam}`);
+            const res = await fetch(`/Performance/GetAreaRiskAnalyticsData?year=${year}&month=${month}&companyId=${companyId}&department=${encodeURIComponent(dept)}${refreshParam}`);
             if (res.ok) {
                 _areaRiskData = await res.json();
                 renderAreaRiskUI();
@@ -7559,70 +7648,95 @@
         const tableContainer = document.getElementById('areaRiskTableContainer');
         const tableBody = document.getElementById('areaRiskTableBody');
         const resultCount = document.getElementById('areaRiskResultCount');
+        const compTitle = document.getElementById('areaRiskCompanyTitle');
 
         if (spinner) spinner.classList.add('d-none');
+        if (compTitle) compTitle.textContent = _areaRiskData.companyName || '-';
 
         // Populate companies dropdown once
         if (!_areaRiskCompaniesLoaded && _areaRiskData.companies && _areaRiskData.companies.length > 0) {
             const selCompany = document.getElementById('selAreaRiskCompany');
             if (selCompany) {
-                const currentVal = selCompany.value;
                 selCompany.innerHTML = '';
-
-                if (_areaRiskData.isTopParent) {
-                    const defaultOpt = document.createElement('option');
-                    defaultOpt.value = '0';
-                    defaultOpt.textContent = 'Semua Perusahaan (Site-Wide)';
-                    selCompany.appendChild(defaultOpt);
-                } else if (_areaRiskData.companies.length > 1) {
-                    const groupOpt = document.createElement('option');
-                    groupOpt.value = '-1';
-                    groupOpt.textContent = 'Semua Perusahaan (Grup & Subkon)';
-                    selCompany.appendChild(groupOpt);
-                }
-
                 _areaRiskData.companies.forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c.id;
                     opt.textContent = c.name;
                     selCompany.appendChild(opt);
                 });
-
-                if (!_areaRiskData.isTopParent && _areaRiskData.myCompanyId > 0) {
-                    selCompany.value = _areaRiskData.myCompanyId;
-                } else if (currentVal && Array.from(selCompany.options).some(o => o.value === currentVal)) {
-                    selCompany.value = currentVal;
+                if (_areaRiskData.companyId > 0) {
+                    selCompany.value = String(_areaRiskData.companyId);
                 }
                 _areaRiskCompaniesLoaded = true;
             }
         }
 
+        // Populate departments dropdown
+        const selDept = document.getElementById('selAreaRiskDept');
+        if (selDept && _areaRiskData.departments) {
+            const curDept = _areaRiskData.selectedDepartment || 'ALL';
+            selDept.innerHTML = '<option value="ALL">Semua Departemen</option>';
+            _areaRiskData.departments.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                selDept.appendChild(opt);
+            });
+            selDept.value = Array.from(selDept.options).some(o => o.value === curDept) ? curDept : 'ALL';
+        }
+
         // Render KPI Summary
         const s = _areaRiskData.summary;
         if (s) {
-            const kpiTotalReports = document.getElementById('kpiAreaTotalReports');
-            const kpiActiveCount = document.getElementById('kpiAreaActiveCount');
-            const kpiTopDanger = document.getElementById('kpiAreaTopDanger');
-            const kpiTopDangerSub = document.getElementById('kpiAreaTopDangerSub');
-            const kpiOpenReports = document.getElementById('kpiAreaOpenReports');
-            const kpiCloseRate = document.getElementById('kpiAreaCloseRate');
-            const kpiTopReporter = document.getElementById('kpiAreaTopReporter');
-            const kpiTopReporterSub = document.getElementById('kpiAreaTopReporterSub');
+            const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setTxt('kpiAreaTotalReports', (s.totalActivities || 0).toLocaleString());
+            setTxt('kpiAreaProgramBreakdown', `${s.totalHazards || 0} Hazard • ${s.totalInspections || 0} Inspeksi • ${s.totalObservations || 0} Observasi`);
+            setTxt('kpiAreaDeptCount', `${s.totalDepartments || 0} Dept`);
+            setTxt('kpiAreaActiveCount', s.totalAreas || 0);
+            setTxt('kpiAreaOpenReports', (s.totalOpenHazards || 0).toLocaleString());
+            setTxt('kpiAreaCloseRate', `${s.overallCloseRate || 0}% hazard closed`);
+            const topEl = document.getElementById('kpiAreaTopDanger');
+            if (topEl) {
+                topEl.textContent = s.topAreaName || '-';
+                topEl.setAttribute('title', s.topAreaName || '-');
+            }
+            setTxt('kpiAreaTopDangerSub', `${s.topAreaOpen || 0} hazard open (${s.topAreaHighRisk || 0} risiko tinggi)`);
+        }
 
-            if (kpiTotalReports) kpiTotalReports.textContent = (s.totalReports || 0).toLocaleString();
-            if (kpiActiveCount) kpiActiveCount.textContent = s.totalAreas || 0;
-            if (kpiTopDanger) {
-                kpiTopDanger.textContent = s.topAreaName || '-';
-                kpiTopDanger.setAttribute('title', s.topAreaName || '-');
+        // Render Department Summary Table
+        const deptBody = document.getElementById('areaDeptSummaryBody');
+        if (deptBody) {
+            const depts = _areaRiskData.deptSummaries || [];
+            if (depts.length === 0) {
+                deptBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">Belum ada aktivitas Hazard, Inspeksi, atau Observasi.</td></tr>';
+            } else {
+                const curDept = _areaRiskData.selectedDepartment || 'ALL';
+                deptBody.innerHTML = depts.map(d => {
+                    const isSelected = curDept !== 'ALL' && curDept.toLowerCase() === (d.department || '').toLowerCase();
+                    const crColor = d.closeRate < 50 ? '#ef4444' : (d.closeRate < 80 ? '#f59e0b' : '#10b981');
+                    return `
+                        <tr onclick="selectAreaRiskDept('${escapeHtml(d.department).replace(/'/g, "\\'")}')" style="cursor: pointer; ${isSelected ? 'background: rgba(2,132,199,0.1);' : ''}">
+                            <td class="fw-bold" style="color: var(--text-main);">
+                                <i class="bi bi-diagram-3 me-1 text-primary"></i>${escapeHtml(d.department)}
+                                ${isSelected ? '<span class="badge bg-primary ms-1" style="font-size: 9px;">Aktif</span>' : ''}
+                            </td>
+                            <td class="text-center fw-semibold">${d.areasCount}</td>
+                            <td class="text-center fw-bold text-danger">${d.hazardCount}</td>
+                            <td class="text-center fw-bold text-primary">${d.inspectionCount}</td>
+                            <td class="text-center fw-bold text-info">${d.observationCount}</td>
+                            <td class="text-center fw-bolder">${d.totalActivities}</td>
+                            <td class="text-center">${d.openCount > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger fw-bold">${d.openCount}</span>` : '<span class="text-muted">0</span>'}</td>
+                            <td class="text-center"><span class="badge bg-success bg-opacity-10 text-success fw-bold">${d.closedCount}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="area-progress-bar" style="width: 55px;"><div class="area-progress-fill" style="width: ${d.closeRate}%; background-color: ${crColor};"></div></div>
+                                    <span style="font-weight: 700; font-size: 11px; color: ${crColor};">${d.closeRate}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
-            if (kpiTopDangerSub) kpiTopDangerSub.textContent = `${s.topAreaReports || 0} temuan (${s.topAreaHighRisk || 0} risiko tinggi)`;
-            if (kpiOpenReports) kpiOpenReports.textContent = (s.totalOpenReports || 0).toLocaleString();
-            if (kpiCloseRate) kpiCloseRate.textContent = `${s.overallCloseRate || 0}% terselesaikan`;
-            if (kpiTopReporter) {
-                kpiTopReporter.textContent = s.topReporterName || '-';
-                kpiTopReporter.setAttribute('title', s.topReporterName || '-');
-            }
-            if (kpiTopReporterSub) kpiTopReporterSub.textContent = `${s.topReporterCount || 0} laporan bahaya`;
         }
 
         // Check if areas empty
@@ -7630,6 +7744,7 @@
             if (emptyState) emptyState.classList.remove('d-none');
             if (tableContainer) tableContainer.classList.add('d-none');
             if (resultCount) resultCount.textContent = '0 Area';
+            renderFollowUpTable();
             return;
         }
 
@@ -7637,87 +7752,48 @@
         if (tableContainer) tableContainer.classList.remove('d-none');
         if (resultCount) resultCount.textContent = `${_areaRiskData.areas.length} Area`;
 
-        // Render Table Rows with Hierarchy (Area Utama -> Breakdown Detail Lokasi)
+        // Render Hierarchy Table (Departemen & Area Utama -> Detail Lokasi)
         let html = '';
         _areaRiskData.areas.forEach(item => {
-            let progressColor = '#10b981';
-            if (item.closeRate < 50) progressColor = '#ef4444';
-            else if (item.closeRate < 80) progressColor = '#f59e0b';
-
-            const companiesHtml = (item.companies && item.companies.length > 0)
-                ? item.companies.map(c => `<span class="area-company-badge"><i class="bi bi-building me-1"></i>${escapeHtml(c)}</span>`).join('')
-                : '<span class="text-muted" style="font-size: 10px;">-</span>';
-
-            // Sublocations table HTML
-            let subRowsHtml = '';
+            const progressColor = item.closeRate < 50 ? '#ef4444' : (item.closeRate < 80 ? '#f59e0b' : '#10b981');
             const subCount = item.subLocations ? item.subLocations.length : 0;
+            let subRowsHtml = '';
+
             if (subCount > 0) {
                 item.subLocations.forEach((sub, sIdx) => {
-                    let subProgColor = '#10b981';
-                    if (sub.closeRate < 50) subProgColor = '#ef4444';
-                    else if (sub.closeRate < 80) subProgColor = '#f59e0b';
-
+                    const subProgColor = sub.closeRate < 50 ? '#ef4444' : (sub.closeRate < 80 ? '#f59e0b' : '#10b981');
                     subRowsHtml += `
-                        <tr class="sub-loc-item" data-sub-text="${escapeHtml((sub.detailLokasi + ' ' + sub.perusahaanName).toLowerCase())}">
+                        <tr class="sub-loc-item" data-sub-text="${escapeHtml((sub.detailLokasi + ' ' + item.department + ' ' + item.areaName).toLowerCase())}">
                             <td style="text-align: center; font-weight: 700; color: var(--text-muted); width: 35px;">${item.rank}.${sIdx + 1}</td>
-                            <td style="min-width: 140px;">
-                                <span class="area-company-badge" style="background: rgba(3, 105, 161, 0.1); color: #0284c7; border-color: rgba(3, 105, 161, 0.25);">
-                                    <i class="bi bi-building me-1"></i>${escapeHtml(sub.perusahaanName)}
-                                </span>
-                            </td>
-                            <td style="font-weight: 700; color: var(--text-main); min-width: 160px;">
+                            <td style="font-weight: 700; color: var(--text-main); min-width: 180px;">
                                 <span style="color: #0284c7; margin-right: 4px;">↳</span>${escapeHtml(sub.detailLokasi)}
                             </td>
                             <td style="text-align: center;">
-                                <span class="risk-badge ${sub.dangerBadgeClass}">
-                                    <i class="bi bi-shield-fill"></i> ${sub.dangerLevel}
-                                </span>
+                                <span class="risk-badge ${sub.dangerBadgeClass}"><i class="bi bi-shield-fill"></i> ${sub.dangerLevel}</span>
                             </td>
-                            <td style="text-align: center; font-weight: 800; color: var(--text-main);">
-                                ${sub.totalReports}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-1 flex-wrap">
-                                    <span class="badge" style="background: rgba(220, 38, 38, 0.15); color: #ef4444; font-size: 9.5px;" title="Tinggi">T: ${sub.highRisk}</span>
-                                    <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-size: 9.5px;" title="Sedang">S: ${sub.mediumRisk}</span>
-                                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 9.5px;" title="Rendah">R: ${sub.lowRisk}</span>
-                                </div>
-                            </td>
+                            <td style="text-align: center; font-weight: 700; color: #ef4444;">${sub.hazardCount}</td>
+                            <td style="text-align: center; font-weight: 700; color: #3b82f6;">${sub.inspectionCount}</td>
+                            <td style="text-align: center; font-weight: 700; color: #0ea5e9;">${sub.observationCount}</td>
+                            <td style="text-align: center; font-weight: 800;">${sub.totalActivities}</td>
                             <td style="text-align: center;">
-                                ${sub.openCount > 0 
-                                    ? `<span class="badge" style="background: rgba(234, 88, 12, 0.18); color: #f97316; font-size: 10px; font-weight: 800;">${sub.openCount}</span>` 
-                                    : `<span class="badge bg-secondary" style="opacity: 0.5; font-size: 9px;">0</span>`}
-                            </td>
-                            <td style="text-align: center;">
-                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 10px; font-weight: 700;">${sub.closedCount}</span>
+                                ${sub.openCount > 0 ? `<span class="badge" style="background: rgba(234, 88, 12, 0.18); color: #f97316; font-weight: 800;">${sub.openCount}</span>` : `<span class="text-muted">0</span>`}
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="area-progress-bar" style="width: 50px;">
-                                        <div class="area-progress-fill" style="width: ${sub.closeRate}%; background-color: ${subProgColor};"></div>
-                                    </div>
+                                    <div class="area-progress-bar" style="width: 50px;"><div class="area-progress-fill" style="width: ${sub.closeRate}%; background-color: ${subProgColor};"></div></div>
                                     <span style="font-weight: 700; font-size: 10.5px; color: ${subProgColor};">${sub.closeRate}%</span>
                                 </div>
                             </td>
-                            <td>
-                                <div style="font-weight: 600; color: var(--text-main); font-size: 11px;">${escapeHtml(sub.topReporterName)}</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);">${escapeHtml(sub.topReporterDept)} &bull; ${sub.topReporterCount} temuan</div>
-                            </td>
-                            <td>
-                                <div style="font-weight: 600; color: var(--text-main); font-size: 11px;">${escapeHtml(sub.pjaName)}</div>
-                            </td>
+                            <td style="font-size: 11px; font-weight: 600;">${escapeHtml(sub.pjaName)}</td>
                         </tr>
                     `;
                 });
-            } else {
-                subRowsHtml = '<tr><td colspan="11" class="text-center text-muted py-2" style="font-size: 11px;">Belum ada spesifikasi titik lokasi khusus.</td></tr>';
             }
 
             html += `
-                <!-- Master Area Row -->
-                <tr class="area-risk-row" id="areaRow_${item.rank}" data-rank="${item.rank}" data-area-name="${escapeHtml((item.areaName || '').toLowerCase())}" style="cursor: pointer;" onclick="toggleSubLocation(${item.rank})">
+                <tr class="area-risk-row" id="areaRow_${item.rank}" data-rank="${item.rank}" data-area-name="${escapeHtml(((item.areaName || '') + ' ' + (item.department || '')).toLowerCase())}" style="cursor: pointer;" onclick="toggleSubLocation(${item.rank})">
                     <td style="text-align: center;">
-                        <button type="button" class="area-expand-btn" id="btnExpand_${item.rank}" onclick="event.stopPropagation(); toggleSubLocation(${item.rank});" title="Buka / Tutup Detail Titik Lokasi">
+                        <button type="button" class="area-expand-btn" id="btnExpand_${item.rank}" onclick="event.stopPropagation(); toggleSubLocation(${item.rank});" title="Buka / Tutup Detail Lokasi">
                             <i class="bi bi-chevron-right"></i>
                         </button>
                     </td>
@@ -7726,94 +7802,59 @@
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <span style="font-weight: 800; color: var(--text-main); font-size: 13px;">${escapeHtml(item.areaName)}</span>
                             <span class="badge" style="background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.2); font-size: 10px; font-weight: 700;">
-                                ${subCount} Titik Lokasi
+                                ${subCount} Detail Lokasi
                             </span>
                         </div>
-                        <div class="mt-1 d-flex flex-wrap align-items-center">
-                            ${companiesHtml}
-                        </div>
-                    </td>
-                    <td style="text-align: center;">
-                        <span class="risk-badge ${item.dangerBadgeClass}">
-                            <i class="bi bi-shield-fill"></i> ${item.dangerLevel}
-                        </span>
-                    </td>
-                    <td style="text-align: center; font-weight: 800; font-size: 13.5px; color: var(--text-main);">
-                        ${item.totalReports.toLocaleString()}
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span class="badge" style="background: rgba(220, 38, 38, 0.15); color: #ef4444; border: 1px solid rgba(220, 38, 38, 0.3); font-size: 10px;" title="Risiko Tinggi / Kritis">
-                                Tinggi: ${item.highRisk}
-                            </span>
-                            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px;" title="Risiko Sedang">
-                                Sedang: ${item.mediumRisk}
-                            </span>
-                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px;" title="Risiko Rendah">
-                                Rendah: ${item.lowRisk}
-                            </span>
+                        <div class="mt-1">
+                            <span class="area-company-badge"><i class="bi bi-diagram-3 me-1"></i>${escapeHtml(item.department)}</span>
                         </div>
                     </td>
                     <td style="text-align: center;">
-                        ${item.openCount > 0 
-                            ? `<span class="badge" style="background: rgba(234, 88, 12, 0.18); color: #f97316; border: 1px solid rgba(234, 88, 12, 0.4); font-size: 11px; font-weight: 800; padding: 4px 8px;">${item.openCount}</span>` 
-                            : `<span class="badge bg-secondary" style="opacity: 0.6; font-size: 10px;">0</span>`}
+                        <span class="risk-badge ${item.dangerBadgeClass}"><i class="bi bi-shield-fill"></i> ${item.dangerLevel}</span>
                     </td>
+                    <td style="text-align: center; font-weight: 800; color: #ef4444;">${item.hazardCount}</td>
+                    <td style="text-align: center; font-weight: 800; color: #3b82f6;">${item.inspectionCount}</td>
+                    <td style="text-align: center; font-weight: 800; color: #0ea5e9;">${item.observationCount}</td>
+                    <td style="text-align: center; font-weight: 800; font-size: 13px;">${item.totalActivities}</td>
                     <td style="text-align: center;">
-                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; font-weight: 700; padding: 4px 8px;">
-                            ${item.closedCount}
-                        </span>
+                        ${item.openCount > 0 ? `<span class="badge" style="background: rgba(234, 88, 12, 0.18); color: #f97316; border: 1px solid rgba(234, 88, 12, 0.4); font-size: 11px; font-weight: 800; padding: 4px 8px;">${item.openCount}</span>` : `<span class="badge bg-secondary" style="opacity: 0.6; font-size: 10px;">0</span>`}
                     </td>
                     <td>
                         <div class="d-flex align-items-center">
-                            <div class="area-progress-bar">
-                                <div class="area-progress-fill" style="width: ${item.closeRate}%; background-color: ${progressColor};"></div>
-                            </div>
+                            <div class="area-progress-bar"><div class="area-progress-fill" style="width: ${item.closeRate}%; background-color: ${progressColor};"></div></div>
                             <span style="font-weight: 700; font-size: 11.5px; color: ${progressColor};">${item.closeRate}%</span>
                         </div>
                     </td>
                     <td>
-                        <div style="font-weight: 700; color: var(--text-main); font-size: 11.5px;">${escapeHtml(item.topReporterName)}</div>
-                        <div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(item.topReporterDept)} &bull; ${item.topReporterCount} temuan</div>
-                    </td>
-                    <td>
                         <div style="font-weight: 600; color: var(--text-main); font-size: 11.5px;">${escapeHtml(item.pjaName)}</div>
-                        <div style="font-size: 10px; color: var(--text-muted);">${item.pjaNik && item.pjaNik !== '-' ? 'NIK: ' + escapeHtml(item.pjaNik) : ''}</div>
                     </td>
                 </tr>
-
-                <!-- Child Sub-locations Row (Collapsible) -->
                 <tr class="area-subrow d-none" id="subRow_${item.rank}" data-parent-rank="${item.rank}">
                     <td colspan="11" class="p-0 border-0">
                         <div class="sub-location-wrapper">
                             <div class="d-flex justify-content-between align-items-center mb-2 px-1">
                                 <span class="fw-bold" style="font-size: 11.5px; color: #0284c7;">
-                                    <i class="bi bi-geo-alt-fill me-1"></i>Breakdown Titik Lokasi &amp; Entitas Kerja: <strong>${escapeHtml(item.areaName)}</strong>
+                                    <i class="bi bi-geo-alt-fill me-1"></i>Detail Lokasi — ${escapeHtml(item.department)} / <strong>${escapeHtml(item.areaName)}</strong>
                                 </span>
-                                <span class="badge bg-light text-secondary border" style="font-size: 10px;">
-                                    ${subCount} Titik Lokasi Terdata
-                                </span>
+                                <span class="badge bg-light text-secondary border" style="font-size: 10px;">${subCount} Detail Lokasi</span>
                             </div>
                             <div class="table-responsive">
                                 <table class="sub-location-table">
                                     <thead>
                                         <tr>
                                             <th style="width: 35px; text-align: center;">No</th>
-                                            <th>Perusahaan</th>
-                                            <th>Detail Titik Lokasi</th>
+                                            <th>Detail Lokasi</th>
                                             <th style="text-align: center;">Bahaya</th>
-                                            <th style="text-align: center;">Temuan</th>
-                                            <th>Perincian Risiko</th>
+                                            <th style="text-align: center;">Hazard</th>
+                                            <th style="text-align: center;">Inspeksi</th>
+                                            <th style="text-align: center;">Observasi</th>
+                                            <th style="text-align: center;">Total</th>
                                             <th style="text-align: center;">Open</th>
-                                            <th style="text-align: center;">Closed</th>
-                                            <th style="min-width: 110px;">% Selesai</th>
-                                            <th>Top Pelapor Titik</th>
+                                            <th style="min-width: 110px;">% Close Rate</th>
                                             <th>PJA</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        ${subRowsHtml}
-                                    </tbody>
+                                    <tbody>${subRowsHtml}</tbody>
                                 </table>
                             </div>
                         </div>
@@ -7822,40 +7863,81 @@
             `;
         });
         tableBody.innerHTML = html;
+        renderFollowUpTable();
+    }
 
-        // Render Top Reporters
-        const repContainer = document.getElementById('areaRiskTopReportersList');
-        if (repContainer) {
-            if (_areaRiskData.topReporters && _areaRiskData.topReporters.length > 0) {
-                let repHtml = '';
-                _areaRiskData.topReporters.forEach(r => {
-                    let medalBg = 'rgba(255,255,255,0.05)';
-                    let medalColor = 'var(--text-muted)';
-                    if (r.rank === 1) { medalBg = 'rgba(234, 179, 8, 0.15)'; medalColor = '#eab308'; }
-                    else if (r.rank === 2) { medalBg = 'rgba(148, 163, 184, 0.2)'; medalColor = '#94a3b8'; }
-                    else if (r.rank === 3) { medalBg = 'rgba(217, 119, 6, 0.15)'; medalColor = '#d97706'; }
-
-                    repHtml += `
-                        <div class="col-12 col-sm-6 col-md-4 col-lg">
-                            <div class="p-3 rounded-3 h-100 d-flex align-items-center gap-3" style="background: rgba(0,0,0,0.03); border: 1px solid var(--border-color);">
-                                <div style="width: 38px; height: 38px; border-radius: 10px; background: ${medalBg}; color: ${medalColor}; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex-shrink: 0;">
-                                    #${r.rank}
-                                </div>
-                                <div style="overflow: hidden; flex: 1;">
-                                    <div class="text-truncate fw-bold" style="font-size: 12px; color: var(--text-main);" title="${escapeHtml(r.nama)}">${escapeHtml(r.nama)}</div>
-                                    <div class="text-truncate" style="font-size: 10.5px; color: var(--text-muted);">${escapeHtml(r.dept)}</div>
-                                    <div class="text-truncate" style="font-size: 9.5px; color: #0284c7; font-weight: 600;">${escapeHtml(r.perusahaan || '-')}</div>
-                                    <div style="font-size: 10.5px; font-weight: 800; color: #10b981; margin-top: 2px;">${r.count} Laporan</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                repContainer.innerHTML = repHtml;
-            } else {
-                repContainer.innerHTML = '<div class="text-center text-muted py-2" style="font-size: 11.5px;">Belum ada pelapor aktif pada periode ini.</div>';
-            }
+    function setFollowUpFilter(filter, btnEl) {
+        _followUpFilter = filter;
+        document.querySelectorAll('.follow-filter-btn').forEach(b => {
+            b.classList.remove('btn-primary', 'btn-danger', 'btn-warning');
+            const f = b.getAttribute('data-filter');
+            if (f === 'OPEN') b.classList.add('btn-outline-danger');
+            else if (f === 'HIGH') b.classList.add('btn-outline-warning');
+            else b.classList.add('btn-outline-secondary');
+        });
+        if (btnEl) {
+            btnEl.classList.remove('btn-outline-danger', 'btn-outline-warning', 'btn-outline-secondary');
+            btnEl.classList.add(filter === 'OPEN' ? 'btn-danger' : (filter === 'HIGH' ? 'btn-warning' : 'btn-primary'));
         }
+        renderFollowUpTable();
+    }
+
+    function renderFollowUpTable() {
+        const tbody = document.getElementById('followUpTableBody');
+        if (!tbody) return;
+        const items = (_areaRiskData && _areaRiskData.followUpItems) ? _areaRiskData.followUpItems : [];
+        const q = (document.getElementById('inputAreaRiskSearch')?.value || '').toLowerCase().trim();
+
+        const filtered = items.filter(x => {
+            if (_followUpFilter === 'OPEN' && !x.isOpen) return false;
+            if (_followUpFilter === 'HIGH' && !x.isHighRisk) return false;
+            if ((_followUpFilter === 'Hazard Report' || _followUpFilter === 'Inspeksi' || _followUpFilter === 'Observasi') && x.program !== _followUpFilter) return false;
+            if (q) {
+                const hay = `${x.departemen} ${x.area} ${x.detailLokasi} ${x.detailTemuan} ${x.statusTemuan} ${x.pelapor}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada detail temuan atau aktivitas yang cocok dengan filter.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(x => {
+            const progBadge = x.program === 'Hazard Report'
+                ? '<span class="badge bg-danger bg-opacity-10 text-danger fw-bold">Hazard</span>'
+                : (x.program === 'Inspeksi'
+                    ? '<span class="badge bg-primary bg-opacity-10 text-primary fw-bold">Inspeksi</span>'
+                    : '<span class="badge bg-info bg-opacity-10 text-info fw-bold">Observasi</span>');
+
+            const statusBadge = x.isOpen
+                ? `<span class="badge bg-danger text-white fw-bold">${escapeHtml(x.statusTemuan)}</span>`
+                : (x.statusTemuan.toLowerCase().includes('close') || x.statusTemuan.toLowerCase().includes('selesai') || x.statusTemuan === 'Sesuai / Selesai' || x.statusTemuan === 'Positive'
+                    ? `<span class="badge bg-success bg-opacity-10 text-success fw-bold">${escapeHtml(x.statusTemuan)}</span>`
+                    : `<span class="badge bg-warning bg-opacity-25 text-dark fw-bold">${escapeHtml(x.statusTemuan)}</span>`);
+
+            return `
+                <tr>
+                    <td style="font-size: 11.5px; font-weight: 700; white-space: nowrap;">${escapeHtml(x.tanggal)}</td>
+                    <td class="text-center">${progBadge}</td>
+                    <td style="font-size: 11.5px; font-weight: 700;">${escapeHtml(x.departemen)}</td>
+                    <td style="font-size: 11.5px;">
+                        <div class="fw-bold">${escapeHtml(x.area)}</div>
+                        <div class="text-muted" style="font-size: 10.5px;">${escapeHtml(x.detailLokasi)}</div>
+                    </td>
+                    <td style="font-size: 11.5px; max-width: 340px;">
+                        <div class="fw-semibold" style="color: var(--text-main);">${escapeHtml(x.detailTemuan)}</div>
+                        ${x.tingkatResiko && x.tingkatResiko !== '-' ? `<span class="badge bg-secondary bg-opacity-10 text-secondary mt-1" style="font-size: 9.5px;">Risiko: ${escapeHtml(x.tingkatResiko)}</span>` : ''}
+                    </td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td style="font-size: 11px;">
+                        <div class="fw-semibold">${escapeHtml(x.pelapor)}</div>
+                        ${x.pja && x.pja !== '-' ? `<div class="text-muted" style="font-size: 10px;">PJA: ${escapeHtml(x.pja)}</div>` : ''}
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function toggleSubLocation(rank) {
@@ -7948,18 +8030,21 @@
 
         const resultCount = document.getElementById('areaRiskResultCount');
         if (resultCount) resultCount.textContent = `${visibleCount} Area`;
+        renderFollowUpTable();
     }
 
     function exportAreaRiskExcel() {
         const selCompany = document.getElementById('selAreaRiskCompany');
+        const selDept = document.getElementById('selAreaRiskDept');
         const selMonth = document.getElementById('selAreaRiskMonth');
         const selYear = document.getElementById('selAreaRiskYear');
 
         const companyId = selCompany ? selCompany.value : 0;
+        const dept = selDept ? selDept.value : 'ALL';
         const month = selMonth ? selMonth.value : ('@ViewBag.SelectedMonth' || (new Date().getMonth() + 1));
         const year = selYear ? selYear.value : ('@ViewBag.SelectedYear' || new Date().getFullYear());
 
-        window.location.href = `/Performance/ExportAreaRiskExcel?year=${year}&month=${month}&companyId=${companyId}`;
+        window.location.href = `/Performance/ExportAreaRiskExcel?year=${year}&month=${month}&companyId=${companyId}&department=${encodeURIComponent(dept)}`;
     }
 
     function escapeHtml(str) {

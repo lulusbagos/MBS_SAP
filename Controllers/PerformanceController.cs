@@ -2409,8 +2409,41 @@ namespace MBS_SAP.Controllers
             return Json(responseData);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAreaRiskAnalyticsData(int? year = null, int? month = null, int? companyId = null)
+        private sealed class AreaActivityItemDto
+        {
+            public DateTime Tanggal { get; set; }
+            public string Program { get; set; } = string.Empty; // "Hazard Report", "Inspeksi", "Observasi"
+            public string Departemen { get; set; } = "Umum / Lainnya";
+            public string Area { get; set; } = "Tidak Terdefinisi";
+            public string Lokasi { get; set; } = string.Empty;
+            public string DetailLokasi { get; set; } = "Umum";
+            public string DetailTemuan { get; set; } = string.Empty;
+            public string TindakanPerbaikan { get; set; } = "-";
+            public string TingkatResiko { get; set; } = "-";
+            public string StatusTemuan { get; set; } = "-";
+            public bool IsHazard { get; set; }
+            public bool IsInspection { get; set; }
+            public bool IsObservation { get; set; }
+            public bool IsHighRisk { get; set; }
+            public bool IsMedRisk { get; set; }
+            public bool IsLowRisk { get; set; }
+            public bool IsOpen { get; set; }
+            public bool IsClosed { get; set; }
+            public string Pelapor { get; set; } = "-";
+            public string Nik { get; set; } = "-";
+            public string Pja { get; set; } = "-";
+        }
+
+        private async Task<(
+            int SelectedYear,
+            int SelectedMonth,
+            bool IsAllYear,
+            int EffectiveCompanyId,
+            string CompanyName,
+            List<object> VisibleCompanies,
+            List<string> Departments,
+            List<AreaActivityItemDto> AllItems
+        )> BuildAreaRiskDepartmentDataAsync(int? year, int? month, int? companyId, string? department)
         {
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -2421,41 +2454,17 @@ namespace MBS_SAP.Controllers
             bool isTopParent = !scopeCompanyId.HasValue || scopeCompanyId.Value == 1 || User.IsInRole("Admin") ||
                                string.Equals(User.FindFirst("Role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
 
-            int? effectiveCompanyId = null;
-            if (companyId.HasValue && companyId.Value > 0)
+            // Default ke perusahaan user yang login (sudut pandang departemen perusahaan masing-masing)
+            int effectiveCompanyId = scopeCompanyId ?? 1;
+            if (companyId.HasValue && companyId.Value > 0 && (isTopParent || allowedCompanyIds.Contains(companyId.Value)))
             {
                 effectiveCompanyId = companyId.Value;
-            }
-            else if (!isTopParent && scopeCompanyId.HasValue && (!companyId.HasValue || companyId.Value == 0))
-            {
-                effectiveCompanyId = scopeCompanyId.Value;
-            }
-
-            var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"AreaRiskAnalytics_v3_{scopeCompanyId}_{selectedYear}_{selectedMonth}_{effectiveCompanyId ?? -1}";
-
-            bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") &&
-                                string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
-
-            if (!forceRefresh && cache.TryGetValue(cacheKey, out object? cachedResult) && cachedResult != null)
-            {
-                return Json(cachedResult);
             }
 
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
-            DateTime startDate;
-            DateTime endDate;
-            if (isAllYear)
-            {
-                startDate = new DateTime(selectedYear, 1, 1);
-                endDate = new DateTime(selectedYear, 12, 31, 23, 59, 59);
-            }
-            else
-            {
-                startDate = new DateTime(selectedYear, selectedMonth, 1);
-                endDate = startDate.AddMonths(1).AddTicks(-1);
-            }
+            DateTime startDate = isAllYear ? new DateTime(selectedYear, 1, 1) : new DateTime(selectedYear, selectedMonth, 1);
+            DateTime endDate = isAllYear ? new DateTime(selectedYear, 12, 31, 23, 59, 59) : startDate.AddMonths(1).AddTicks(-1);
 
             var allCompanies = await _context.Perusahaans.AsNoTracking()
                 .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
@@ -2463,1227 +2472,677 @@ namespace MBS_SAP.Controllers
                 .Select(p => new { id = p.PerusahaanId, name = p.NamaPerusahaan })
                 .ToListAsync();
 
-            var visibleCompanies = isTopParent
+            var visibleCompanies = (isTopParent
                 ? allCompanies
-                : allCompanies.Where(c => allowedCompanyIds.Contains(c.id)).ToList();
+                : allCompanies.Where(c => allowedCompanyIds.Contains(c.id)).ToList())
+                .Select(c => (object)new { c.id, c.name })
+                .ToList();
 
-            var companyDict = allCompanies.ToDictionary(c => c.id, c => c.name);
+            string companyName = allCompanies.FirstOrDefault(c => c.id == effectiveCompanyId)?.name ?? "Perusahaan";
 
-            var hazardQuery = _context.HazardReports.AsNoTracking()
-                .Where(h => !h.IsDeleted && h.Tanggal >= startDate && h.Tanggal <= endDate);
-
-            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)))
-            {
-                hazardQuery = hazardQuery.Where(h => h.PerusahaanId == effectiveCompanyId.Value);
-            }
-            else if (!isTopParent)
-            {
-                hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
-            }
-
-            var rawList = await hazardQuery
+            var hazardsRaw = await _context.HazardReports.AsNoTracking()
+                .Where(h => !h.IsDeleted && h.PerusahaanId == effectiveCompanyId && h.Tanggal >= startDate && h.Tanggal <= endDate)
                 .Select(h => new
                 {
-                    Id = h.Id,
-                    Tanggal = h.Tanggal,
-                    Area = string.IsNullOrWhiteSpace(h.Area) ? "Tidak Terdefinisi" : h.Area.Trim(),
-                    Lokasi = h.Lokasi ?? "",
-                    DetilLokasi = h.DetilLokasi ?? "",
-                    Temuan = h.Temuan ?? "",
-                    Perbaikan = !string.IsNullOrEmpty(h.Perbaikan) ? h.Perbaikan : (h.TindakanPerbaikan ?? ""),
-                    KategoriBahaya = h.KategoriBahaya ?? "",
-                    TingkatResiko = h.TingkatResiko ?? "",
-                    StatusTemuan = h.StatusTemuan ?? "Open",
-                    Nama = h.Nama,
-                    Nik = h.Nik,
-                    Departemen = h.Departemen ?? "-",
-                    Pja = h.Pja ?? "",
-                    NikPja = h.NikPja ?? "",
-                    PerusahaanId = h.PerusahaanId
+                    h.Tanggal,
+                    h.Departemen,
+                    h.Area,
+                    h.Lokasi,
+                    h.DetilLokasi,
+                    h.Temuan,
+                    h.Perbaikan,
+                    h.TindakanPerbaikan,
+                    h.TingkatResiko,
+                    h.StatusTemuan,
+                    h.Nama,
+                    h.Nik,
+                    h.Pja
                 })
                 .ToListAsync();
 
-            var areaGroups = rawList.GroupBy(h => h.Area).ToList();
-            var areaResults = new List<AreaRiskItemViewModel>();
-            int totalAllReports = rawList.Count;
-            int totalHighRisk = 0;
-            int totalOpenReports = 0;
-            int totalClosedReports = 0;
+            var inspectionsRaw = await _context.Inspections.AsNoTracking()
+                .Where(i => !i.IsDeleted && i.PerusahaanId == effectiveCompanyId && i.Tanggal >= startDate && i.Tanggal <= endDate)
+                .Select(i => new
+                {
+                    i.Tanggal,
+                    i.Departemen,
+                    i.Area,
+                    i.Lokasi,
+                    i.DetilLokasi,
+                    i.JenisInspeksi,
+                    i.Catatan,
+                    i.Nama,
+                    i.Nik,
+                    i.Pja
+                })
+                .ToListAsync();
 
-            foreach (var group in areaGroups)
+            var observationsRaw = await _context.Observations.AsNoTracking()
+                .Where(o => !o.IsDeleted && o.PerusahaanId == effectiveCompanyId && o.Date >= startDate && o.Date <= endDate)
+                .Select(o => new
+                {
+                    o.Date,
+                    o.Departemen,
+                    o.Area,
+                    o.Lokasi,
+                    o.DetilLokasi,
+                    o.KegiatanYangDiamati,
+                    o.Keterangan,
+                    o.TingkatResiko,
+                    o.HasilObservasi,
+                    o.Nama,
+                    o.Nik
+                })
+                .ToListAsync();
+
+            static string NormDept(string? d) => string.IsNullOrWhiteSpace(d) ? "Umum / Lainnya" : d.Trim();
+            static string NormArea(string? a) => string.IsNullOrWhiteSpace(a) ? "Tidak Terdefinisi" : a.Trim();
+            static string NormSubLoc(string? detil, string? lok) => !string.IsNullOrWhiteSpace(detil) ? detil.Trim() : (!string.IsNullOrWhiteSpace(lok) ? lok.Trim() : "Umum");
+
+            var allItems = new List<AreaActivityItemDto>(hazardsRaw.Count + inspectionsRaw.Count + observationsRaw.Count);
+
+            foreach (var h in hazardsRaw)
             {
-                var areaName = group.Key;
-                int totalReports = group.Count();
+                string risk = (h.TingkatResiko ?? "").Trim();
+                string st = string.IsNullOrWhiteSpace(h.StatusTemuan) ? "Open" : h.StatusTemuan.Trim();
+                bool isHigh = risk.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) || risk.Equals("Kritis", StringComparison.OrdinalIgnoreCase) || risk.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) || risk.Equals("High", StringComparison.OrdinalIgnoreCase);
+                bool isMed = risk.Equals("Sedang", StringComparison.OrdinalIgnoreCase) || risk.Equals("Medium", StringComparison.OrdinalIgnoreCase);
+                bool isLow = risk.Equals("Rendah", StringComparison.OrdinalIgnoreCase) || risk.Equals("Low", StringComparison.OrdinalIgnoreCase);
+                bool isClosed = IsClosedStatus(st);
+                bool isOpen = !isClosed;
 
-                int highRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase));
-
-                int medRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase));
-
-                int lowRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Rendah", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Low", StringComparison.OrdinalIgnoreCase));
-
-                int openCount = group.Count(h =>
-                    h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase));
-
-                int closedCount = group.Count(h =>
-                    h.StatusTemuan.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("Close", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("Selesai", StringComparison.OrdinalIgnoreCase));
-
-                totalHighRisk += highRisk;
-                totalOpenReports += openCount;
-                totalClosedReports += closedCount;
-
-                int dangerScore = (highRisk * 3) + (medRisk * 2) + (lowRisk * 1);
-
-                string dangerLevel = "Rendah";
-                string dangerBadgeClass = "risk-badge-low";
-                if (highRisk >= 15 || dangerScore >= 120 || (openCount >= 30 && highRisk >= 5))
+                allItems.Add(new AreaActivityItemDto
                 {
-                    dangerLevel = "Kritis";
-                    dangerBadgeClass = "risk-badge-critical";
-                }
-                else if (highRisk >= 5 || dangerScore >= 60 || openCount >= 15)
-                {
-                    dangerLevel = "Tinggi";
-                    dangerBadgeClass = "risk-badge-high";
-                }
-                else if (dangerScore >= 20 || openCount >= 5)
-                    dangerLevel = "Sedang";
-                else
-                    dangerLevel = "Rendah";
-
-                if (dangerLevel == "Sedang") dangerBadgeClass = "risk-badge-medium";
-                else if (dangerLevel == "Rendah") dangerBadgeClass = "risk-badge-low";
-
-                double closeRate = totalReports > 0 ? Math.Round(((double)closedCount / totalReports) * 100.0, 1) : 0.0;
-
-                var topReporterGroup = group
-                    .Where(h => !string.IsNullOrEmpty(h.Nama))
-                    .GroupBy(h => new { h.Nama, h.Nik, h.Departemen })
-                    .OrderByDescending(g => g.Count())
-                    .FirstOrDefault();
-
-                var topPjaGroup = group
-                    .Where(h => !string.IsNullOrEmpty(h.Pja))
-                    .GroupBy(h => new { h.Pja, h.NikPja })
-                    .OrderByDescending(g => g.Count())
-                    .FirstOrDefault();
-
-                // Breakdown Detail Lokasi (Sub-locations)
-                var subGroups = group
-                    .GroupBy(h => new
-                    {
-                        SubLoc = !string.IsNullOrWhiteSpace(h.DetilLokasi) ? h.DetilLokasi.Trim() : (!string.IsNullOrWhiteSpace(h.Lokasi) ? h.Lokasi.Trim() : "Umum / Titik Utama"),
-                        h.PerusahaanId
-                    })
-                    .ToList();
-
-                var subLocations = new List<AreaRiskSubLocationViewModel>();
-                foreach (var sg in subGroups)
-                {
-                    int subTotal = sg.Count();
-                    int subHigh = sg.Count(h =>
-                        h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase));
-                    int subMed = sg.Count(h =>
-                        h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase));
-                    int subLow = sg.Count(h =>
-                        h.TingkatResiko.Equals("Rendah", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Low", StringComparison.OrdinalIgnoreCase));
-                    int subOpen = sg.Count(h =>
-                        h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase));
-                    int subClosed = sg.Count(h =>
-                        h.StatusTemuan.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Close", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Selesai", StringComparison.OrdinalIgnoreCase));
-
-                    int subScore = (subHigh * 3) + (subMed * 2) + (subLow * 1);
-                    string subDanger = "Rendah";
-                    string subBadge = "risk-badge-low";
-                    if (subHigh >= 5 || subScore >= 30 || subOpen >= 10)
-                    {
-                        subDanger = "Kritis";
-                        subBadge = "risk-badge-critical";
-                    }
-                    else if (subHigh >= 2 || subScore >= 15 || subOpen >= 5)
-                    {
-                        subDanger = "Tinggi";
-                        subBadge = "risk-badge-high";
-                    }
-                    else if (subScore >= 6 || subOpen >= 2)
-                    {
-                        subDanger = "Sedang";
-                        subBadge = "risk-badge-medium";
-                    }
-
-                    string compName = (sg.Key.PerusahaanId.HasValue && companyDict.TryGetValue(sg.Key.PerusahaanId.Value, out var cn))
-                        ? cn
-                        : (sg.Key.PerusahaanId.HasValue ? $"Perusahaan #{sg.Key.PerusahaanId}" : "Umum");
-
-                    var subTopReporter = sg.Where(h => !string.IsNullOrEmpty(h.Nama))
-                        .GroupBy(h => new { h.Nama, h.Departemen })
-                        .OrderByDescending(g => g.Count())
-                        .FirstOrDefault();
-
-                    var subPja = sg.FirstOrDefault(h => !string.IsNullOrEmpty(h.Pja))?.Pja ?? "-";
-
-                    subLocations.Add(new AreaRiskSubLocationViewModel
-                    {
-                        DetailLokasi = sg.Key.SubLoc,
-                        PerusahaanId = sg.Key.PerusahaanId,
-                        PerusahaanName = compName,
-                        TotalReports = subTotal,
-                        HighRisk = subHigh,
-                        MediumRisk = subMed,
-                        LowRisk = subLow,
-                        OpenCount = subOpen,
-                        ClosedCount = subClosed,
-                        CloseRate = subTotal > 0 ? Math.Round(((double)subClosed / subTotal) * 100.0, 1) : 0.0,
-                        DangerScore = subScore,
-                        DangerLevel = subDanger,
-                        DangerBadgeClass = subBadge,
-                        TopReporterName = subTopReporter?.Key.Nama ?? "-",
-                        TopReporterDept = subTopReporter?.Key.Departemen ?? "-",
-                        TopReporterCount = subTopReporter?.Count() ?? 0,
-                        PjaName = subPja
-                    });
-                }
-
-                subLocations = subLocations.OrderByDescending(s => s.DangerScore).ThenByDescending(s => s.TotalReports).ToList();
-
-                var distinctCompanies = group
-                    .Where(h => h.PerusahaanId.HasValue && companyDict.ContainsKey(h.PerusahaanId.Value))
-                    .Select(h => companyDict[h.PerusahaanId.Value])
-                    .Distinct()
-                    .OrderBy(c => c)
-                    .ToList();
-
-                areaResults.Add(new AreaRiskItemViewModel
-                {
-                    AreaName = areaName,
-                    Companies = distinctCompanies,
-                    SubLocationsCount = subLocations.Count,
-                    TotalReports = totalReports,
-                    HighRisk = highRisk,
-                    MediumRisk = medRisk,
-                    LowRisk = lowRisk,
-                    OpenCount = openCount,
-                    ClosedCount = closedCount,
-                    CloseRate = closeRate,
-                    DangerScore = dangerScore,
-                    DangerLevel = dangerLevel,
-                    DangerBadgeClass = dangerBadgeClass,
-                    TopReporterName = topReporterGroup?.Key.Nama ?? "-",
-                    TopReporterNik = topReporterGroup?.Key.Nik ?? "-",
-                    TopReporterDept = topReporterGroup?.Key.Departemen ?? "-",
-                    TopReporterCount = topReporterGroup?.Count() ?? 0,
-                    PjaName = topPjaGroup?.Key.Pja ?? "-",
-                    PjaNik = topPjaGroup?.Key.NikPja ?? "-",
-                    SubLocations = subLocations
+                    Tanggal = h.Tanggal,
+                    Program = "Hazard Report",
+                    Departemen = NormDept(h.Departemen),
+                    Area = NormArea(h.Area),
+                    Lokasi = h.Lokasi?.Trim() ?? "-",
+                    DetailLokasi = NormSubLoc(h.DetilLokasi, h.Lokasi),
+                    DetailTemuan = string.IsNullOrWhiteSpace(h.Temuan) ? "-" : h.Temuan.Trim(),
+                    TindakanPerbaikan = !string.IsNullOrWhiteSpace(h.Perbaikan) ? h.Perbaikan.Trim() : (!string.IsNullOrWhiteSpace(h.TindakanPerbaikan) ? h.TindakanPerbaikan.Trim() : "-"),
+                    TingkatResiko = string.IsNullOrWhiteSpace(risk) ? "-" : risk,
+                    StatusTemuan = st,
+                    IsHazard = true,
+                    IsHighRisk = isHigh,
+                    IsMedRisk = isMed,
+                    IsLowRisk = isLow,
+                    IsOpen = isOpen,
+                    IsClosed = isClosed,
+                    Pelapor = string.IsNullOrWhiteSpace(h.Nama) ? "-" : h.Nama.Trim(),
+                    Nik = string.IsNullOrWhiteSpace(h.Nik) ? "-" : h.Nik.Trim(),
+                    Pja = string.IsNullOrWhiteSpace(h.Pja) ? "-" : h.Pja.Trim()
                 });
             }
 
-            areaResults = areaResults.OrderByDescending(a => a.DangerScore).ThenByDescending(a => a.TotalReports).ToList();
-
-            for (int i = 0; i < areaResults.Count; i++)
+            foreach (var i in inspectionsRaw)
             {
-                areaResults[i].Rank = i + 1;
+                bool hasNote = !string.IsNullOrWhiteSpace(i.Catatan);
+                allItems.Add(new AreaActivityItemDto
+                {
+                    Tanggal = i.Tanggal,
+                    Program = "Inspeksi",
+                    Departemen = NormDept(i.Departemen),
+                    Area = NormArea(i.Area),
+                    Lokasi = i.Lokasi?.Trim() ?? "-",
+                    DetailLokasi = NormSubLoc(i.DetilLokasi, i.Lokasi),
+                    DetailTemuan = string.IsNullOrWhiteSpace(i.JenisInspeksi) ? "Inspeksi Area" : (hasNote ? $"{i.JenisInspeksi.Trim()} — {i.Catatan!.Trim()}" : i.JenisInspeksi.Trim()),
+                    TindakanPerbaikan = hasNote ? i.Catatan!.Trim() : "-",
+                    TingkatResiko = "-",
+                    StatusTemuan = hasNote ? "Ada Catatan" : "Sesuai / Selesai",
+                    IsInspection = true,
+                    Pelapor = string.IsNullOrWhiteSpace(i.Nama) ? "-" : i.Nama.Trim(),
+                    Nik = string.IsNullOrWhiteSpace(i.Nik) ? "-" : i.Nik.Trim(),
+                    Pja = string.IsNullOrWhiteSpace(i.Pja) ? "-" : i.Pja.Trim()
+                });
             }
 
-            var overallTopReporters = rawList
-                .Where(h => !string.IsNullOrEmpty(h.Nama))
-                .GroupBy(h => new { h.Nama, h.Nik, h.Departemen, h.PerusahaanId })
-                .OrderByDescending(g => g.Count())
-                .Take(7)
-                .Select((g, idx) => new
+            foreach (var o in observationsRaw)
+            {
+                string hasil = string.IsNullOrWhiteSpace(o.HasilObservasi) ? "Positive" : o.HasilObservasi.Trim();
+                string risk = (o.TingkatResiko ?? "").Trim();
+                bool hasNote = !string.IsNullOrWhiteSpace(o.Keterangan);
+                allItems.Add(new AreaActivityItemDto
                 {
-                    rank = idx + 1,
-                    nama = g.Key.Nama,
-                    nik = g.Key.Nik,
-                    dept = g.Key.Departemen,
-                    perusahaan = (g.Key.PerusahaanId.HasValue && companyDict.TryGetValue(g.Key.PerusahaanId.Value, out var cp)) ? cp : "-",
-                    count = g.Count()
-                })
+                    Tanggal = o.Date,
+                    Program = "Observasi",
+                    Departemen = NormDept(o.Departemen),
+                    Area = NormArea(o.Area),
+                    Lokasi = o.Lokasi?.Trim() ?? "-",
+                    DetailLokasi = NormSubLoc(o.DetilLokasi, o.Lokasi),
+                    DetailTemuan = string.IsNullOrWhiteSpace(o.KegiatanYangDiamati) ? "Observasi Lapangan" : (hasNote ? $"{o.KegiatanYangDiamati.Trim()} — {o.Keterangan!.Trim()}" : o.KegiatanYangDiamati.Trim()),
+                    TindakanPerbaikan = hasNote ? o.Keterangan!.Trim() : "-",
+                    TingkatResiko = string.IsNullOrWhiteSpace(risk) ? "-" : risk,
+                    StatusTemuan = hasil,
+                    IsObservation = true,
+                    Pelapor = string.IsNullOrWhiteSpace(o.Nama) ? "-" : o.Nama.Trim(),
+                    Nik = string.IsNullOrWhiteSpace(o.Nik) ? "-" : o.Nik.Trim(),
+                    Pja = "-"
+                });
+            }
+
+            var departments = allItems
+                .Select(x => x.Departemen)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(d => d)
                 .ToList();
 
-            var topArea = areaResults.FirstOrDefault();
-
-            var responseData = new
+            if (!string.IsNullOrWhiteSpace(department) && !string.Equals(department, "ALL", StringComparison.OrdinalIgnoreCase))
             {
-                year = selectedYear,
-                month = selectedMonth,
-                isAllYear = isAllYear,
-                companyId = effectiveCompanyId,
-                myCompanyId = scopeCompanyId ?? 0,
-                isTopParent = isTopParent,
-                summary = new
-                {
-                    totalAreas = areaResults.Count,
-                    totalSubLocations = areaResults.Sum(a => a.SubLocationsCount),
-                    totalReports = totalAllReports,
-                    totalHighRisk = totalHighRisk,
-                    totalOpenReports = totalOpenReports,
-                    totalClosedReports = totalClosedReports,
-                    overallCloseRate = totalAllReports > 0 ? Math.Round(((double)totalClosedReports / totalAllReports) * 100.0, 1) : 0.0,
-                    topAreaName = topArea?.AreaName ?? "-",
-                    topAreaDangerLevel = topArea?.DangerLevel ?? "-",
-                    topAreaReports = topArea?.TotalReports ?? 0,
-                    topAreaHighRisk = topArea?.HighRisk ?? 0,
-                    topReporterName = overallTopReporters.FirstOrDefault()?.nama ?? "-",
-                    topReporterDept = overallTopReporters.FirstOrDefault()?.dept ?? "-",
-                    topReporterPerusahaan = overallTopReporters.FirstOrDefault()?.perusahaan ?? "-",
-                    topReporterCount = overallTopReporters.FirstOrDefault()?.count ?? 0
-                },
-                areas = areaResults,
-                topReporters = overallTopReporters,
-                companies = visibleCompanies
-            };
+                allItems = allItems
+                    .Where(x => string.Equals(x.Departemen, department.Trim(), StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
 
-            cache.Set(cacheKey, responseData, TimeSpan.FromMinutes(5));
-            return Json(responseData);
+            return (selectedYear, selectedMonth, isAllYear, effectiveCompanyId, companyName, visibleCompanies, departments, allItems);
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportAreaRiskExcel(int? year = null, int? month = null, int? companyId = null)
+        public async Task<IActionResult> GetAreaRiskAnalyticsData(int? year = null, int? month = null, int? companyId = null, string? department = null)
         {
-            var today = DateTime.Today;
-            int selectedYear = year ?? today.Year;
-            int selectedMonth = month ?? today.Month;
-            bool isAllYear = selectedMonth <= 0;
+            var data = await BuildAreaRiskDepartmentDataAsync(year, month, companyId, department);
+            var items = data.AllItems;
 
-            var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            bool isTopParent = !scopeCompanyId.HasValue || scopeCompanyId.Value == 1 || User.IsInRole("Admin") ||
-                               string.Equals(User.FindFirst("Role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+            int totalHazards = items.Count(x => x.IsHazard);
+            int totalInspections = items.Count(x => x.IsInspection);
+            int totalObservations = items.Count(x => x.IsObservation);
+            int totalActivities = items.Count;
+            int totalHighRisk = items.Count(x => x.IsHighRisk);
+            int totalOpenHazards = items.Count(x => x.IsHazard && x.IsOpen);
+            int totalClosedHazards = items.Count(x => x.IsHazard && x.IsClosed);
+            double overallCloseRate = totalHazards > 0 ? Math.Round((double)totalClosedHazards / totalHazards * 100.0, 1) : 100.0;
 
-            int? effectiveCompanyId = null;
-            if (companyId.HasValue && companyId.Value > 0)
-            {
-                effectiveCompanyId = companyId.Value;
-            }
-            else if (!isTopParent && scopeCompanyId.HasValue && (!companyId.HasValue || companyId.Value == 0))
-            {
-                effectiveCompanyId = scopeCompanyId.Value;
-            }
-
-            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
-
-            DateTime startDate;
-            DateTime endDate;
-            if (isAllYear)
-            {
-                startDate = new DateTime(selectedYear, 1, 1);
-                endDate = new DateTime(selectedYear, 12, 31, 23, 59, 59);
-            }
-            else
-            {
-                startDate = new DateTime(selectedYear, selectedMonth, 1);
-                endDate = startDate.AddMonths(1).AddTicks(-1);
-            }
-
-            var allCompanies = await _context.Perusahaans.AsNoTracking()
-                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
-                .OrderBy(p => p.NamaPerusahaan)
-                .Select(p => new { id = p.PerusahaanId, name = p.NamaPerusahaan })
-                .ToListAsync();
-
-            var visibleCompanies = isTopParent
-                ? allCompanies
-                : allCompanies.Where(c => allowedCompanyIds.Contains(c.id)).ToList();
-
-            var companyDict = allCompanies.ToDictionary(c => c.id, c => c.name);
-
-            var hazardQuery = _context.HazardReports.AsNoTracking()
-                .Where(h => !h.IsDeleted && h.Tanggal >= startDate && h.Tanggal <= endDate);
-
-            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)))
-            {
-                hazardQuery = hazardQuery.Where(h => h.PerusahaanId == effectiveCompanyId.Value);
-            }
-            else if (!isTopParent)
-            {
-                hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
-            }
-
-            var rawList = await hazardQuery
-                .Select(h => new
+            var deptSummaries = items
+                .GroupBy(x => x.Departemen)
+                .Select(g =>
                 {
-                    Id = h.Id,
-                    Tanggal = h.Tanggal,
-                    Area = string.IsNullOrWhiteSpace(h.Area) ? "Tidak Terdefinisi" : h.Area.Trim(),
-                    Lokasi = h.Lokasi ?? "",
-                    DetilLokasi = h.DetilLokasi ?? "",
-                    Temuan = h.Temuan ?? "",
-                    Perbaikan = !string.IsNullOrEmpty(h.Perbaikan) ? h.Perbaikan : (h.TindakanPerbaikan ?? ""),
-                    KategoriBahaya = h.KategoriBahaya ?? "",
-                    TingkatResiko = h.TingkatResiko ?? "",
-                    StatusTemuan = h.StatusTemuan ?? "Open",
-                    Nama = h.Nama,
-                    Nik = h.Nik,
-                    Departemen = h.Departemen ?? "-",
-                    Pja = h.Pja ?? "",
-                    NikPja = h.NikPja ?? "",
-                    PerusahaanId = h.PerusahaanId
+                    int hz = g.Count(x => x.IsHazard);
+                    int ins = g.Count(x => x.IsInspection);
+                    int obs = g.Count(x => x.IsObservation);
+                    int openC = g.Count(x => x.IsHazard && x.IsOpen);
+                    int closedC = g.Count(x => x.IsHazard && x.IsClosed);
+                    int highC = g.Count(x => x.IsHighRisk);
+                    double cr = hz > 0 ? Math.Round((double)closedC / hz * 100.0, 1) : 100.0;
+                    return new
+                    {
+                        department = g.Key,
+                        hazardCount = hz,
+                        inspectionCount = ins,
+                        observationCount = obs,
+                        totalActivities = g.Count(),
+                        highRiskCount = highC,
+                        openCount = openC,
+                        closedCount = closedC,
+                        closeRate = cr,
+                        areasCount = g.Select(x => x.Area).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                    };
                 })
-                .ToListAsync();
+                .OrderByDescending(d => d.openCount)
+                .ThenByDescending(d => d.totalActivities)
+                .ToList();
 
-            var areaGroups = rawList.GroupBy(h => h.Area).ToList();
-            var areaResults = new List<AreaRiskItemViewModel>();
-            int totalAllReports = rawList.Count;
-            int totalHighRisk = 0;
-            int totalOpenReports = 0;
-            int totalClosedReports = 0;
+            var areaRows = items
+                .GroupBy(x => new { x.Departemen, x.Area })
+                .Select(g =>
+                {
+                    int hz = g.Count(x => x.IsHazard);
+                    int ins = g.Count(x => x.IsInspection);
+                    int obs = g.Count(x => x.IsObservation);
+                    int highR = g.Count(x => x.IsHighRisk);
+                    int medR = g.Count(x => x.IsMedRisk);
+                    int lowR = g.Count(x => x.IsLowRisk);
+                    int openC = g.Count(x => x.IsHazard && x.IsOpen);
+                    int closedC = g.Count(x => x.IsHazard && x.IsClosed);
+                    double cr = hz > 0 ? Math.Round((double)closedC / hz * 100.0, 1) : 100.0;
+                    int score = (highR * 3) + (medR * 2) + lowR + openC;
 
-            foreach (var group in areaGroups)
+                    string dangerLevel = "Rendah";
+                    string dangerBadge = "risk-badge-low";
+                    if (highR >= 10 || openC >= 15 || score >= 60) { dangerLevel = "Kritis"; dangerBadge = "risk-badge-critical"; }
+                    else if (highR >= 3 || openC >= 6 || score >= 25) { dangerLevel = "Tinggi"; dangerBadge = "risk-badge-high"; }
+                    else if (openC >= 2 || score >= 10) { dangerLevel = "Sedang"; dangerBadge = "risk-badge-medium"; }
+
+                    var topPja = g.Where(x => x.Pja != "-").GroupBy(x => x.Pja).OrderByDescending(pg => pg.Count()).Select(pg => pg.Key).FirstOrDefault() ?? "-";
+
+                    var subLocations = g
+                        .GroupBy(x => x.DetailLokasi)
+                        .Select(sg =>
+                        {
+                            int sHz = sg.Count(x => x.IsHazard);
+                            int sIns = sg.Count(x => x.IsInspection);
+                            int sObs = sg.Count(x => x.IsObservation);
+                            int sHigh = sg.Count(x => x.IsHighRisk);
+                            int sOpen = sg.Count(x => x.IsHazard && x.IsOpen);
+                            int sClosed = sg.Count(x => x.IsHazard && x.IsClosed);
+                            double sCr = sHz > 0 ? Math.Round((double)sClosed / sHz * 100.0, 1) : 100.0;
+                            string sLvl = sHigh >= 3 || sOpen >= 5 ? "Tinggi" : (sOpen >= 2 || sHigh >= 1 ? "Sedang" : "Rendah");
+                            string sBadge = sLvl == "Tinggi" ? "risk-badge-high" : (sLvl == "Sedang" ? "risk-badge-medium" : "risk-badge-low");
+                            var sPja = sg.Where(x => x.Pja != "-").GroupBy(x => x.Pja).OrderByDescending(pg => pg.Count()).Select(pg => pg.Key).FirstOrDefault() ?? "-";
+
+                            return new
+                            {
+                                detailLokasi = sg.Key,
+                                hazardCount = sHz,
+                                inspectionCount = sIns,
+                                observationCount = sObs,
+                                totalActivities = sg.Count(),
+                                highRisk = sHigh,
+                                openCount = sOpen,
+                                closedCount = sClosed,
+                                closeRate = sCr,
+                                dangerLevel = sLvl,
+                                dangerBadgeClass = sBadge,
+                                pjaName = sPja
+                            };
+                        })
+                        .OrderByDescending(s => s.openCount)
+                        .ThenByDescending(s => s.highRisk)
+                        .ThenByDescending(s => s.totalActivities)
+                        .ToList();
+
+                    return new
+                    {
+                        rank = 0,
+                        department = g.Key.Departemen,
+                        areaName = g.Key.Area,
+                        subLocationsCount = subLocations.Count,
+                        hazardCount = hz,
+                        inspectionCount = ins,
+                        observationCount = obs,
+                        totalActivities = g.Count(),
+                        highRisk = highR,
+                        mediumRisk = medR,
+                        lowRisk = lowR,
+                        openCount = openC,
+                        closedCount = closedC,
+                        closeRate = cr,
+                        dangerScore = score,
+                        dangerLevel = dangerLevel,
+                        dangerBadgeClass = dangerBadge,
+                        pjaName = topPja,
+                        subLocations = subLocations
+                    };
+                })
+                .OrderByDescending(a => a.openCount)
+                .ThenByDescending(a => a.dangerScore)
+                .ThenByDescending(a => a.totalActivities)
+                .Select((a, idx) => new
+                {
+                    rank = idx + 1,
+                    a.department,
+                    a.areaName,
+                    a.subLocationsCount,
+                    a.hazardCount,
+                    a.inspectionCount,
+                    a.observationCount,
+                    a.totalActivities,
+                    a.highRisk,
+                    a.mediumRisk,
+                    a.lowRisk,
+                    a.openCount,
+                    a.closedCount,
+                    a.closeRate,
+                    a.dangerScore,
+                    a.dangerLevel,
+                    a.dangerBadgeClass,
+                    a.pjaName,
+                    a.subLocations
+                })
+                .ToList();
+
+            var topDangerArea = areaRows.FirstOrDefault();
+
+            var followUpItems = items
+                .OrderByDescending(x => x.IsHazard && x.IsOpen ? 1 : 0)
+                .ThenByDescending(x => x.IsHighRisk ? 1 : 0)
+                .ThenByDescending(x => x.Tanggal)
+                .Take(400)
+                .Select(x => new
+                {
+                    tanggal = x.Tanggal.ToString("dd MMM yyyy"),
+                    tanggalIso = x.Tanggal.ToString("yyyy-MM-dd"),
+                    program = x.Program,
+                    departemen = x.Departemen,
+                    area = x.Area,
+                    lokasi = x.Lokasi,
+                    detailLokasi = x.DetailLokasi,
+                    detailTemuan = x.DetailTemuan,
+                    tindakanPerbaikan = x.TindakanPerbaikan,
+                    tingkatResiko = x.TingkatResiko,
+                    statusTemuan = x.StatusTemuan,
+                    isOpen = x.IsOpen,
+                    isHighRisk = x.IsHighRisk,
+                    pelapor = x.Pelapor,
+                    nik = x.Nik,
+                    pja = x.Pja
+                })
+                .ToList();
+
+            return Json(new
             {
-                var areaName = group.Key;
-                int totalReports = group.Count();
-                int highRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase));
-
-                int medRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase));
-
-                int lowRisk = group.Count(h =>
-                    h.TingkatResiko.Equals("Rendah", StringComparison.OrdinalIgnoreCase) ||
-                    h.TingkatResiko.Equals("Low", StringComparison.OrdinalIgnoreCase));
-
-                int openCount = group.Count(h =>
-                    h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase));
-
-                int closedCount = group.Count(h =>
-                    h.StatusTemuan.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("Close", StringComparison.OrdinalIgnoreCase) ||
-                    h.StatusTemuan.Equals("Selesai", StringComparison.OrdinalIgnoreCase));
-
-                totalHighRisk += highRisk;
-                totalOpenReports += openCount;
-                totalClosedReports += closedCount;
-
-                int dangerScore = (highRisk * 3) + (medRisk * 2) + (lowRisk * 1);
-                string dangerLevel = "Rendah";
-                if (highRisk >= 15 || dangerScore >= 120 || (openCount >= 30 && highRisk >= 5))
-                    dangerLevel = "Kritis";
-                else if (highRisk >= 5 || dangerScore >= 60 || openCount >= 15)
-                    dangerLevel = "Tinggi";
-                else if (dangerScore >= 20 || openCount >= 5)
-                    dangerLevel = "Sedang";
-
-                double closeRate = totalReports > 0 ? Math.Round(((double)closedCount / totalReports) * 100.0, 1) : 0.0;
-
-                var topReporterGroup = group.Where(h => !string.IsNullOrEmpty(h.Nama))
-                    .GroupBy(h => new { h.Nama, h.Nik, h.Departemen })
-                    .OrderByDescending(g => g.Count())
-                    .FirstOrDefault();
-
-                var topPjaGroup = group.Where(h => !string.IsNullOrEmpty(h.Pja))
-                    .GroupBy(h => new { h.Pja, h.NikPja })
-                    .OrderByDescending(g => g.Count())
-                    .FirstOrDefault();
-
-                var subGroups = group
-                    .GroupBy(h => new
-                    {
-                        SubLoc = !string.IsNullOrWhiteSpace(h.DetilLokasi) ? h.DetilLokasi.Trim() : (!string.IsNullOrWhiteSpace(h.Lokasi) ? h.Lokasi.Trim() : "Umum / Titik Utama"),
-                        h.PerusahaanId
-                    })
-                    .ToList();
-
-                var subLocations = new List<AreaRiskSubLocationViewModel>();
-                foreach (var sg in subGroups)
+                year = data.SelectedYear,
+                month = data.SelectedMonth,
+                isAllYear = data.IsAllYear,
+                companyId = data.EffectiveCompanyId,
+                companyName = data.CompanyName,
+                companies = data.VisibleCompanies,
+                departments = data.Departments,
+                selectedDepartment = department ?? "ALL",
+                summary = new
                 {
-                    int subTotal = sg.Count();
-                    int subHigh = sg.Count(h =>
-                        h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase));
-                    int subMed = sg.Count(h =>
-                        h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase));
-                    int subLow = sg.Count(h =>
-                        h.TingkatResiko.Equals("Rendah", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Low", StringComparison.OrdinalIgnoreCase));
-                    int subOpen = sg.Count(h =>
-                        h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase));
-                    int subClosed = sg.Count(h =>
-                        h.StatusTemuan.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Close", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Selesai", StringComparison.OrdinalIgnoreCase));
+                    totalActivities,
+                    totalHazards,
+                    totalInspections,
+                    totalObservations,
+                    totalDepartments = deptSummaries.Count,
+                    totalAreas = areaRows.Select(a => a.areaName).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    totalHighRisk,
+                    totalOpenHazards,
+                    totalClosedHazards,
+                    overallCloseRate,
+                    topAreaName = topDangerArea != null ? $"{topDangerArea.areaName} ({topDangerArea.department})" : "-",
+                    topAreaOpen = topDangerArea?.openCount ?? 0,
+                    topAreaHighRisk = topDangerArea?.highRisk ?? 0
+                },
+                deptSummaries,
+                areas = areaRows,
+                followUpItems
+            });
+        }
 
-                    int subScore = (subHigh * 3) + (subMed * 2) + (subLow * 1);
-                    string subDanger = "Rendah";
-                    if (subHigh >= 5 || subScore >= 30 || subOpen >= 10) subDanger = "Kritis";
-                    else if (subHigh >= 2 || subScore >= 15 || subOpen >= 5) subDanger = "Tinggi";
-                    else if (subScore >= 6 || subOpen >= 2) subDanger = "Sedang";
+        [HttpGet]
+        public async Task<IActionResult> ExportAreaRiskExcel(int? year = null, int? month = null, int? companyId = null, string? department = null)
+        {
+            var data = await BuildAreaRiskDepartmentDataAsync(year, month, companyId, department);
+            var items = data.AllItems;
 
-                    string compName = (sg.Key.PerusahaanId.HasValue && companyDict.TryGetValue(sg.Key.PerusahaanId.Value, out var cn))
-                        ? cn
-                        : (sg.Key.PerusahaanId.HasValue ? $"Perusahaan #{sg.Key.PerusahaanId}" : "Umum");
+            string[] monthNames = { "Semua Bulan (YTD)", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+            string periodText = data.IsAllYear ? $"Tahun {data.SelectedYear} (YTD)" : $"{monthNames[data.SelectedMonth]} {data.SelectedYear}";
+            string deptText = string.IsNullOrWhiteSpace(department) || department == "ALL" ? "Semua Departemen" : department.Trim();
 
-                    var subTopReporter = sg.Where(h => !string.IsNullOrEmpty(h.Nama))
-                        .GroupBy(h => new { h.Nama, h.Departemen })
-                        .OrderByDescending(g => g.Count())
-                        .FirstOrDefault();
+            using var workbook = new XLWorkbook();
+            var navy = XLColor.FromHtml("#0F2942");
+            var slateDark = XLColor.FromHtml("#1E293B");
+            var zebraFill = XLColor.FromHtml("#F1F5F9");
+            var borderClr = XLColor.FromHtml("#CBD5E1");
 
-                    var subPja = sg.FirstOrDefault(h => !string.IsNullOrEmpty(h.Pja))?.Pja ?? "-";
-
-                    subLocations.Add(new AreaRiskSubLocationViewModel
-                    {
-                        DetailLokasi = sg.Key.SubLoc,
-                        PerusahaanId = sg.Key.PerusahaanId,
-                        PerusahaanName = compName,
-                        TotalReports = subTotal,
-                        HighRisk = subHigh,
-                        MediumRisk = subMed,
-                        LowRisk = subLow,
-                        OpenCount = subOpen,
-                        ClosedCount = subClosed,
-                        CloseRate = subTotal > 0 ? Math.Round(((double)subClosed / subTotal) * 100.0, 1) : 0.0,
-                        DangerScore = subScore,
-                        DangerLevel = subDanger,
-                        TopReporterName = subTopReporter?.Key.Nama ?? "-",
-                        TopReporterDept = subTopReporter?.Key.Departemen ?? "-",
-                        TopReporterCount = subTopReporter?.Count() ?? 0,
-                        PjaName = subPja
-                    });
-                }
-
-                subLocations = subLocations.OrderByDescending(s => s.DangerScore).ThenByDescending(s => s.TotalReports).ToList();
-
-                var distinctCompanies = group
-                    .Where(h => h.PerusahaanId.HasValue && companyDict.ContainsKey(h.PerusahaanId.Value))
-                    .Select(h => companyDict[h.PerusahaanId.Value])
-                    .Distinct()
-                    .OrderBy(c => c)
-                    .ToList();
-
-                areaResults.Add(new AreaRiskItemViewModel
-                {
-                    AreaName = areaName,
-                    Companies = distinctCompanies,
-                    SubLocationsCount = subLocations.Count,
-                    TotalReports = totalReports,
-                    HighRisk = highRisk,
-                    MediumRisk = medRisk,
-                    LowRisk = lowRisk,
-                    OpenCount = openCount,
-                    ClosedCount = closedCount,
-                    CloseRate = closeRate,
-                    DangerScore = dangerScore,
-                    DangerLevel = dangerLevel,
-                    TopReporterName = topReporterGroup?.Key.Nama ?? "-",
-                    TopReporterNik = topReporterGroup?.Key.Nik ?? "-",
-                    TopReporterDept = topReporterGroup?.Key.Departemen ?? "-",
-                    TopReporterCount = topReporterGroup?.Count() ?? 0,
-                    PjaName = topPjaGroup?.Key.Pja ?? "-",
-                    PjaNik = topPjaGroup?.Key.NikPja ?? "-",
-                    SubLocations = subLocations
-                });
+            void ApplyBanner(IXLWorksheet ws, int maxCol, string title, string subtitle)
+            {
+                ws.Range(1, 1, 1, maxCol).Merge().Value = title;
+                ws.Range(2, 1, 2, maxCol).Merge().Value = subtitle;
+                var r1 = ws.Range(1, 1, 1, maxCol);
+                r1.Style.Fill.BackgroundColor = navy;
+                r1.Style.Font.Bold = true;
+                r1.Style.Font.FontSize = 14;
+                r1.Style.Font.FontColor = XLColor.White;
+                r1.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                r1.Style.Alignment.Indent = 1;
+                var r2 = ws.Range(2, 1, 2, maxCol);
+                r2.Style.Fill.BackgroundColor = navy;
+                r2.Style.Font.Italic = true;
+                r2.Style.Font.FontSize = 9.5;
+                r2.Style.Font.FontColor = XLColor.FromHtml("#E2E8F0");
+                r2.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                r2.Style.Alignment.Indent = 1;
+                ws.Row(1).Height = 26;
+                ws.Row(2).Height = 19;
             }
 
-            areaResults = areaResults.OrderByDescending(a => a.DangerScore).ThenByDescending(a => a.TotalReports).ToList();
-            for (int i = 0; i < areaResults.Count; i++) areaResults[i].Rank = i + 1;
+            var wsExec = workbook.Worksheets.Add("Ringkasan Departemen");
+            ApplyBanner(wsExec, 10,
+                $"ANALISA RISIKO AREA & FOLLOW-UP SAFETY — {data.CompanyName.ToUpperInvariant()}",
+                $"Periode: {periodText} | Filter Departemen: {deptText} | Export: {DateTime.Now:dd MMM yyyy HH:mm}");
 
-            string selectedCompanyName = isTopParent ? "Semua Perusahaan" : (visibleCompanies.Count == 1 ? visibleCompanies[0].name : string.Join(", ", visibleCompanies.Select(c => c.name)));
-            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)) && companyDict.TryGetValue(effectiveCompanyId.Value, out var scn))
+            int totHz = items.Count(x => x.IsHazard);
+            int totIns = items.Count(x => x.IsInspection);
+            int totObs = items.Count(x => x.IsObservation);
+            int totOpen = items.Count(x => x.IsHazard && x.IsOpen);
+            int totClosed = items.Count(x => x.IsHazard && x.IsClosed);
+            double totCr = totHz > 0 ? Math.Round((double)totClosed / totHz * 100.0, 1) : 100.0;
+
+            var kpis = new[]
             {
-                selectedCompanyName = scn;
+                (1, 2, "TOTAL AKTIVITAS (HZ+INS+OBS)", items.Count.ToString("N0"), "#0F2942"),
+                (3, 4, "HAZARD / INSPEKSI / OBSERVASI", $"{totHz:N0} / {totIns:N0} / {totObs:N0}", "#0F766E"),
+                (5, 6, "HAZARD OPEN (PERLU FOLLOW-UP)", totOpen.ToString("N0"), "#DC2626"),
+                (7, 8, "HAZARD CLOSED", totClosed.ToString("N0"), "#059669"),
+                (9, 10, "CLOSE RATE HAZARD", $"{totCr}%", "#1D4ED8")
+            };
+            wsExec.Row(4).Height = 20;
+            wsExec.Row(5).Height = 28;
+            foreach (var (cs, ce, lbl, val, hex) in kpis)
+            {
+                var h = wsExec.Range(4, cs, 4, ce).Merge();
+                h.Value = lbl; h.Style.Fill.BackgroundColor = XLColor.FromHtml(hex); h.Style.Font.Bold = true; h.Style.Font.FontSize = 9; h.Style.Font.FontColor = XLColor.White;
+                h.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; h.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                var v = wsExec.Range(5, cs, 5, ce).Merge();
+                v.Value = val; v.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC"); v.Style.Font.Bold = true; v.Style.Font.FontSize = 13; v.Style.Font.FontColor = XLColor.FromHtml(hex);
+                v.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; v.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                wsExec.Range(4, cs, 5, ce).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             }
 
-            string periodStr = isAllYear ? $"Tahun {selectedYear} (YTD)" : $"{new DateTime(selectedYear, selectedMonth, 1):MMMM yyyy}";
-
-            using (var workbook = new XLWorkbook())
+            var deptHeaders = new[] { "No", "Departemen", "Area Aktif", "Hazard Report", "Inspeksi", "Observasi", "Total Aktivitas", "Hazard Open", "Hazard Closed", "% Close Rate" };
+            wsExec.Row(7).Height = 25;
+            for (int c = 1; c <= deptHeaders.Length; c++)
             {
-                // Helper local styling lambdas
-                void ApplyBadgeColor(IXLCell cell, string level)
+                var cell = wsExec.Cell(7, c);
+                cell.Value = deptHeaders[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            var deptGroups = items
+                .GroupBy(x => x.Departemen)
+                .Select(g => new
                 {
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    if (level.Equals("Kritis", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
-                        cell.Style.Font.FontColor = XLColor.FromHtml("#991b1b");
-                    }
-                    else if (level.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) || level.Equals("High", StringComparison.OrdinalIgnoreCase) || level.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
-                        cell.Style.Font.FontColor = XLColor.FromHtml("#9a3412");
-                    }
-                    else if (level.Equals("Sedang", StringComparison.OrdinalIgnoreCase) || level.Equals("Medium", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#fef9c3");
-                        cell.Style.Font.FontColor = XLColor.FromHtml("#854d0e");
-                    }
-                    else
-                    {
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#dcfce7");
-                        cell.Style.Font.FontColor = XLColor.FromHtml("#166534");
-                    }
+                    Dept = g.Key,
+                    Areas = g.Select(x => x.Area).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    Hz = g.Count(x => x.IsHazard),
+                    Ins = g.Count(x => x.IsInspection),
+                    Obs = g.Count(x => x.IsObservation),
+                    Tot = g.Count(),
+                    Open = g.Count(x => x.IsHazard && x.IsOpen),
+                    Closed = g.Count(x => x.IsHazard && x.IsClosed)
+                })
+                .OrderByDescending(d => d.Open)
+                .ThenByDescending(d => d.Tot)
+                .ToList();
+
+            int dRow = 8;
+            for (int i = 0; i < deptGroups.Count; i++)
+            {
+                var d = deptGroups[i];
+                int rn = dRow + i;
+                wsExec.Row(rn).Height = 20;
+                wsExec.Cell(rn, 1).Value = i + 1;
+                wsExec.Cell(rn, 2).Value = d.Dept;
+                wsExec.Cell(rn, 3).Value = d.Areas;
+                wsExec.Cell(rn, 4).Value = d.Hz;
+                wsExec.Cell(rn, 5).Value = d.Ins;
+                wsExec.Cell(rn, 6).Value = d.Obs;
+                wsExec.Cell(rn, 7).Value = d.Tot;
+                wsExec.Cell(rn, 8).Value = d.Open;
+                wsExec.Cell(rn, 9).Value = d.Closed;
+                wsExec.Cell(rn, 10).FormulaA1 = $"=IF(D{rn}>0, I{rn}/D{rn}, 1)";
+                wsExec.Cell(rn, 10).Style.NumberFormat.Format = "0.0%";
+                var bg = (i % 2 == 1) ? zebraFill : XLColor.White;
+                wsExec.Range(rn, 1, rn, 10).Style.Fill.BackgroundColor = bg;
+                wsExec.Range(rn, 1, rn, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                wsExec.Range(rn, 1, rn, 10).Style.Border.OutsideBorderColor = borderClr;
+                wsExec.Cell(rn, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsExec.Cell(rn, 2).Style.Font.Bold = true;
+                if (d.Open > 0) { wsExec.Cell(rn, 8).Style.Font.Bold = true; wsExec.Cell(rn, 8).Style.Font.FontColor = XLColor.FromHtml("#DC2626"); }
+            }
+            wsExec.SheetView.FreezeRows(7);
+            wsExec.Columns().AdjustToContents(10, 40);
+
+            var wsArea = workbook.Worksheets.Add("Area & Detail Lokasi");
+            ApplyBanner(wsArea, 12,
+                $"PEMETAAN AREA UTAMA & DETAIL LOKASI PER DEPARTEMEN — {data.CompanyName.ToUpperInvariant()}",
+                $"Periode: {periodText} | Jumlah Hazard, Inspeksi, Observasi & Status Close Rate per Titik Lokasi");
+
+            var areaHdrs = new[] { "No", "Departemen", "Area Utama", "Detail Lokasi", "Hazard", "Inspeksi", "Observasi", "Total Aktivitas", "High Risk", "Hazard Open", "Hazard Closed", "% Close Rate" };
+            wsArea.Row(4).Height = 25;
+            for (int c = 1; c <= areaHdrs.Length; c++)
+            {
+                var cell = wsArea.Cell(4, c);
+                cell.Value = areaHdrs[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            var subLocRows = items
+                .GroupBy(x => new { x.Departemen, x.Area, x.DetailLokasi })
+                .Select(g => new
+                {
+                    g.Key.Departemen,
+                    g.Key.Area,
+                    g.Key.DetailLokasi,
+                    Hz = g.Count(x => x.IsHazard),
+                    Ins = g.Count(x => x.IsInspection),
+                    Obs = g.Count(x => x.IsObservation),
+                    Tot = g.Count(),
+                    High = g.Count(x => x.IsHighRisk),
+                    Open = g.Count(x => x.IsHazard && x.IsOpen),
+                    Closed = g.Count(x => x.IsHazard && x.IsClosed)
+                })
+                .OrderByDescending(x => x.Open)
+                .ThenByDescending(x => x.High)
+                .ThenByDescending(x => x.Tot)
+                .ToList();
+
+            for (int i = 0; i < subLocRows.Count; i++)
+            {
+                var s = subLocRows[i];
+                int rn = 5 + i;
+                wsArea.Row(rn).Height = 20;
+                wsArea.Cell(rn, 1).Value = i + 1;
+                wsArea.Cell(rn, 2).Value = s.Departemen;
+                wsArea.Cell(rn, 3).Value = s.Area;
+                wsArea.Cell(rn, 4).Value = s.DetailLokasi;
+                wsArea.Cell(rn, 5).Value = s.Hz;
+                wsArea.Cell(rn, 6).Value = s.Ins;
+                wsArea.Cell(rn, 7).Value = s.Obs;
+                wsArea.Cell(rn, 8).Value = s.Tot;
+                wsArea.Cell(rn, 9).Value = s.High;
+                wsArea.Cell(rn, 10).Value = s.Open;
+                wsArea.Cell(rn, 11).Value = s.Closed;
+                wsArea.Cell(rn, 12).FormulaA1 = $"=IF(E{rn}>0, K{rn}/E{rn}, 1)";
+                wsArea.Cell(rn, 12).Style.NumberFormat.Format = "0.0%";
+                var bg = (i % 2 == 1) ? zebraFill : XLColor.White;
+                wsArea.Range(rn, 1, rn, 12).Style.Fill.BackgroundColor = bg;
+                wsArea.Range(rn, 1, rn, 12).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                wsArea.Range(rn, 1, rn, 12).Style.Border.OutsideBorderColor = borderClr;
+                wsArea.Cell(rn, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                if (s.Open > 0) { wsArea.Cell(rn, 10).Style.Font.Bold = true; wsArea.Cell(rn, 10).Style.Font.FontColor = XLColor.FromHtml("#DC2626"); }
+            }
+            wsArea.SheetView.FreezeRows(4);
+            if (subLocRows.Count > 0) wsArea.Range(4, 1, 4 + subLocRows.Count, 12).SetAutoFilter();
+            wsArea.Columns().AdjustToContents(10, 42);
+
+            var wsLog = workbook.Worksheets.Add("Log Follow-Up Temuan");
+            ApplyBanner(wsLog, 13,
+                $"LOG DETAIL TEMUAN & AKTIVITAS SAFETY (FOLLOW-UP) — {data.CompanyName.ToUpperInvariant()}",
+                $"Periode: {periodText} | Mencakup Tanggal, Program (Hazard/Inspeksi/Observasi), Detail Temuan & Status untuk Follow-Up Team Safety");
+
+            var logHdrs = new[] { "No", "Tanggal", "Program", "Departemen", "Area Utama", "Lokasi", "Detail Lokasi", "Detail Temuan / Kegiatan", "Tindakan / Catatan", "Tingkat Risiko", "Status Temuan", "Pelapor (NIK)", "PJA" };
+            wsLog.Row(4).Height = 25;
+            for (int c = 1; c <= logHdrs.Length; c++)
+            {
+                var cell = wsLog.Cell(4, c);
+                cell.Value = logHdrs[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            var orderedItems = items
+                .OrderByDescending(x => x.IsHazard && x.IsOpen ? 1 : 0)
+                .ThenByDescending(x => x.IsHighRisk ? 1 : 0)
+                .ThenByDescending(x => x.Tanggal)
+                .ToList();
+
+            for (int i = 0; i < orderedItems.Count; i++)
+            {
+                var x = orderedItems[i];
+                int rn = 5 + i;
+                wsLog.Row(rn).Height = 22;
+                wsLog.Cell(rn, 1).Value = i + 1;
+                wsLog.Cell(rn, 2).Value = x.Tanggal;
+                wsLog.Cell(rn, 2).Style.DateFormat.Format = "dd-MMM-yyyy";
+                wsLog.Cell(rn, 3).Value = x.Program;
+                wsLog.Cell(rn, 4).Value = x.Departemen;
+                wsLog.Cell(rn, 5).Value = x.Area;
+                wsLog.Cell(rn, 6).Value = x.Lokasi;
+                wsLog.Cell(rn, 7).Value = x.DetailLokasi;
+                wsLog.Cell(rn, 8).Value = x.DetailTemuan;
+                wsLog.Cell(rn, 9).Value = x.TindakanPerbaikan;
+                wsLog.Cell(rn, 10).Value = x.TingkatResiko;
+                wsLog.Cell(rn, 11).Value = x.StatusTemuan;
+                wsLog.Cell(rn, 12).Value = $"{x.Pelapor} ({x.Nik})";
+                wsLog.Cell(rn, 13).Value = x.Pja;
+
+                var bg = (i % 2 == 1) ? zebraFill : XLColor.White;
+                wsLog.Range(rn, 1, rn, 13).Style.Fill.BackgroundColor = bg;
+                wsLog.Range(rn, 1, rn, 13).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                wsLog.Range(rn, 1, rn, 13).Style.Border.OutsideBorderColor = borderClr;
+                wsLog.Range(rn, 1, rn, 13).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                wsLog.Cell(rn, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsLog.Cell(rn, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsLog.Cell(rn, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsLog.Cell(rn, 8).Style.Alignment.WrapText = true;
+                wsLog.Cell(rn, 9).Style.Alignment.WrapText = true;
+
+                if (x.IsOpen)
+                {
+                    wsLog.Cell(rn, 11).Style.Fill.BackgroundColor = XLColor.FromHtml("#FEE2E2");
+                    wsLog.Cell(rn, 11).Style.Font.FontColor = XLColor.FromHtml("#991B1B");
+                    wsLog.Cell(rn, 11).Style.Font.Bold = true;
                 }
-
-                void SetupPrint(IXLWorksheet ws)
+                else if (x.IsClosed)
                 {
-                    ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
-                    ws.PageSetup.FitToPages(1, 0);
-                }
-
-                double overallCloseRate = totalAllReports > 0 ? Math.Round(((double)totalClosedReports / totalAllReports) * 100.0, 1) : 0.0;
-                int totalSubLocationsCount = areaResults.Sum(a => a.SubLocationsCount);
-
-                // ==================== SHEET 1: EXECUTIVE SUMMARY & PRIORITAS TAKE-UP ====================
-                var wsExec = workbook.Worksheets.Add("Executive Summary");
-                wsExec.ShowGridLines = true;
-
-                // Corporate Banner
-                wsExec.Range(1, 1, 1, 10).Merge().Value = "LAPORAN EKSEKUTIF PEMETAAN RISIKO & TINDAK LANJUT TEMUAN (SAP)";
-                wsExec.Range(1, 1, 1, 10).Style.Font.Bold = true;
-                wsExec.Range(1, 1, 1, 10).Style.Font.FontSize = 15;
-                wsExec.Range(1, 1, 1, 10).Style.Font.FontColor = XLColor.White;
-                wsExec.Range(1, 1, 1, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
-                wsExec.Range(1, 1, 1, 10).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                wsExec.Row(1).Height = 32;
-
-                wsExec.Range(2, 1, 2, 10).Merge().Value = $"Periode: {periodStr}   |   Perusahaan: {selectedCompanyName}   |   Dicetak: {DateTime.Now:dd MMM yyyy HH:mm}";
-                wsExec.Range(2, 1, 2, 10).Style.Font.Italic = true;
-                wsExec.Range(2, 1, 2, 10).Style.Font.FontSize = 10;
-                wsExec.Range(2, 1, 2, 10).Style.Font.FontColor = XLColor.FromHtml("#e2e8f0");
-                wsExec.Range(2, 1, 2, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
-                wsExec.Range(2, 1, 2, 10).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                wsExec.Row(2).Height = 20;
-
-                // KPI Cards (Rows 4-5)
-                var kpiDefs = new (int c1, int c2, string title, object val, string bgHex, string fgHex)[]
-                {
-                    (1, 2, "TOTAL TEMUAN BAHAYA", totalAllReports, "#eff6ff", "#1d4ed8"),
-                    (3, 4, "RISIKO TINGGI / KRITIS", totalHighRisk, "#fef2f2", "#b91c1c"),
-                    (5, 6, "BELUM CLOSE (OPEN)", totalOpenReports, "#fff7ed", "#c2410c"),
-                    (7, 8, "% CLOSE RATE", $"{overallCloseRate}%", "#ecfdf5", "#047857"),
-                    (9, 10, "CAKUPAN AREA / TITIK", $"{areaResults.Count} Area / {totalSubLocationsCount} Titik", "#f8fafc", "#334155")
-                };
-
-                wsExec.Row(4).Height = 18;
-                wsExec.Row(5).Height = 26;
-                foreach (var k in kpiDefs)
-                {
-                    var rngTitle = wsExec.Range(4, k.c1, 4, k.c2).Merge();
-                    rngTitle.Value = k.title;
-                    rngTitle.Style.Font.Bold = true;
-                    rngTitle.Style.Font.FontSize = 9;
-                    rngTitle.Style.Font.FontColor = XLColor.FromHtml("#475569");
-                    rngTitle.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
-                    rngTitle.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    rngTitle.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-
-                    var rngVal = wsExec.Range(5, k.c1, 5, k.c2).Merge();
-                    rngVal.Value = XLCellValue.FromObject(k.val);
-                    rngVal.Style.Font.Bold = true;
-                    rngVal.Style.Font.FontSize = 14;
-                    rngVal.Style.Font.FontColor = XLColor.FromHtml(k.fgHex);
-                    rngVal.Style.Fill.BackgroundColor = XLColor.FromHtml(k.bgHex);
-                    rngVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    rngVal.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-
-                    var box = wsExec.Range(4, k.c1, 5, k.c2);
-                    box.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-                    box.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                }
-
-                // Section: Top 15 Action-Required Sub-Locations
-                wsExec.Range(7, 1, 7, 10).Merge().Value = "PRIORITAS TINDAK LANJUT (TOP 15 TITIK LOKASI DENGAN TEMUAN OPEN & BAHAYA TERTINGGI)";
-                wsExec.Range(7, 1, 7, 10).Style.Font.Bold = true;
-                wsExec.Range(7, 1, 7, 10).Style.Font.FontSize = 11;
-                wsExec.Range(7, 1, 7, 10).Style.Font.FontColor = XLColor.FromHtml("#9a3412");
-                wsExec.Range(7, 1, 7, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
-                wsExec.Row(7).Height = 22;
-
-                string[] prioHeaders = new[]
-                {
-                    "Prioritas", "Perusahaan", "Area Utama", "Detail Titik Lokasi", "Tingkat Bahaya",
-                    "Open (Belum Close)", "Risiko Tinggi", "% Selesai", "PJA Penanggung Jawab", "Rekomendasi Take Up"
-                };
-                for (int c = 0; c < prioHeaders.Length; c++)
-                {
-                    var cell = wsExec.Cell(8, c + 1);
-                    cell.Value = prioHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontSize = 9.5;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#b45309");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                }
-                wsExec.Row(8).Height = 22;
-
-                var prioritySubLocs = areaResults
-                    .SelectMany(a => a.SubLocations.Select(s => new { Area = a.AreaName, Sub = s }))
-                    .Where(x => x.Sub.OpenCount > 0 || x.Sub.HighRisk > 0)
-                    .OrderByDescending(x => x.Sub.OpenCount)
-                    .ThenByDescending(x => x.Sub.HighRisk)
-                    .ThenByDescending(x => x.Sub.DangerScore)
-                    .Take(15)
-                    .ToList();
-
-                int eRow = 9;
-                if (prioritySubLocs.Any())
-                {
-                    int pIdx = 1;
-                    foreach (var p in prioritySubLocs)
-                    {
-                        string prioLabel = p.Sub.OpenCount >= 5 || p.Sub.DangerLevel == "Kritis" ? $"P1 - URGENT (#{pIdx})" : $"P2 - TINGGI (#{pIdx})";
-                        string actionRec = p.Sub.OpenCount > 0
-                            ? $"Segera close {p.Sub.OpenCount} temuan open (koordinasi PJA: {p.Sub.PjaName})"
-                            : $"Lakukan inspeksi & kontrol area risiko tinggi ({p.Sub.HighRisk} temuan tinggi)";
-
-                        wsExec.Cell(eRow, 1).Value = prioLabel;
-                        wsExec.Cell(eRow, 2).Value = p.Sub.PerusahaanName;
-                        wsExec.Cell(eRow, 3).Value = p.Area;
-                        wsExec.Cell(eRow, 4).Value = p.Sub.DetailLokasi;
-                        wsExec.Cell(eRow, 5).Value = p.Sub.DangerLevel;
-                        wsExec.Cell(eRow, 6).Value = p.Sub.OpenCount;
-                        wsExec.Cell(eRow, 7).Value = p.Sub.HighRisk;
-                        wsExec.Cell(eRow, 8).Value = $"{p.Sub.CloseRate}%";
-                        wsExec.Cell(eRow, 9).Value = p.Sub.PjaName;
-                        wsExec.Cell(eRow, 10).Value = actionRec;
-
-                        wsExec.Cell(eRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsExec.Cell(eRow, 1).Style.Font.Bold = true;
-                        if (prioLabel.StartsWith("P1")) wsExec.Cell(eRow, 1).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                        ApplyBadgeColor(wsExec.Cell(eRow, 5), p.Sub.DangerLevel);
-                        wsExec.Cell(eRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsExec.Cell(eRow, 6).Style.Font.Bold = true;
-                        if (p.Sub.OpenCount > 0) wsExec.Cell(eRow, 6).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
-                        wsExec.Cell(eRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsExec.Cell(eRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                        if (eRow % 2 == 0) wsExec.Range(eRow, 1, eRow, 10).Style.Fill.BackgroundColor = XLColor.FromHtml("#fffbeb");
-                        eRow++;
-                        pIdx++;
-                    }
-                }
-                else
-                {
-                    wsExec.Range(eRow, 1, eRow, 10).Merge().Value = "Tidak ada temuan Open atau Risiko Tinggi yang mendesak pada periode ini.";
-                    wsExec.Cell(eRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    eRow++;
-                }
-
-                var prioRange = wsExec.Range(8, 1, eRow - 1, 10);
-                prioRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                prioRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                prioRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                prioRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-
-                // Section: Top 7 Reporters
-                int repTitleRow = eRow + 2;
-                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Merge().Value = "TOP 7 KONTRIBUTOR PELAPOR BAHAYA TERAKTIF";
-                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.Bold = true;
-                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.FontSize = 11;
-                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Font.FontColor = XLColor.FromHtml("#065f46");
-                wsExec.Range(repTitleRow, 1, repTitleRow, 6).Style.Fill.BackgroundColor = XLColor.FromHtml("#d1fae5");
-                wsExec.Row(repTitleRow).Height = 22;
-
-                string[] repHeaders = new[] { "Rank", "Nama Pelapor", "NIK", "Departemen", "Perusahaan", "Total Laporan" };
-                int repHeadRow = repTitleRow + 1;
-                for (int c = 0; c < repHeaders.Length; c++)
-                {
-                    var cell = wsExec.Cell(repHeadRow, c + 1);
-                    cell.Value = repHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#047857");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                }
-
-                var execTopReporters = rawList
-                    .Where(h => !string.IsNullOrEmpty(h.Nama))
-                    .GroupBy(h => new { h.Nama, h.Nik, h.Departemen, h.PerusahaanId })
-                    .OrderByDescending(g => g.Count())
-                    .Take(7)
-                    .ToList();
-
-                int rRow = repHeadRow + 1;
-                int rRank = 1;
-                foreach (var r in execTopReporters)
-                {
-                    string comp = (r.Key.PerusahaanId.HasValue && companyDict.TryGetValue(r.Key.PerusahaanId.Value, out var cn)) ? cn : "-";
-                    wsExec.Cell(rRow, 1).Value = rRank;
-                    wsExec.Cell(rRow, 2).Value = r.Key.Nama;
-                    wsExec.Cell(rRow, 3).Value = r.Key.Nik;
-                    wsExec.Cell(rRow, 4).Value = r.Key.Departemen;
-                    wsExec.Cell(rRow, 5).Value = comp;
-                    wsExec.Cell(rRow, 6).Value = r.Count();
-                    wsExec.Cell(rRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsExec.Cell(rRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsExec.Cell(rRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsExec.Cell(rRow, 6).Style.Font.Bold = true;
-                    rRow++;
-                    rRank++;
-                }
-
-                if (rRow > repHeadRow + 1)
-                {
-                    var repRange = wsExec.Range(repHeadRow, 1, rRow - 1, 6);
-                    repRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                    repRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                    repRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    repRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                }
-
-                wsExec.Columns().AdjustToContents(10, 50);
-                SetupPrint(wsExec);
-
-                // ==================== SHEET 2: PEMETAAN & BREAKDOWN DETAIL LOKASI ====================
-                var wsDetail = workbook.Worksheets.Add("Pemetaan Detail Lokasi");
-                wsDetail.ShowGridLines = true;
-                wsDetail.Outline.SummaryVLocation = XLOutlineSummaryVLocation.Top;
-
-                wsDetail.Range(1, 1, 1, 16).Merge().Value = "LAPORAN PEMETAAN RISIKO & BREAKDOWN DETAIL LOKASI KERJA";
-                wsDetail.Range(1, 1, 1, 16).Style.Font.Bold = true;
-                wsDetail.Range(1, 1, 1, 16).Style.Font.FontSize = 14;
-                wsDetail.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
-                wsDetail.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
-                wsDetail.Row(1).Height = 28;
-
-                wsDetail.Range(2, 1, 2, 16).Merge().Value = $"Periode: {periodStr}  |  Perusahaan: {selectedCompanyName}  |  Tips: Gunakan tombol [+] / [-] di sisi kiri Excel untuk melipat/membuka detail titik lokasi.";
-                wsDetail.Range(2, 1, 2, 16).Style.Font.Italic = true;
-                wsDetail.Range(2, 1, 2, 16).Style.Font.FontSize = 9.5;
-                wsDetail.Range(2, 1, 2, 16).Style.Font.FontColor = XLColor.FromHtml("#e2e8f0");
-                wsDetail.Range(2, 1, 2, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
-                wsDetail.Row(2).Height = 19;
-
-                int headerRow = 4;
-                string[] detailHeaders = new[]
-                {
-                    "No", "Perusahaan", "Area Utama", "Detail Titik Lokasi", "Tingkat Bahaya",
-                    "Total Temuan", "Risiko Tinggi", "Risiko Sedang", "Risiko Rendah",
-                    "Open (Belum Close)", "Closed", "% Selesai",
-                    "Pelapor Terbanyak", "Departemen", "Jml Laporan", "Penanggung Jawab Area (PJA)"
-                };
-
-                for (int c = 0; c < detailHeaders.Length; c++)
-                {
-                    var cell = wsDetail.Cell(headerRow, c + 1);
-                    cell.Value = detailHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontSize = 10;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0369a1");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                }
-                wsDetail.Row(headerRow).Height = 24;
-
-                int curRow = 5;
-                foreach (var area in areaResults)
-                {
-                    // Master Area Row
-                    wsDetail.Cell(curRow, 1).Value = area.Rank;
-                    wsDetail.Cell(curRow, 2).Value = string.Join(", ", area.Companies);
-                    wsDetail.Cell(curRow, 3).Value = $"[AREA UTAMA] {area.AreaName} ({area.SubLocationsCount} Titik)";
-                    wsDetail.Cell(curRow, 4).Value = "Seluruh Titik di Area";
-                    wsDetail.Cell(curRow, 5).Value = area.DangerLevel;
-                    wsDetail.Cell(curRow, 6).Value = area.TotalReports;
-                    wsDetail.Cell(curRow, 7).Value = area.HighRisk;
-                    wsDetail.Cell(curRow, 8).Value = area.MediumRisk;
-                    wsDetail.Cell(curRow, 9).Value = area.LowRisk;
-                    wsDetail.Cell(curRow, 10).Value = area.OpenCount;
-                    wsDetail.Cell(curRow, 11).Value = area.ClosedCount;
-                    wsDetail.Cell(curRow, 12).Value = $"{area.CloseRate}%";
-                    wsDetail.Cell(curRow, 13).Value = area.TopReporterName;
-                    wsDetail.Cell(curRow, 14).Value = area.TopReporterDept;
-                    wsDetail.Cell(curRow, 15).Value = area.TopReporterCount > 0 ? area.TopReporterCount.ToString() : "-";
-                    wsDetail.Cell(curRow, 16).Value = area.PjaName;
-
-                    wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Font.Bold = true;
-                    wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e0f2fe");
-                    for (int col = 1; col <= 15; col++)
-                    {
-                        if (col == 2 || col == 3 || col == 4 || col == 13 || col == 14) continue;
-                        wsDetail.Cell(curRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    }
-                    ApplyBadgeColor(wsDetail.Cell(curRow, 5), area.DangerLevel);
-                    if (area.OpenCount > 0) wsDetail.Cell(curRow, 10).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                    wsDetail.Cell(curRow, 12).Style.Font.FontColor = XLColor.FromHtml(area.CloseRate >= 80 ? "#166534" : (area.CloseRate >= 50 ? "#854d0e" : "#991b1b"));
-
-                    curRow++;
-
-                    // SubLocation Rows with Outline Grouping
-                    int subIndex = 1;
-                    foreach (var sub in area.SubLocations)
-                    {
-                        wsDetail.Cell(curRow, 1).Value = $"{area.Rank}.{subIndex}";
-                        wsDetail.Cell(curRow, 2).Value = sub.PerusahaanName;
-                        wsDetail.Cell(curRow, 3).Value = area.AreaName;
-                        wsDetail.Cell(curRow, 4).Value = $"   ↳ {sub.DetailLokasi}";
-                        wsDetail.Cell(curRow, 5).Value = sub.DangerLevel;
-                        wsDetail.Cell(curRow, 6).Value = sub.TotalReports;
-                        wsDetail.Cell(curRow, 7).Value = sub.HighRisk;
-                        wsDetail.Cell(curRow, 8).Value = sub.MediumRisk;
-                        wsDetail.Cell(curRow, 9).Value = sub.LowRisk;
-                        wsDetail.Cell(curRow, 10).Value = sub.OpenCount;
-                        wsDetail.Cell(curRow, 11).Value = sub.ClosedCount;
-                        wsDetail.Cell(curRow, 12).Value = $"{sub.CloseRate}%";
-                        wsDetail.Cell(curRow, 13).Value = sub.TopReporterName;
-                        wsDetail.Cell(curRow, 14).Value = sub.TopReporterDept;
-                        wsDetail.Cell(curRow, 15).Value = sub.TopReporterCount > 0 ? sub.TopReporterCount.ToString() : "-";
-                        wsDetail.Cell(curRow, 16).Value = sub.PjaName;
-
-                        wsDetail.Row(curRow).OutlineLevel = 1;
-
-                        for (int col = 1; col <= 15; col++)
-                        {
-                            if (col == 2 || col == 3 || col == 4 || col == 13 || col == 14) continue;
-                            wsDetail.Cell(curRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        }
-
-                        if (curRow % 2 == 0)
-                        {
-                            wsDetail.Range(curRow, 1, curRow, detailHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
-                        }
-                        ApplyBadgeColor(wsDetail.Cell(curRow, 5), sub.DangerLevel);
-                        if (sub.OpenCount > 0)
-                        {
-                            wsDetail.Cell(curRow, 10).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                            wsDetail.Cell(curRow, 10).Style.Font.Bold = true;
-                        }
-                        wsDetail.Cell(curRow, 12).Style.Font.FontColor = XLColor.FromHtml(sub.CloseRate >= 80 ? "#166534" : (sub.CloseRate >= 50 ? "#854d0e" : "#991b1b"));
-
-                        curRow++;
-                        subIndex++;
-                    }
-                }
-
-                if (curRow > 5)
-                {
-                    var tableRange = wsDetail.Range(headerRow, 1, curRow - 1, detailHeaders.Length);
-                    tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                    tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                    tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                    tableRange.SetAutoFilter();
-                }
-
-                wsDetail.SheetView.FreezeRows(headerRow);
-                wsDetail.Columns().AdjustToContents(10, 50);
-                SetupPrint(wsDetail);
-
-                // ==================== SHEET 3: DAFTAR TEMUAN OPEN (SIAP TAKE UP) ====================
-                var wsOpen = workbook.Worksheets.Add("Temuan Open (Take Up)");
-                wsOpen.ShowGridLines = true;
-
-                wsOpen.Range(1, 1, 1, 14).Merge().Value = "DAFTAR RINCI TEMUAN BAHAYA BELUM SELESAI (OPEN) - SIAP TINDAK LANJUT";
-                wsOpen.Range(1, 1, 1, 14).Style.Font.Bold = true;
-                wsOpen.Range(1, 1, 1, 14).Style.Font.FontSize = 14;
-                wsOpen.Range(1, 1, 1, 14).Style.Font.FontColor = XLColor.White;
-                wsOpen.Range(1, 1, 1, 14).Style.Fill.BackgroundColor = XLColor.FromHtml("#9a3412");
-                wsOpen.Row(1).Height = 28;
-
-                wsOpen.Range(2, 1, 2, 14).Merge().Value = $"Periode: {periodStr}  |  Perusahaan: {selectedCompanyName}  |  Total Temuan Open: {totalOpenReports}";
-                wsOpen.Range(2, 1, 2, 14).Style.Font.Italic = true;
-                wsOpen.Range(2, 1, 2, 14).Style.Font.FontSize = 9.5;
-                wsOpen.Range(2, 1, 2, 14).Style.Font.FontColor = XLColor.FromHtml("#ffedd5");
-                wsOpen.Range(2, 1, 2, 14).Style.Fill.BackgroundColor = XLColor.FromHtml("#7c2d12");
-                wsOpen.Row(2).Height = 19;
-
-                string[] openHeaders = new[]
-                {
-                    "No", "ID", "Tanggal Lapor", "Umur (Hari)", "Perusahaan", "Area Utama", "Detail Titik Lokasi",
-                    "Tingkat Risiko", "Status", "Kategori", "Deskripsi Temuan", "Rekomendasi Perbaikan",
-                    "Pelapor (Dept)", "PJA Penanggung Jawab"
-                };
-
-                for (int c = 0; c < openHeaders.Length; c++)
-                {
-                    var cell = wsOpen.Cell(4, c + 1);
-                    cell.Value = openHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                }
-                wsOpen.Row(4).Height = 24;
-
-                var openItems = rawList
-                    .Where(h => h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) || h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(h =>
-                        h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ? 4 :
-                        (h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase) ? 3 :
-                        (h.TingkatResiko.Equals("Sedang", StringComparison.OrdinalIgnoreCase) || h.TingkatResiko.Equals("Medium", StringComparison.OrdinalIgnoreCase) ? 2 : 1)))
-                    .ThenBy(h => h.Tanggal)
-                    .ToList();
-
-                int oRow = 5;
-                int oIdx = 1;
-                foreach (var item in openItems)
-                {
-                    string comp = (item.PerusahaanId.HasValue && companyDict.TryGetValue(item.PerusahaanId.Value, out var cn)) ? cn : "-";
-                    string subLoc = !string.IsNullOrWhiteSpace(item.DetilLokasi) ? item.DetilLokasi.Trim() : (!string.IsNullOrWhiteSpace(item.Lokasi) ? item.Lokasi.Trim() : "-");
-                    int ageDays = Math.Max(0, (DateTime.Today - item.Tanggal.Date).Days);
-
-                    wsOpen.Cell(oRow, 1).Value = oIdx;
-                    wsOpen.Cell(oRow, 2).Value = item.Id;
-                    wsOpen.Cell(oRow, 3).Value = item.Tanggal.ToString("dd/MM/yyyy");
-                    wsOpen.Cell(oRow, 4).Value = ageDays;
-                    wsOpen.Cell(oRow, 5).Value = comp;
-                    wsOpen.Cell(oRow, 6).Value = item.Area;
-                    wsOpen.Cell(oRow, 7).Value = subLoc;
-                    wsOpen.Cell(oRow, 8).Value = string.IsNullOrEmpty(item.TingkatResiko) ? "-" : item.TingkatResiko;
-                    wsOpen.Cell(oRow, 9).Value = item.StatusTemuan;
-                    wsOpen.Cell(oRow, 10).Value = string.IsNullOrEmpty(item.KategoriBahaya) ? "-" : item.KategoriBahaya;
-                    wsOpen.Cell(oRow, 11).Value = item.Temuan;
-                    wsOpen.Cell(oRow, 12).Value = string.IsNullOrEmpty(item.Perbaikan) ? "-" : item.Perbaikan;
-                    wsOpen.Cell(oRow, 13).Value = $"{item.Nama} ({item.Departemen})";
-                    wsOpen.Cell(oRow, 14).Value = string.IsNullOrEmpty(item.Pja) ? "-" : item.Pja;
-
-                    wsOpen.Cell(oRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsOpen.Cell(oRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsOpen.Cell(oRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsOpen.Cell(oRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsOpen.Cell(oRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                    if (ageDays >= 14)
-                    {
-                        wsOpen.Cell(oRow, 4).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
-                        wsOpen.Cell(oRow, 4).Style.Font.Bold = true;
-                    }
-                    ApplyBadgeColor(wsOpen.Cell(oRow, 8), item.TingkatResiko);
-                    wsOpen.Cell(oRow, 11).Style.Alignment.WrapText = true;
-                    wsOpen.Cell(oRow, 12).Style.Alignment.WrapText = true;
-
-                    if (oRow % 2 == 0) wsOpen.Range(oRow, 1, oRow, openHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#fff7ed");
-                    oRow++;
-                    oIdx++;
-                }
-
-                if (oRow > 5)
-                {
-                    var openRange = wsOpen.Range(4, 1, oRow - 1, openHeaders.Length);
-                    openRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                    openRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                    openRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    openRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                    openRange.SetAutoFilter();
-                }
-
-                wsOpen.SheetView.FreezeRows(4);
-                wsOpen.Columns().AdjustToContents(10, 48);
-                wsOpen.Column(11).Width = 42;
-                wsOpen.Column(12).Width = 38;
-                SetupPrint(wsOpen);
-
-                // ==================== SHEET 4: REKAPITULASI AREA UTAMA ====================
-                var wsMain = workbook.Worksheets.Add("Rekap Area Utama");
-                wsMain.ShowGridLines = true;
-
-                wsMain.Range(1, 1, 1, 16).Merge().Value = "REKAPITULASI AREA UTAMA & TINGKAT BAHAYA";
-                wsMain.Range(1, 1, 1, 16).Style.Font.Bold = true;
-                wsMain.Range(1, 1, 1, 16).Style.Font.FontSize = 14;
-                wsMain.Range(1, 1, 1, 16).Style.Font.FontColor = XLColor.White;
-                wsMain.Range(1, 1, 1, 16).Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
-                wsMain.Row(1).Height = 28;
-
-                string[] mainHeaders = new[]
-                {
-                    "Rank", "Area Utama", "Perusahaan Terkait", "Jml Titik Lokasi", "Tingkat Bahaya",
-                    "Total Temuan", "Risiko Tinggi", "Risiko Sedang", "Risiko Rendah",
-                    "Belum Close (Open)", "Sudah Close", "% Selesai",
-                    "Pelapor Terbanyak", "Departemen", "Jml Laporan", "PJA"
-                };
-
-                for (int c = 0; c < mainHeaders.Length; c++)
-                {
-                    var cell = wsMain.Cell(3, c + 1);
-                    cell.Value = mainHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                }
-                wsMain.Row(3).Height = 24;
-
-                int mRow = 4;
-                foreach (var area in areaResults)
-                {
-                    wsMain.Cell(mRow, 1).Value = area.Rank;
-                    wsMain.Cell(mRow, 2).Value = area.AreaName;
-                    wsMain.Cell(mRow, 3).Value = string.Join(", ", area.Companies);
-                    wsMain.Cell(mRow, 4).Value = area.SubLocationsCount;
-                    wsMain.Cell(mRow, 5).Value = area.DangerLevel;
-                    wsMain.Cell(mRow, 6).Value = area.TotalReports;
-                    wsMain.Cell(mRow, 7).Value = area.HighRisk;
-                    wsMain.Cell(mRow, 8).Value = area.MediumRisk;
-                    wsMain.Cell(mRow, 9).Value = area.LowRisk;
-                    wsMain.Cell(mRow, 10).Value = area.OpenCount;
-                    wsMain.Cell(mRow, 11).Value = area.ClosedCount;
-                    wsMain.Cell(mRow, 12).Value = $"{area.CloseRate}%";
-                    wsMain.Cell(mRow, 13).Value = area.TopReporterName;
-                    wsMain.Cell(mRow, 14).Value = area.TopReporterDept;
-                    wsMain.Cell(mRow, 15).Value = area.TopReporterCount > 0 ? area.TopReporterCount.ToString() : "-";
-                    wsMain.Cell(mRow, 16).Value = area.PjaName;
-
-                    for (int col = 1; col <= 15; col++)
-                    {
-                        if (col == 2 || col == 3 || col == 13 || col == 14) continue;
-                        wsMain.Cell(mRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    }
-
-                    if (mRow % 2 == 0) wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
-                    ApplyBadgeColor(wsMain.Cell(mRow, 5), area.DangerLevel);
-                    mRow++;
-                }
-
-                // Grand Total Row
-                if (mRow > 4)
-                {
-                    wsMain.Range(mRow, 1, mRow, 3).Merge().Value = "GRAND TOTAL";
-                    wsMain.Cell(mRow, 4).Value = totalSubLocationsCount;
-                    wsMain.Cell(mRow, 5).Value = "-";
-                    wsMain.Cell(mRow, 6).Value = totalAllReports;
-                    wsMain.Cell(mRow, 7).Value = totalHighRisk;
-                    wsMain.Cell(mRow, 8).Value = areaResults.Sum(a => a.MediumRisk);
-                    wsMain.Cell(mRow, 9).Value = areaResults.Sum(a => a.LowRisk);
-                    wsMain.Cell(mRow, 10).Value = totalOpenReports;
-                    wsMain.Cell(mRow, 11).Value = totalClosedReports;
-                    wsMain.Cell(mRow, 12).Value = $"{overallCloseRate}%";
-                    wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Font.Bold = true;
-                    wsMain.Range(mRow, 1, mRow, mainHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
-                    for (int col = 1; col <= 12; col++) wsMain.Cell(mRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                    var tableRange = wsMain.Range(3, 1, mRow, mainHeaders.Length);
-                    tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                    tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                    tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                    wsMain.Range(3, 1, mRow - 1, mainHeaders.Length).SetAutoFilter();
-                }
-                wsMain.SheetView.FreezeRows(3);
-                wsMain.Columns().AdjustToContents(10, 45);
-                SetupPrint(wsMain);
-
-                // ==================== SHEET 5: REKAP PERUSAHAAN ====================
-                var wsComp = workbook.Worksheets.Add("Rekap Perusahaan");
-                wsComp.ShowGridLines = true;
-                wsComp.Range(1, 1, 1, 8).Merge().Value = "REKAPITULASI TEMUAN BAHAYA PER PERUSAHAAN";
-                wsComp.Range(1, 1, 1, 8).Style.Font.Bold = true;
-                wsComp.Range(1, 1, 1, 8).Style.Font.FontSize = 14;
-                wsComp.Range(1, 1, 1, 8).Style.Font.FontColor = XLColor.White;
-                wsComp.Range(1, 1, 1, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
-                wsComp.Row(1).Height = 28;
-
-                string[] compHeaders = new[] { "No", "Perusahaan", "Jumlah Area Kerja", "Total Temuan", "Risiko Tinggi", "Belum Selesai (Open)", "Sudah Selesai", "% Close Rate" };
-                for (int c = 0; c < compHeaders.Length; c++)
-                {
-                    var cell = wsComp.Cell(3, c + 1);
-                    cell.Value = compHeaders[c];
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = XLColor.White;
-                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#047857");
-                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                }
-                wsComp.Row(3).Height = 24;
-
-                var compGroup = rawList.GroupBy(h => h.PerusahaanId).ToList();
-                int cpRow = 4;
-                int cpIdx = 1;
-                foreach (var cg in compGroup.OrderByDescending(g => g.Count()))
-                {
-                    string cName = (cg.Key.HasValue && companyDict.TryGetValue(cg.Key.Value, out var n)) ? n : (cg.Key.HasValue ? $"Perusahaan #{cg.Key}" : "Tidak Terdefinisi");
-                    int cTotal = cg.Count();
-                    int cAreas = cg.Select(h => h.Area).Distinct().Count();
-                    int cHigh = cg.Count(h =>
-                        h.TingkatResiko.Equals("Tinggi", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Kritis", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("Ekstrim", StringComparison.OrdinalIgnoreCase) ||
-                        h.TingkatResiko.Equals("High", StringComparison.OrdinalIgnoreCase));
-                    int cOpen = cg.Count(h =>
-                        h.StatusTemuan.Equals("Open", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("In Progress", StringComparison.OrdinalIgnoreCase));
-                    int cClosed = cg.Count(h =>
-                        h.StatusTemuan.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Close", StringComparison.OrdinalIgnoreCase) ||
-                        h.StatusTemuan.Equals("Selesai", StringComparison.OrdinalIgnoreCase));
-                    double cRate = cTotal > 0 ? Math.Round(((double)cClosed / cTotal) * 100.0, 1) : 0.0;
-
-                    wsComp.Cell(cpRow, 1).Value = cpIdx;
-                    wsComp.Cell(cpRow, 2).Value = cName;
-                    wsComp.Cell(cpRow, 3).Value = cAreas;
-                    wsComp.Cell(cpRow, 4).Value = cTotal;
-                    wsComp.Cell(cpRow, 5).Value = cHigh;
-                    wsComp.Cell(cpRow, 6).Value = cOpen;
-                    wsComp.Cell(cpRow, 7).Value = cClosed;
-                    wsComp.Cell(cpRow, 8).Value = $"{cRate}%";
-
-                    for (int col = 1; col <= 8; col++)
-                    {
-                        if (col == 2) continue;
-                        wsComp.Cell(cpRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    }
-                    if (cOpen > 0)
-                    {
-                        wsComp.Cell(cpRow, 6).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
-                        wsComp.Cell(cpRow, 6).Style.Font.Bold = true;
-                    }
-
-                    if (cpRow % 2 == 0) wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
-                    cpRow++;
-                    cpIdx++;
-                }
-
-                if (cpRow > 4)
-                {
-                    wsComp.Range(cpRow, 1, cpRow, 2).Merge().Value = "GRAND TOTAL";
-                    wsComp.Cell(cpRow, 3).Value = areaResults.Count;
-                    wsComp.Cell(cpRow, 4).Value = totalAllReports;
-                    wsComp.Cell(cpRow, 5).Value = totalHighRisk;
-                    wsComp.Cell(cpRow, 6).Value = totalOpenReports;
-                    wsComp.Cell(cpRow, 7).Value = totalClosedReports;
-                    wsComp.Cell(cpRow, 8).Value = $"{overallCloseRate}%";
-                    wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Font.Bold = true;
-                    wsComp.Range(cpRow, 1, cpRow, compHeaders.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
-                    for (int col = 1; col <= 8; col++) wsComp.Cell(cpRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-                    var tableRange = wsComp.Range(3, 1, cpRow, compHeaders.Length);
-                    tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-                    tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#cbd5e1");
-                    tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#94a3b8");
-                    wsComp.Range(3, 1, cpRow - 1, compHeaders.Length).SetAutoFilter();
-                }
-                wsComp.SheetView.FreezeRows(3);
-                wsComp.Columns().AdjustToContents(10, 45);
-                SetupPrint(wsComp);
-
-                using (var stream = new MemoryStream())
-                {
-                    workbook.SaveAs(stream);
-                    var content = stream.ToArray();
-                    string safeCompName = selectedCompanyName.Replace(" ", "_").Replace(".", "");
-                    string fileName = $"Laporan_Risiko_Area_SAP_{safeCompName}_{selectedYear}_{(isAllYear ? "YTD" : selectedMonth.ToString("D2"))}.xlsx";
-                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                    wsLog.Cell(rn, 11).Style.Fill.BackgroundColor = XLColor.FromHtml("#DCFCE7");
+                    wsLog.Cell(rn, 11).Style.Font.FontColor = XLColor.FromHtml("#166534");
+                    wsLog.Cell(rn, 11).Style.Font.Bold = true;
                 }
             }
+            wsLog.SheetView.FreezeRows(4);
+            if (orderedItems.Count > 0) wsLog.Range(4, 1, 4 + orderedItems.Count, 13).SetAutoFilter();
+            wsLog.Column(1).Width = 6;
+            wsLog.Column(2).Width = 13;
+            wsLog.Column(3).Width = 15;
+            wsLog.Column(4).Width = 22;
+            wsLog.Column(5).Width = 22;
+            wsLog.Column(6).Width = 20;
+            wsLog.Column(7).Width = 24;
+            wsLog.Column(8).Width = 45;
+            wsLog.Column(9).Width = 35;
+            wsLog.Column(10).Width = 14;
+            wsLog.Column(11).Width = 16;
+            wsLog.Column(12).Width = 24;
+            wsLog.Column(13).Width = 22;
+
+            foreach (var ws in workbook.Worksheets)
+            {
+                ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+                ws.PageSetup.PaperSize = XLPaperSize.A4Paper;
+                ws.PageSetup.FitToPages(1, 0);
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            string safeCompName = data.CompanyName.Replace(" ", "_").Replace(".", "");
+            string fileName = $"Analisa_Risiko_Departemen_{safeCompName}_{data.SelectedYear}_{(data.IsAllYear ? "YTD" : data.SelectedMonth.ToString("D2"))}.xlsx";
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [HttpGet]
@@ -11621,6 +11080,13 @@ namespace MBS_SAP.Controllers
             var topPerfList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();
             ViewBag.TopPerformanceList = topPerfList;
 
+            var indeximSubconIdSet = new HashSet<int>(indeximSubconIds);
+            var topIndeximMitraPerfList = performanceList
+                .Where(p => indeximSubconIdSet.Contains(p.PerusahaanId))
+                .OrderByDescending(p => p.TotalScore)
+                .ToList();
+            ViewBag.TopIndeximMitraPerformanceList = topIndeximMitraPerfList;
+
             var selectedComp = allowedCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId);
             var aiComplianceAnalysis = Services.SapComplianceAiEngine.AnalyzeCompliance(
                 selectedYear,
@@ -12197,6 +11663,669 @@ namespace MBS_SAP.Controllers
                 
                 return true;
             }).ToList();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportMitraIndeximExcel(int? year = null, int? month = null)
+        {
+            int selectedYear = year ?? DateTime.Today.Year;
+            int selectedMonth = (month.HasValue && month.Value >= 1 && month.Value <= 12) ? month.Value : DateTime.Today.Month;
+
+            var monthNames = new[] { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+            var monthShort = new[] { "", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des" };
+            string periodLabel = $"{monthNames[selectedMonth]} {selectedYear}";
+
+            var excludedMaincons = new HashSet<int> { 1, 3, 4, 5 }; // Indexim (1), UDU (3), KPP (4), MGE (5)
+
+            var indeximChildIdsFromRelations = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                .Where(r => r.ParentCompanyId == 1 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                .Select(r => r.ChildCompanyId!.Value)
+                .ToListAsync();
+
+            var indeximChildIdsFromDirectParent = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.PerusahaanIndukId == 1 && p.StatusAktif)
+                .Select(p => p.PerusahaanId)
+                .ToListAsync();
+
+            var subconIds = indeximChildIdsFromRelations
+                .Concat(indeximChildIdsFromDirectParent)
+                .Distinct()
+                .Where(id => !excludedMaincons.Contains(id) && !ExcludedCompanies.IsExcluded(id))
+                .ToList();
+
+            var subconCompanies = await _context.Perusahaans.AsNoTracking()
+                .Where(p => subconIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
+
+            var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
+            var allHazardsMonth = (await _context.HazardReports.AsNoTracking()
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
+                .Select(h => new { h.PerusahaanId, Nik = h.Nik!.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
+                .Distinct()
+                .ToListAsync())
+                .Select(h => new { h.PerusahaanId, h.StatusTemuan })
+                .ToList();
+
+            var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var closedHazardCounts = allHazardsMonth.Where(h => IsClosedStatus(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+
+            var rows = new List<(
+                int Rank, int Id, string Kode, string Nama, string Pjo,
+                int TotalEmps, int TargetEmps, int ActiveReporters,
+                int TotalTgt, int TotalCap, int TotalRaw,
+                double CapaianPct, double CloseRate, string Status,
+                int HTgt, int HCap, int HRaw,
+                int ITgt, int ICap, int IRaw,
+                int StTgt, int StCap, int StRaw,
+                int OTgt, int OCap, int ORaw,
+                int CTgt, int CCap, int CRaw,
+                int P5mTgt, int P5mRaw
+            )>();
+
+            foreach (var comp in subconCompanies)
+            {
+                var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, 1, includeNonTarget: true);
+                var targetEmps = compEmps.Where(e => (bool)e.isTargetSap).ToList();
+
+                int totalEmps = compEmps.Count;
+                int targetEmpsCount = targetEmps.Count;
+                int activeReporters = compEmps.Count(e => (int)e.totalActualAll > 0);
+                int totalRaw = compEmps.Sum(e => (int)e.totalActualAll);
+
+                int hTgt = targetEmps.Sum(e => (int)e.hazard.target);
+                int hCap = targetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                int hRaw = targetEmps.Sum(e => (int)e.hazard.actual);
+
+                int iTgt = targetEmps.Sum(e => (int)e.inspeksi.target);
+                int iCap = targetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                int iRaw = targetEmps.Sum(e => (int)e.inspeksi.actual);
+
+                int stTgt = targetEmps.Sum(e => (int)e.safetyTalk.target);
+                int stCap = targetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                int stRaw = targetEmps.Sum(e => (int)e.safetyTalk.actual);
+
+                int oTgt = targetEmps.Sum(e => (int)e.observasi.target);
+                int oCap = targetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                int oRaw = targetEmps.Sum(e => (int)e.observasi.actual);
+
+                int cTgt = targetEmps.Sum(e => (int)e.coaching.target);
+                int cCap = targetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+                int cRaw = targetEmps.Sum(e => (int)e.coaching.actual);
+
+                int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
+                int p5mRaw = compEmps.Sum(e => (int)e.p5m.actual);
+
+                int totalTgt = hTgt + iTgt + stTgt + oTgt + cTgt;
+                int totalCap = hCap + iCap + stCap + oCap + cCap;
+                double capaianPct = totalTgt > 0 ? Math.Min(100.0, Math.Round((double)totalCap / totalTgt * 100.0, 1)) : 0.0;
+
+                var compAp = monthlyActionPlans.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
+                int apT = compAp.Count;
+                int apC = compAp.Count(a => IsClosedStatus(a.Status));
+                int hzT = hazardCounts.TryGetValue(comp.PerusahaanId, out int hzv) ? hzv : 0;
+                int hzC = closedHazardCounts.TryGetValue(comp.PerusahaanId, out int hzcv) ? hzcv : 0;
+                int effApT = (apT >= hzT && apT > 0) ? apT : hzT;
+                int effApC = (apT >= hzT && apT > 0) ? apC : hzC;
+                double closeRate = effApT > 0 ? Math.Round(Math.Min(100.0, (double)effApC / effApT * 100.0), 1) : 100.0;
+
+                string status = targetEmpsCount == 0 ? "BELUM ADA TARGET SAP"
+                    : capaianPct >= 90.0 ? "EXCELLENT"
+                    : capaianPct >= 70.0 ? "ON TRACK"
+                    : capaianPct >= 40.0 ? "PERLU PERHATIAN"
+                    : "KRITIS";
+
+                rows.Add((
+                    0, comp.PerusahaanId,
+                    string.IsNullOrWhiteSpace(comp.KodePerusahaan) ? "-" : comp.KodePerusahaan.Trim(),
+                    (comp.NamaPerusahaan ?? "Unknown").Trim(),
+                    string.IsNullOrWhiteSpace(comp.NamaPjo) ? "-" : comp.NamaPjo.Trim(),
+                    totalEmps, targetEmpsCount, activeReporters,
+                    totalTgt, totalCap, totalRaw,
+                    capaianPct, closeRate, status,
+                    hTgt, hCap, hRaw,
+                    iTgt, iCap, iRaw,
+                    stTgt, stCap, stRaw,
+                    oTgt, oCap, oRaw,
+                    cTgt, cCap, cRaw,
+                    p5mTgt, p5mRaw
+                ));
+            }
+
+            rows = rows
+                .OrderByDescending(r => r.TargetEmps > 0 ? 1 : 0)
+                .ThenByDescending(r => r.CapaianPct)
+                .ThenByDescending(r => r.TotalCap)
+                .ThenByDescending(r => r.TotalRaw)
+                .ThenByDescending(r => r.TotalEmps)
+                .Select((r, idx) => (
+                    idx + 1, r.Id, r.Kode, r.Nama, r.Pjo,
+                    r.TotalEmps, r.TargetEmps, r.ActiveReporters,
+                    r.TotalTgt, r.TotalCap, r.TotalRaw,
+                    r.CapaianPct, r.CloseRate, r.Status,
+                    r.HTgt, r.HCap, r.HRaw,
+                    r.ITgt, r.ICap, r.IRaw,
+                    r.StTgt, r.StCap, r.StRaw,
+                    r.OTgt, r.OCap, r.ORaw,
+                    r.CTgt, r.CCap, r.CRaw,
+                    r.P5mTgt, r.P5mRaw
+                ))
+                .ToList();
+
+            using var workbook = new XLWorkbook();
+            var navy = XLColor.FromHtml("#0F2942");
+            var slateDark = XLColor.FromHtml("#1E293B");
+            var zebraFill = XLColor.FromHtml("#F1F5F9");
+            var totalFill = XLColor.FromHtml("#E2E8F0");
+            var borderClr = XLColor.FromHtml("#CBD5E1");
+
+            (XLColor Bg, XLColor Fg) GetStatusStyle(string st) => st switch
+            {
+                "EXCELLENT" => (XLColor.FromHtml("#DCFCE7"), XLColor.FromHtml("#166534")),
+                "ON TRACK" => (XLColor.FromHtml("#DBEAFE"), XLColor.FromHtml("#1E40AF")),
+                "PERLU PERHATIAN" => (XLColor.FromHtml("#FEF3C7"), XLColor.FromHtml("#92400E")),
+                "KRITIS" => (XLColor.FromHtml("#FEE2E2"), XLColor.FromHtml("#991B1B")),
+                _ => (XLColor.FromHtml("#E2E8F0"), XLColor.FromHtml("#475569"))
+            };
+
+            void ApplyBanner(IXLWorksheet ws, int maxCol, string title, string subtitle)
+            {
+                ws.Range(1, 1, 1, maxCol).Merge().Value = title;
+                ws.Range(2, 1, 2, maxCol).Merge().Value = subtitle;
+                var r1 = ws.Range(1, 1, 1, maxCol);
+                r1.Style.Fill.BackgroundColor = navy;
+                r1.Style.Font.Bold = true;
+                r1.Style.Font.FontSize = 15;
+                r1.Style.Font.FontColor = XLColor.White;
+                r1.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                r1.Style.Alignment.Indent = 1;
+                var r2 = ws.Range(2, 1, 2, maxCol);
+                r2.Style.Fill.BackgroundColor = navy;
+                r2.Style.Font.Italic = true;
+                r2.Style.Font.FontSize = 10;
+                r2.Style.Font.FontColor = XLColor.FromHtml("#E2E8F0");
+                r2.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                r2.Style.Alignment.Indent = 1;
+                ws.Row(1).Height = 28;
+                ws.Row(2).Height = 20;
+            }
+
+            var wsExec = workbook.Worksheets.Add("Executive Summary");
+            var wsRank = workbook.Worksheets.Add("Klasemen Mitra Kerja");
+            var wsProg = workbook.Worksheets.Add("Rincian Program SAP");
+            var wsAct = workbook.Worksheets.Add("Prioritas Pembinaan");
+
+            // SHEET 2: KLASEMEN MITRA KERJA
+            ApplyBanner(wsRank, 14,
+                "KLASEMEN PENCAPAIAN SAP — MITRA KERJA PT INDEXIM COALINDO",
+                $"Periode: {periodLabel} (Export: {DateTime.Now:dd MMM yyyy HH:mm}) | Scope: {rows.Count} Mitra Kerja Child Indexim (Kecuali PT UDU, PT KPP, PT MGE & Excluded Companies)");
+
+            var rankHeaders = new[] {
+                "Rank", "Kode", "Nama Perusahaan Mitra", "Nama PJO",
+                "Karyawan Aktif", "Wajib SAP", "Karyawan Lapor", "Partisipasi (%)",
+                "Target SAP", "Capaian (Capped)", "Total Submit (Raw)",
+                "Capaian SAP (%)", "Close Rate (%)", "Status Kinerja"
+            };
+            wsRank.Row(4).Height = 28;
+            for (int c = 1; c <= rankHeaders.Length; c++)
+            {
+                var cell = wsRank.Cell(4, c);
+                cell.Value = rankHeaders[c - 1];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Alignment.WrapText = true;
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.OutsideBorderColor = borderClr;
+            }
+
+            int startR = 5;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var r = rows[i];
+                int rn = startR + i;
+                wsRank.Row(rn).Height = 21;
+                var rowBg = (i % 2 == 1) ? zebraFill : XLColor.White;
+
+                wsRank.Cell(rn, 1).Value = r.Rank;
+                wsRank.Cell(rn, 2).Value = r.Kode;
+                wsRank.Cell(rn, 3).Value = r.Nama;
+                wsRank.Cell(rn, 4).Value = r.Pjo;
+                wsRank.Cell(rn, 5).Value = r.TotalEmps;
+                wsRank.Cell(rn, 6).Value = r.TargetEmps;
+                wsRank.Cell(rn, 7).Value = r.ActiveReporters;
+                wsRank.Cell(rn, 8).FormulaA1 = $"=IF(E{rn}>0, ROUND(G{rn}/E{rn}, 3), 0)";
+                wsRank.Cell(rn, 9).Value = r.TotalTgt;
+                wsRank.Cell(rn, 10).Value = r.TotalCap;
+                wsRank.Cell(rn, 11).Value = r.TotalRaw;
+                wsRank.Cell(rn, 12).FormulaA1 = $"=IF(I{rn}>0, MIN(1, ROUND(J{rn}/I{rn}, 3)), 0)";
+                wsRank.Cell(rn, 13).Value = r.CloseRate / 100.0;
+                wsRank.Cell(rn, 14).Value = r.Status;
+
+                for (int c = 1; c <= 14; c++)
+                {
+                    var cell = wsRank.Cell(rn, c);
+                    cell.Style.Fill.BackgroundColor = rowBg;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = borderClr;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (c == 1 || c == 2 || c == 14) cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    else if (c == 3 || c == 4) cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    else cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+                    if (c == 1 || c == 3 || c == 12) cell.Style.Font.Bold = true;
+                    if (c is 5 or 6 or 7 or 9 or 10 or 11) cell.Style.NumberFormat.Format = "#,##0";
+                    if (c is 8 or 12 or 13) cell.Style.NumberFormat.Format = "0.0%";
+                }
+
+                var (sBg, sFg) = GetStatusStyle(r.Status);
+                var sc = wsRank.Cell(rn, 14);
+                sc.Style.Fill.BackgroundColor = sBg;
+                sc.Style.Font.FontColor = sFg;
+                sc.Style.Font.Bold = true;
+                sc.Style.Font.FontSize = 9;
+            }
+
+            int endR = startR + rows.Count - 1;
+            int totR = endR + 1;
+            wsRank.Row(totR).Height = 24;
+            wsRank.Cell(totR, 2).Value = "TOTAL";
+            wsRank.Cell(totR, 3).FormulaA1 = $"=COUNTA(C{startR}:C{endR})&\" Perusahaan Mitra\"";
+            wsRank.Cell(totR, 4).Value = "-";
+            foreach (int c in new[] { 5, 6, 7, 9, 10, 11 })
+            {
+                string ltr = XLHelper.GetColumnLetterFromNumber(c);
+                wsRank.Cell(totR, c).FormulaA1 = $"=SUM({ltr}{startR}:{ltr}{endR})";
+                wsRank.Cell(totR, c).Style.NumberFormat.Format = "#,##0";
+            }
+            wsRank.Cell(totR, 8).FormulaA1 = $"=IF(E{totR}>0, G{totR}/E{totR}, 0)";
+            wsRank.Cell(totR, 8).Style.NumberFormat.Format = "0.0%";
+            wsRank.Cell(totR, 12).FormulaA1 = $"=IF(I{totR}>0, J{totR}/I{totR}, 0)";
+            wsRank.Cell(totR, 12).Style.NumberFormat.Format = "0.0%";
+            wsRank.Cell(totR, 13).FormulaA1 = $"=AVERAGE(M{startR}:M{endR})";
+            wsRank.Cell(totR, 13).Style.NumberFormat.Format = "0.0%";
+            var totRange = wsRank.Range(totR, 1, totR, 14);
+            totRange.Style.Fill.BackgroundColor = totalFill;
+            totRange.Style.Font.Bold = true;
+            totRange.Style.Font.FontColor = navy;
+            totRange.Style.Border.TopBorder = XLBorderStyleValues.Medium;
+            totRange.Style.Border.BottomBorder = XLBorderStyleValues.Medium;
+
+            wsRank.Range(startR, 12, endR, 13).AddConditionalFormat().ColorScale()
+                .LowestValue(XLColor.FromHtml("#FCA5A5"))
+                .Midpoint(XLCFContentType.Number, 0.7, XLColor.FromHtml("#FDE68A"))
+                .HighestValue(XLColor.FromHtml("#86EFAC"));
+
+            wsRank.SheetView.FreezeRows(4);
+            wsRank.SheetView.FreezeColumns(3);
+            wsRank.Range(4, 1, endR, 14).SetAutoFilter();
+            var rankWidths = new[] { 7, 15, 42, 26, 14, 12, 14, 14, 12, 15, 16, 15, 14, 22 };
+            for (int c = 1; c <= rankWidths.Length; c++) wsRank.Column(c).Width = rankWidths[c - 1];
+
+            // SHEET 3: RINCIAN PROGRAM SAP
+            ApplyBanner(wsProg, 20,
+                "RINCIAN PENCAPAIAN PER PROGRAM SAP — MITRA KERJA PT INDEXIM COALINDO",
+                $"Periode: {periodLabel} | Breakdown Target vs Aktual (Capped & Raw) pada 5 Program Wajib SAP + P5M");
+
+            var progGroups = new[] {
+                (1, 3, "IDENTITAS MITRA KERJA", "#0F2942"),
+                (4, 6, "HAZARD REPORT", "#0F766E"),
+                (7, 9, "INSPEKSI", "#1D4ED8"),
+                (10, 12, "SAFETY TALK", "#7C3AED"),
+                (13, 15, "OBSERVASI", "#B45309"),
+                (16, 18, "COACHING", "#BE123C"),
+                (19, 20, "P5M (TAMBAHAN)", "#475569")
+            };
+            wsProg.Row(4).Height = 22;
+            wsProg.Row(5).Height = 24;
+            foreach (var (sc, ec, title, hex) in progGroups)
+            {
+                var grpRng = wsProg.Range(4, sc, 4, ec).Merge();
+                grpRng.Value = title;
+                grpRng.Style.Fill.BackgroundColor = XLColor.FromHtml(hex);
+                grpRng.Style.Font.Bold = true;
+                grpRng.Style.Font.FontColor = XLColor.White;
+                grpRng.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                grpRng.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+            var progSub = new[] {
+                "Rank", "Nama Perusahaan Mitra", "Wajib SAP",
+                "Target", "Capped", "%",
+                "Target", "Capped", "%",
+                "Target", "Capped", "%",
+                "Target", "Capped", "%",
+                "Target", "Capped", "%",
+                "Target", "Aktual"
+            };
+            for (int c = 1; c <= progSub.Length; c++)
+            {
+                var cell = wsProg.Cell(5, c);
+                cell.Value = progSub[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            int pStart = 6;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var r = rows[i];
+                int rn = pStart + i;
+                wsProg.Row(rn).Height = 20;
+                var rowBg = (i % 2 == 1) ? zebraFill : XLColor.White;
+
+                wsProg.Cell(rn, 1).Value = r.Rank;
+                wsProg.Cell(rn, 2).Value = r.Nama;
+                wsProg.Cell(rn, 3).Value = r.TargetEmps;
+                wsProg.Cell(rn, 4).Value = r.HTgt; wsProg.Cell(rn, 5).Value = r.HCap; wsProg.Cell(rn, 6).FormulaA1 = $"=IF(D{rn}>0, E{rn}/D{rn}, \"-\")";
+                wsProg.Cell(rn, 7).Value = r.ITgt; wsProg.Cell(rn, 8).Value = r.ICap; wsProg.Cell(rn, 9).FormulaA1 = $"=IF(G{rn}>0, H{rn}/G{rn}, \"-\")";
+                wsProg.Cell(rn, 10).Value = r.StTgt; wsProg.Cell(rn, 11).Value = r.StCap; wsProg.Cell(rn, 12).FormulaA1 = $"=IF(J{rn}>0, K{rn}/J{rn}, \"-\")";
+                wsProg.Cell(rn, 13).Value = r.OTgt; wsProg.Cell(rn, 14).Value = r.OCap; wsProg.Cell(rn, 15).FormulaA1 = $"=IF(M{rn}>0, N{rn}/M{rn}, \"-\")";
+                wsProg.Cell(rn, 16).Value = r.CTgt; wsProg.Cell(rn, 17).Value = r.CCap; wsProg.Cell(rn, 18).FormulaA1 = $"=IF(P{rn}>0, Q{rn}/P{rn}, \"-\")";
+                wsProg.Cell(rn, 19).Value = r.P5mTgt; wsProg.Cell(rn, 20).Value = r.P5mRaw;
+
+                for (int c = 1; c <= 20; c++)
+                {
+                    var cell = wsProg.Cell(rn, c);
+                    cell.Style.Fill.BackgroundColor = rowBg;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = borderClr;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (c == 1) { cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; cell.Style.Font.Bold = true; }
+                    else if (c == 2) { cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; cell.Style.Font.Bold = true; }
+                    else cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+                    if (c is 6 or 9 or 12 or 15 or 18) cell.Style.NumberFormat.Format = "0.0%";
+                    else if (c >= 3) cell.Style.NumberFormat.Format = "#,##0";
+                }
+            }
+            int pEnd = pStart + rows.Count - 1;
+            int pTot = pEnd + 1;
+            wsProg.Row(pTot).Height = 24;
+            wsProg.Cell(pTot, 2).Value = "TOTAL MITRA KERJA";
+            for (int c = 3; c <= 20; c++)
+            {
+                string ltr = XLHelper.GetColumnLetterFromNumber(c);
+                if (c is 6 or 9 or 12 or 15 or 18)
+                {
+                    string p1 = XLHelper.GetColumnLetterFromNumber(c - 2);
+                    string p2 = XLHelper.GetColumnLetterFromNumber(c - 1);
+                    wsProg.Cell(pTot, c).FormulaA1 = $"=IF({p1}{pTot}>0, {p2}{pTot}/{p1}{pTot}, 0)";
+                    wsProg.Cell(pTot, c).Style.NumberFormat.Format = "0.0%";
+                }
+                else
+                {
+                    wsProg.Cell(pTot, c).FormulaA1 = $"=SUM({ltr}{pStart}:{ltr}{pEnd})";
+                    wsProg.Cell(pTot, c).Style.NumberFormat.Format = "#,##0";
+                }
+            }
+            var pTotRng = wsProg.Range(pTot, 1, pTot, 20);
+            pTotRng.Style.Fill.BackgroundColor = totalFill;
+            pTotRng.Style.Font.Bold = true;
+            pTotRng.Style.Font.FontColor = navy;
+            wsProg.SheetView.FreezeRows(5);
+            wsProg.SheetView.FreezeColumns(3);
+            wsProg.Range(5, 1, pEnd, 20).SetAutoFilter();
+            wsProg.Column(1).Width = 7;
+            wsProg.Column(2).Width = 40;
+            wsProg.Column(3).Width = 11;
+            for (int c = 4; c <= 20; c++) wsProg.Column(c).Width = 9;
+
+            // SHEET 4: PRIORITAS PEMBINAAN
+            ApplyBanner(wsAct, 10,
+                "DAFTAR PRIORITAS PEMBINAAN & TAKE-UP ACTION — MITRA KERJA INDEXIM",
+                $"Fokus pada Mitra dengan Capaian SAP < 70% atau Belum Memiliki Mapping Target SAP ({periodLabel})");
+
+            var actHeaders = new[] {
+                "No", "Nama Perusahaan Mitra", "Nama PJO", "Karyawan Aktif",
+                "Wajib SAP", "Target SAP", "Capaian (Capped)", "Gap Laporan",
+                "Capaian (%)", "Rekomendasi Tindak Lanjut"
+            };
+            wsAct.Row(4).Height = 26;
+            for (int c = 1; c <= actHeaders.Length; c++)
+            {
+                var cell = wsAct.Cell(4, c);
+                cell.Value = actHeaders[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Alignment.WrapText = true;
+            }
+
+            var focusRows = rows
+                .Where(r => r.TargetEmps == 0 || r.CapaianPct < 70.0)
+                .OrderBy(r => (r.TargetEmps > 0 && r.CapaianPct < 40.0) ? 0 : (r.TargetEmps > 0 ? 1 : 2))
+                .ThenBy(r => r.CapaianPct)
+                .ThenByDescending(r => r.TotalEmps)
+                .ToList();
+
+            for (int i = 0; i < focusRows.Count; i++)
+            {
+                var r = focusRows[i];
+                int rn = 5 + i;
+                wsAct.Row(rn).Height = 24;
+                var rowBg = (i % 2 == 1) ? zebraFill : XLColor.White;
+                int gap = Math.Max(0, r.TotalTgt - r.TotalCap);
+                string rekom = r.TargetEmps == 0
+                    ? "Segera lakukan Mapping Jabatan & Target SAP karyawan aktif bersama PJO/HSE Mitra"
+                    : r.CapaianPct == 0
+                        ? "ESKALASI PJO: 0% capaian MTD; wajib coaching & verifikasi akun login karyawan"
+                        : r.CapaianPct < 40.0
+                            ? $"KRITIS: Kejar kekurangan {gap} laporan SAP & monitoring harian pengawas"
+                            : $"Follow-up rutin: Perlu tambahan {gap} laporan SAP untuk mencapai target >= 70%";
+
+                wsAct.Cell(rn, 1).Value = i + 1;
+                wsAct.Cell(rn, 2).Value = r.Nama;
+                wsAct.Cell(rn, 3).Value = r.Pjo;
+                wsAct.Cell(rn, 4).Value = r.TotalEmps;
+                wsAct.Cell(rn, 5).Value = r.TargetEmps;
+                wsAct.Cell(rn, 6).Value = r.TotalTgt;
+                wsAct.Cell(rn, 7).Value = r.TotalCap;
+                wsAct.Cell(rn, 8).Value = gap;
+                wsAct.Cell(rn, 9).Value = r.CapaianPct / 100.0;
+                wsAct.Cell(rn, 10).Value = rekom;
+
+                for (int c = 1; c <= 10; c++)
+                {
+                    var cell = wsAct.Cell(rn, c);
+                    cell.Style.Fill.BackgroundColor = rowBg;
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = borderClr;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (c == 1) { cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; cell.Style.Font.Bold = true; }
+                    else if (c is 2 or 3 or 10) { cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; cell.Style.Alignment.WrapText = true; if (c == 2) cell.Style.Font.Bold = true; }
+                    else cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    if (c is 4 or 5 or 6 or 7 or 8) cell.Style.NumberFormat.Format = "#,##0";
+                }
+                var (sBg, sFg) = GetStatusStyle(r.Status);
+                var pCell = wsAct.Cell(rn, 9);
+                pCell.Style.NumberFormat.Format = "0.0%";
+                pCell.Style.Fill.BackgroundColor = sBg;
+                pCell.Style.Font.FontColor = sFg;
+                pCell.Style.Font.Bold = true;
+            }
+            wsAct.SheetView.FreezeRows(4);
+            wsAct.SheetView.FreezeColumns(2);
+            if (focusRows.Count > 0) wsAct.Range(4, 1, 4 + focusRows.Count, 10).SetAutoFilter();
+            var actWidths = new[] { 6, 40, 24, 14, 12, 12, 15, 13, 13, 55 };
+            for (int c = 1; c <= actWidths.Length; c++) wsAct.Column(c).Width = actWidths[c - 1];
+
+            // SHEET 1: EXECUTIVE SUMMARY
+            ApplyBanner(wsExec, 10,
+                "EXECUTIVE DASHBOARD — PENCAPAIAN SAP MITRA KERJA PT INDEXIM COALINDO",
+                $"Periode: {periodLabel} (Export: {DateTime.Now:dd MMM yyyy HH:mm}) | Pengecualian: PT Indexim Coalindo (Internal), PT UDU, PT KPP, PT MGE");
+
+            var kpis = new[] {
+                (1, 2, "TOTAL MITRA KERJA", $"=COUNTA('Klasemen Mitra Kerja'!C{startR}:C{endR})", "#,##0", "#0F2942"),
+                (3, 4, "KARYAWAN WAJIB SAP", $"='Klasemen Mitra Kerja'!F{totR}", "#,##0", "#0F766E"),
+                (5, 6, "CAPAIAN SAP AGREGAT", $"='Klasemen Mitra Kerja'!L{totR}", "0.0%", "#1D4ED8"),
+                (7, 8, "TOTAL REALISASI / TARGET", $"='Klasemen Mitra Kerja'!J{totR}&\" / \"&'Klasemen Mitra Kerja'!I{totR}", "@", "#7C3AED"),
+                (9, 10, "RATA-RATA CLOSE RATE", $"='Klasemen Mitra Kerja'!M{totR}", "0.0%", "#047857")
+            };
+            wsExec.Row(4).Height = 20;
+            wsExec.Row(5).Height = 30;
+            foreach (var (cs, ce, lbl, formula, fmt, hex) in kpis)
+            {
+                var hRng = wsExec.Range(4, cs, 4, ce).Merge();
+                hRng.Value = lbl;
+                hRng.Style.Fill.BackgroundColor = XLColor.FromHtml(hex);
+                hRng.Style.Font.Bold = true;
+                hRng.Style.Font.FontSize = 9;
+                hRng.Style.Font.FontColor = XLColor.White;
+                hRng.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                hRng.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                var vRng = wsExec.Range(5, cs, 5, ce).Merge();
+                vRng.FormulaA1 = formula;
+                vRng.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+                vRng.Style.Font.Bold = true;
+                vRng.Style.Font.FontSize = 15;
+                vRng.Style.Font.FontColor = XLColor.FromHtml(hex);
+                vRng.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                vRng.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                vRng.Style.NumberFormat.Format = fmt;
+                wsExec.Range(4, cs, 5, ce).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+
+            wsExec.Cell(8, 1).Value = "DISTRIBUSI KATEGORI KINERJA MITRA";
+            wsExec.Cell(8, 1).Style.Font.Bold = true;
+            wsExec.Cell(8, 1).Style.Font.FontColor = navy;
+            wsExec.Cell(8, 6).Value = "RINGKASAN CAPAIAN PER PROGRAM SAP (AGREGAT)";
+            wsExec.Cell(8, 6).Style.Font.Bold = true;
+            wsExec.Cell(8, 6).Style.Font.FontColor = navy;
+
+            var distHdrs = new[] { "Kategori Kinerja", "Rentang Capaian", "Jumlah Mitra", "Proporsi" };
+            for (int c = 1; c <= 4; c++)
+            {
+                var cell = wsExec.Cell(9, c);
+                cell.Value = distHdrs[c - 1];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            var distCats = new[] {
+                ("EXCELLENT", ">= 90%"),
+                ("ON TRACK", "70% - 89.9%"),
+                ("PERLU PERHATIAN", "40% - 69.9%"),
+                ("KRITIS", "< 40%"),
+                ("BELUM ADA TARGET SAP", "Wajib SAP = 0")
+            };
+            for (int i = 0; i < distCats.Length; i++)
+            {
+                int rn = 10 + i;
+                var (cat, rng) = distCats[i];
+                var (sBg, sFg) = GetStatusStyle(cat);
+                wsExec.Cell(rn, 1).Value = cat;
+                wsExec.Cell(rn, 1).Style.Fill.BackgroundColor = sBg;
+                wsExec.Cell(rn, 1).Style.Font.FontColor = sFg;
+                wsExec.Cell(rn, 1).Style.Font.Bold = true;
+                wsExec.Cell(rn, 2).Value = rng;
+                wsExec.Cell(rn, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsExec.Cell(rn, 3).FormulaA1 = $"=COUNTIF('Klasemen Mitra Kerja'!$N${startR}:$N${endR}, A{rn})";
+                wsExec.Cell(rn, 3).Style.NumberFormat.Format = "#,##0";
+                wsExec.Cell(rn, 3).Style.Font.Bold = true;
+                wsExec.Cell(rn, 4).FormulaA1 = $"=IF(SUM($C$10:$C$14)>0, C{rn}/SUM($C$10:$C$14), 0)";
+                wsExec.Cell(rn, 4).Style.NumberFormat.Format = "0.0%";
+            }
+
+            var pSumHdrs = new[] { "Program SAP", "Total Target", "Total Capped", "Total Raw", "Capaian (%)" };
+            for (int i = 0; i < pSumHdrs.Length; i++)
+            {
+                var cell = wsExec.Cell(9, 6 + i);
+                cell.Value = pSumHdrs[i];
+                cell.Style.Fill.BackgroundColor = slateDark;
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            var pMap = new[] {
+                ("Hazard Report", "D", "E", rows.Sum(r => r.HRaw)),
+                ("Inspeksi", "G", "H", rows.Sum(r => r.IRaw)),
+                ("Safety Talk", "J", "K", rows.Sum(r => r.StRaw)),
+                ("Observasi", "M", "N", rows.Sum(r => r.ORaw)),
+                ("Coaching", "P", "Q", rows.Sum(r => r.CRaw))
+            };
+            for (int i = 0; i < pMap.Length; i++)
+            {
+                int rn = 10 + i;
+                var (pName, tCol, cCol, rawSum) = pMap[i];
+                wsExec.Cell(rn, 6).Value = pName; wsExec.Cell(rn, 6).Style.Font.Bold = true;
+                wsExec.Cell(rn, 7).FormulaA1 = $"='Rincian Program SAP'!{tCol}{pTot}"; wsExec.Cell(rn, 7).Style.NumberFormat.Format = "#,##0";
+                wsExec.Cell(rn, 8).FormulaA1 = $"='Rincian Program SAP'!{cCol}{pTot}"; wsExec.Cell(rn, 8).Style.NumberFormat.Format = "#,##0";
+                wsExec.Cell(rn, 9).Value = rawSum; wsExec.Cell(rn, 9).Style.NumberFormat.Format = "#,##0";
+                wsExec.Cell(rn, 10).FormulaA1 = $"=IF(G{rn}>0, H{rn}/G{rn}, 0)"; wsExec.Cell(rn, 10).Style.NumberFormat.Format = "0.0%"; wsExec.Cell(rn, 10).Style.Font.Bold = true;
+            }
+
+            // Top 5 Terbaik & Top 5 Pembinaan
+            wsExec.Cell(17, 1).Value = "TOP 5 MITRA KERJA TERBAIK (WAJIB SAP > 0)";
+            wsExec.Cell(17, 1).Style.Font.Bold = true; wsExec.Cell(17, 1).Style.Font.FontColor = navy;
+            wsExec.Cell(17, 6).Value = "TOP 5 MITRA PRIORITAS PEMBINAAN (WAJIB SAP > 0)";
+            wsExec.Cell(17, 6).Style.Font.Bold = true; wsExec.Cell(17, 6).Style.Font.FontColor = navy;
+            var t5Hdrs = new[] { "Rank", "Nama Mitra", "Wajib SAP", "Capaian (%)", "Close Rate (%)" };
+            for (int i = 0; i < 5; i++)
+            {
+                var c1 = wsExec.Cell(18, 1 + i); c1.Value = t5Hdrs[i]; c1.Style.Fill.BackgroundColor = XLColor.FromHtml("#0F766E"); c1.Style.Font.Bold = true; c1.Style.Font.FontColor = XLColor.White; c1.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                var c2 = wsExec.Cell(18, 6 + i); c2.Value = t5Hdrs[i]; c2.Style.Fill.BackgroundColor = XLColor.FromHtml("#991B1B"); c2.Style.Font.Bold = true; c2.Style.Font.FontColor = XLColor.White; c2.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+            var targetedList = rows.Where(r => r.TargetEmps > 0).ToList();
+            var top5List = targetedList.Take(5).ToList();
+            var bot5List = targetedList.OrderBy(r => r.CapaianPct).ThenByDescending(r => r.TotalTgt).Take(5).ToList();
+            for (int i = 0; i < 5; i++)
+            {
+                int rn = 19 + i;
+                if (i < top5List.Count)
+                {
+                    var r = top5List[i];
+                    wsExec.Cell(rn, 1).Value = r.Rank; wsExec.Cell(rn, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsExec.Cell(rn, 2).Value = r.Nama;
+                    wsExec.Cell(rn, 3).Value = r.TargetEmps; wsExec.Cell(rn, 3).Style.NumberFormat.Format = "#,##0";
+                    wsExec.Cell(rn, 4).Value = r.CapaianPct / 100.0; wsExec.Cell(rn, 4).Style.NumberFormat.Format = "0.0%"; wsExec.Cell(rn, 4).Style.Font.Bold = true;
+                    wsExec.Cell(rn, 5).Value = r.CloseRate / 100.0; wsExec.Cell(rn, 5).Style.NumberFormat.Format = "0.0%";
+                }
+                if (i < bot5List.Count)
+                {
+                    var r = bot5List[i];
+                    wsExec.Cell(rn, 6).Value = r.Rank; wsExec.Cell(rn, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsExec.Cell(rn, 7).Value = r.Nama;
+                    wsExec.Cell(rn, 8).Value = r.TargetEmps; wsExec.Cell(rn, 8).Style.NumberFormat.Format = "#,##0";
+                    wsExec.Cell(rn, 9).Value = r.CapaianPct / 100.0; wsExec.Cell(rn, 9).Style.NumberFormat.Format = "0.0%"; wsExec.Cell(rn, 9).Style.Font.Bold = true;
+                    wsExec.Cell(rn, 10).Value = r.CloseRate / 100.0; wsExec.Cell(rn, 10).Style.NumberFormat.Format = "0.0%";
+                }
+            }
+            wsExec.Range(9, 1, 14, 4).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(9, 1, 14, 4).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(9, 6, 14, 10).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(9, 6, 14, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(18, 1, 23, 5).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(18, 1, 23, 5).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(18, 6, 23, 10).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            wsExec.Range(18, 6, 23, 10).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var execWidths = new[] { 24, 16, 14, 13, 4, 20, 14, 14, 14, 14 };
+            for (int c = 1; c <= execWidths.Length; c++) wsExec.Column(c).Width = execWidths[c - 1];
+
+            foreach (var ws in workbook.Worksheets)
+            {
+                ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+                ws.PageSetup.PaperSize = XLPaperSize.A4Paper;
+                ws.PageSetup.FitToPages(1, 0);
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+            string fileName = $"Pencapaian_SAP_Mitra_Indexim_{monthShort[selectedMonth]}_{selectedYear}.xlsx";
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 
