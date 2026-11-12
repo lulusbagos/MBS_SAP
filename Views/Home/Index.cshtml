@@ -1119,28 +1119,107 @@
             border-radius: 24px !important;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
-            max-height: 90vh;
-            max-height: 90dvh;
+            display: flex !important;
+            flex-direction: column !important;
+            max-height: calc(100dvh - 2rem) !important;
+            height: auto !important;
         }
         .roster-header-banner {
             background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
             border-bottom: 1px solid var(--border-color);
-            padding: 24px 20px;
+            padding: 20px 20px;
             text-align: center;
             position: relative;
+            flex-shrink: 0 !important;
         }
         .roster-header-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 18px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
             background: linear-gradient(135deg, #a855f7, #3b82f6);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 26px;
+            font-size: 24px;
             box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3);
-            margin-bottom: 14px;
+            margin-bottom: 10px;
+        }
+        .roster-modal-body {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 20px !important;
+        }
+        .roster-modal-footer {
+            border-top: 1px solid var(--border-color) !important;
+            padding: 14px 20px !important;
+            background: var(--bg-card) !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+            flex-shrink: 0 !important;
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 1055 !important;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Mobile specific optimizations: ensure Simpan button is ALWAYS visible & modal never overflows screen */
+        @@media (max-width: 576px) {
+            #rosterSettingsModal .modal-dialog {
+                margin: 0.4rem auto !important;
+                max-width: calc(100vw - 0.8rem) !important;
+                width: calc(100vw - 0.8rem) !important;
+                height: calc(100dvh - 0.8rem) !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+            .roster-modal-content {
+                max-height: calc(100dvh - 0.8rem) !important;
+                height: 100% !important;
+                border-radius: 18px !important;
+            }
+            .roster-header-banner {
+                padding: 12px 14px !important;
+            }
+            .roster-header-icon {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 18px !important;
+                border-radius: 10px !important;
+                margin-bottom: 6px !important;
+            }
+            .roster-header-banner h5 {
+                font-size: 13.5px !important;
+            }
+            .roster-header-banner p {
+                font-size: 10.5px !important;
+                line-height: 1.3 !important;
+            }
+            .roster-header-banner .btn-close {
+                top: 10px !important;
+                right: 12px !important;
+                font-size: 10px !important;
+            }
+            .roster-modal-body {
+                padding: 12px 14px !important;
+            }
+            .roster-card {
+                padding: 12px !important;
+                margin-bottom: 10px !important;
+                border-radius: 12px !important;
+            }
+            .roster-modal-footer {
+                padding: 10px 14px !important;
+            }
+            .btn-roster-save, .btn-roster-cancel, #btnDeleteRoster {
+                padding: 8px 16px !important;
+                font-size: 12px !important;
+                border-radius: 10px !important;
+            }
         }
         .roster-card {
             background: rgba(255, 255, 255, 0.02);
@@ -1273,7 +1352,7 @@
                     <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast)); z-index: 1055; cursor: pointer;"></button>
                 </div>
                 
-                <div class="modal-body" style="padding: 20px; -webkit-overflow-scrolling: touch; max-height: min(72vh, 72dvh);">
+                <div class="modal-body roster-modal-body">
                     <form id="rosterSettingsForm" onsubmit="event.preventDefault(); return false;">
                         @{
                             var currentTipe = (ViewData["RosterTipe"] as string) ?? "REGULER";
@@ -1540,7 +1619,7 @@
                     </form>
                 </div>
                 
-                <div class="modal-footer" style="border-top: 1px solid var(--border-color); padding: 16px 20px; background: rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="modal-footer roster-modal-footer">
                     <div>
                         @if (ViewData["IsEditMode"] is bool deleteAllowed && deleteAllowed)
                         {
@@ -1561,6 +1640,32 @@
     @section Scripts {
         <script>
             $(document).ready(function() {
+                // State to manage browser Back button without stacking backdrops or trapping navigation
+                let rosterHistoryStatePushed = false;
+                let rosterClosedViaPopstate = false;
+
+                function pushRosterHistoryState() {
+                    if (!rosterHistoryStatePushed && window.history && window.history.pushState) {
+                        try {
+                            window.history.pushState({ modalOpen: 'rosterSettingsModal' }, '', window.location.href);
+                            rosterHistoryStatePushed = true;
+                        } catch (e) {
+                            console.warn('History push failed', e);
+                        }
+                    }
+                }
+
+                function popRosterHistoryState() {
+                    if (rosterHistoryStatePushed && !rosterClosedViaPopstate && window.history && window.history.state && window.history.state.modalOpen === 'rosterSettingsModal') {
+                        rosterHistoryStatePushed = false;
+                        try {
+                            window.history.back();
+                        } catch (e) {}
+                    }
+                    rosterHistoryStatePushed = false;
+                    rosterClosedViaPopstate = false;
+                }
+
                 // Unified modal opener using getOrCreateInstance to prevent duplicate backdrops & Safari WebKit focus recursion crashes
                 function triggerRosterModal() {
                     const modalEl = document.getElementById('rosterSettingsModal');
@@ -1568,13 +1673,31 @@
 
                     const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl, {
                         backdrop: 'static',
-                        keyboard: false
+                        keyboard: true
                     });
 
                     if (!modalEl.classList.contains('show')) {
                         modalInstance.show();
                     }
                 }
+
+                // Listen to browser Back button (popstate) to dismiss modal cleanly instead of stacking
+                window.addEventListener('popstate', function(e) {
+                    const modalEl = document.getElementById('rosterSettingsModal');
+                    if (modalEl && modalEl.classList.contains('show')) {
+                        rosterClosedViaPopstate = true;
+                        rosterHistoryStatePushed = false;
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) {
+                            inst.hide();
+                        }
+                    }
+                });
+
+                // Push history state whenever modal is opened (both auto and manual button clicks)
+                $('#rosterSettingsModal').on('show.bs.modal', function() {
+                    pushRosterHistoryState();
+                });
 
                 // Explicit dismiss handler to ensure Safari on iOS cleanly closes the modal on Batal or X
                 $(document).on('click', '#rosterSettingsModal [data-bs-dismiss="modal"]', function(e) {
@@ -1606,23 +1729,29 @@
                 {
                     <text>
                     if (!rosterTriggeredByParam) {
-                        setTimeout(function() {
-                            // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
-                            var $incidentModal = $('#incidentPopupModal');
-                            if ($incidentModal.length) {
-                                var incidentId = $incidentModal.attr('data-incident-id');
-                                var incidentShown = sessionStorage.getItem('incident_popup_shown');
-                                
-                                if (incidentId && incidentShown !== incidentId) {
-                                    $incidentModal.on('hidden.bs.modal', function() {
-                                        triggerRosterModal();
-                                    });
-                                    return;
+                        const todayStr = new Date().toDateString();
+                        const isDismissedToday = localStorage.getItem('roster_popup_dismissed_date') === todayStr;
+                        const isDismissedSession = sessionStorage.getItem('roster_popup_dismissed_session') === 'true';
+
+                        if (!isDismissedToday && !isDismissedSession) {
+                            setTimeout(function() {
+                                // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
+                                var $incidentModal = $('#incidentPopupModal');
+                                if ($incidentModal.length) {
+                                    var incidentId = $incidentModal.attr('data-incident-id');
+                                    var incidentShown = sessionStorage.getItem('incident_popup_shown');
+                                    
+                                    if (incidentId && incidentShown !== incidentId) {
+                                        $incidentModal.on('hidden.bs.modal', function() {
+                                            triggerRosterModal();
+                                        });
+                                        return;
+                                    }
                                 }
-                            }
-                            
-                            triggerRosterModal();
-                        }, 500);
+                                
+                                triggerRosterModal();
+                            }, 500);
+                        }
                     }
                     </text>
                 }
@@ -2027,12 +2156,28 @@
                     });
                 });
 
-                // Simpan status ditolak jika modal roster ditutup tanpa disimpan
+                // Simpan status ditolak jika modal roster ditutup tanpa disimpan & bersihkan semua backdrop/body lock
                 $('#rosterSettingsModal').on('hidden.bs.modal', function () {
+                    popRosterHistoryState();
+
                     if (!window.rosterSavedSuccess) {
                         const todayStr = new Date().toDateString();
                         localStorage.setItem('roster_popup_dismissed_date', todayStr);
+                        sessionStorage.setItem('roster_popup_dismissed_session', 'true');
                     }
+
+                    // Bersihkan backdrop yatim dan pulihkan scrolling body secara instan
+                    setTimeout(function() {
+                        if ($('.modal.show').length === 0) {
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({ 'overflow': '', 'padding-right': '' });
+                        } else {
+                            var $backdrops = $('.modal-backdrop');
+                            if ($backdrops.length > 1) {
+                                $backdrops.slice(1).remove();
+                            }
+                        }
+                    }, 50);
                 });
             });
         </script>
