@@ -79,6 +79,7 @@ namespace MBS_SAP.Services
 
             try
             {
+                _context.Database.SetCommandTimeout(120);
                 await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;", cancellationToken);
 
                 // 1a. Re-check Hazard Reports dalam 1 Periode karena ada fitur update data hazard
@@ -188,12 +189,18 @@ namespace MBS_SAP.Services
                     }
                 }
 
-                // 1b. Audit Unrated Hazard Reports (misalnya backlog historis di luar 1 periode)
+                // 1b. Audit Unrated Hazard Reports (hanya scan window terbaru agar tidak full-table scan timeout)
+                int hMaxAuditedId = await _context.SapQualityAssessments.AsNoTracking()
+                    .Where(a => a.ProgramType == "Hazard")
+                    .Select(a => (int?)a.ProgramId)
+                    .MaxAsync(cancellationToken) ?? 0;
+                int hMinScanId = Math.Max(0, hMaxAuditedId - 2000);
+
                 int hProcessed = 0;
                 while (hProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
-                    var rawHazards = await (from h in _context.HazardReports
-                                            where !h.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
+                    var rawHazards = await (from h in _context.HazardReports.AsNoTracking()
+                                            where !h.IsDeleted && h.Id > hMinScanId && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
                                             orderby h.Id descending
                                             select new
                                             {
@@ -247,11 +254,17 @@ namespace MBS_SAP.Services
                 }
 
                 // 2. Audit Inspeksi K3
+                int iMaxAuditedId = await _context.SapQualityAssessments.AsNoTracking()
+                    .Where(a => a.ProgramType == "Inspection")
+                    .Select(a => (int?)a.ProgramId)
+                    .MaxAsync(cancellationToken) ?? 0;
+                int iMinScanId = Math.Max(0, iMaxAuditedId - 2000);
+
                 int iProcessed = 0;
                 while (iProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
-                    var rawInspections = await (from i in _context.Inspections
-                                                where !i.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
+                    var rawInspections = await (from i in _context.Inspections.AsNoTracking()
+                                                where !i.IsDeleted && i.Id > iMinScanId && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
                                                 orderby i.Id descending
                                                 select new {
                                                     i.Id, i.Catatan, i.Tanggal,
@@ -309,11 +322,17 @@ namespace MBS_SAP.Services
                 _logger.LogInformation("SapQualityService: Selesai audit Inspeksi ({Count} laporan baru)", iProcessed);
 
                 // 3. Audit Safety Talk
+                int stMaxAuditedId = await _context.SapQualityAssessments.AsNoTracking()
+                    .Where(a => a.ProgramType == "SafetyTalk")
+                    .Select(a => (int?)a.ProgramId)
+                    .MaxAsync(cancellationToken) ?? 0;
+                int stMinScanId = Math.Max(0, stMaxAuditedId - 2000);
+
                 int stProcessed = 0;
                 while (stProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
-                    var rawSafetyTalks = await (from s in _context.SafetyTalks
-                                                where !s.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "SafetyTalk" && a.ProgramId == s.Id)
+                    var rawSafetyTalks = await (from s in _context.SafetyTalks.AsNoTracking()
+                                                where !s.IsDeleted && s.Id > stMinScanId && !_context.SapQualityAssessments.Any(a => a.ProgramType == "SafetyTalk" && a.ProgramId == s.Id)
                                                 orderby s.Id descending
                                                 select new { s.Id, s.Keterangan, s.Tanggal })
                                                 .Take(batchSize)
@@ -346,11 +365,17 @@ namespace MBS_SAP.Services
                 _logger.LogInformation("SapQualityService: Selesai audit Safety Talk ({Count} laporan baru)", stProcessed);
 
                 // 4. Audit Observation
+                int oMaxAuditedId = await _context.SapQualityAssessments.AsNoTracking()
+                    .Where(a => a.ProgramType == "Observation")
+                    .Select(a => (int?)a.ProgramId)
+                    .MaxAsync(cancellationToken) ?? 0;
+                int oMinScanId = Math.Max(0, oMaxAuditedId - 2000);
+
                 int oProcessed = 0;
                 while (oProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
-                    var rawObservations = await (from o in _context.Observations
-                                                 where !o.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
+                    var rawObservations = await (from o in _context.Observations.AsNoTracking()
+                                                 where !o.IsDeleted && o.Id > oMinScanId && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
                                                  orderby o.Id descending
                                                  select new {
                                                      o.Id, o.Date,
@@ -391,11 +416,17 @@ namespace MBS_SAP.Services
                 _logger.LogInformation("SapQualityService: Selesai audit Observasi ({Count} laporan baru)", oProcessed);
 
                 // 5. Audit Coaching
+                int cMaxAuditedId = await _context.SapQualityAssessments.AsNoTracking()
+                    .Where(a => a.ProgramType == "Coaching")
+                    .Select(a => (int?)a.ProgramId)
+                    .MaxAsync(cancellationToken) ?? 0;
+                int cMinScanId = Math.Max(0, cMaxAuditedId - 2000);
+
                 int cProcessed = 0;
                 while (cProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
-                    var rawCoachings = await (from c in _context.Coachings
-                                              where !c.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Coaching" && a.ProgramId == c.Id)
+                    var rawCoachings = await (from c in _context.Coachings.AsNoTracking()
+                                              where !c.IsDeleted && c.Id > cMinScanId && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Coaching" && a.ProgramId == c.Id)
                                               orderby c.Id descending
                                               select new { c.Id, c.Feedback, c.Tanggal })
                                               .Take(batchSize)
