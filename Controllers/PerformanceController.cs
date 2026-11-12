@@ -2527,8 +2527,8 @@ namespace MBS_SAP.Controllers
 
                 int dangerScore = (highRisk * 3) + (medRisk * 2) + (lowRisk * 1);
 
-                string dangerLevel;
-                string dangerBadgeClass;
+                string dangerLevel = "Rendah";
+                string dangerBadgeClass = "risk-badge-low";
                 if (highRisk >= 15 || dangerScore >= 120 || (openCount >= 30 && highRisk >= 5))
                 {
                     dangerLevel = "Kritis";
@@ -3300,6 +3300,7 @@ namespace MBS_SAP.Controllers
                     string fileName = $"Pemetaan_Risiko_Area_SAP_{safeCompName}_{selectedYear}_{(isAllYear ? "YTD" : selectedMonth.ToString("D2"))}.xlsx";
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
+
             }
         }
 
@@ -8749,5 +8750,3423 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                if (parentId.HasValue && parentId.Va
-... [truncated for diff preview]
+                if (parentId.HasValue && parentId.Value > 0)
+                {
+                    effectiveParentScope = parentId.Value;
+                }
+            }
+
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+            HashSet<int> targetCompanyIds;
+            if (isTopParent)
+            {
+                targetCompanyIds = allCompanies.Select(c => c.PerusahaanId).ToHashSet();
+            }
+            else
+            {
+                int scopeRootId = loggedInUserCompanyId ?? selectedCompany.PerusahaanId;
+                targetCompanyIds = BuildCompanyHierarchyScope(scopeRootId, allCompanies, relations);
+            }
+
+            if (mode == "core")
+            {
+                var coreComps = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId) && CoreCompanyNames.Contains(c.NamaPerusahaan ?? "")).Select(c => c.PerusahaanId);
+                targetCompanyIds.IntersectWith(coreComps);
+            }
+            else if (mode == "company")
+            {
+                targetCompanyIds.IntersectWith(allowedCompanies.Select(c => c.PerusahaanId));
+            }
+            else
+            {
+                targetCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
+            }
+
+            // Fetch compliance data to properly apply targetFilter
+            bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+            var allEmpsList = new List<dynamic>();
+            foreach (var cId in targetCompanyIds)
+            {
+                int? cParentScope = (mode == "company" || mode == "core")
+                    ? null
+                    : ((selectedCompanyId > 0 && selectedCompanyId != cId) ? selectedCompanyId : effectiveParentScope);
+                var emps = await GetEmployeesComplianceData(cId, departmentName, selectedYear, selectedMonth, cParentScope, includeNonTarget: includeNonTarget);
+                allEmpsList.AddRange(emps);
+            }
+
+            if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isNonTarget).ToList();
+            }
+            else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                // keep all
+            }
+            else // default "target"
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isTargetSap).ToList();
+            }
+
+            var employeeNiksList = allEmpsList.Select(e => (string)e.nik).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            var employeeNiksSet = new HashSet<string>(employeeNiksList.Select(n => n.Trim()), StringComparer.OrdinalIgnoreCase);
+
+            string modeLabel = mode == "company" ? "Super League (Antar Perusahaan)" : (mode == "core" ? "Liga Perusahaan Inti" : "Klasemen Internal (Departemen)");
+
+            // Fetch 7 SAP entities
+            bool filterByEmpNiks = !string.IsNullOrEmpty(departmentName) || targetFilter != "all";
+
+            var hazards = await _context.HazardReports.AsNoTracking()
+                .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(h.Nik) : targetCompanyIds.Contains(h.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(h.PerusahaanId ?? 0) || employeeNiksSet.Contains(h.Nik))))
+                .OrderByDescending(h => h.Tanggal).ThenByDescending(h => h.Waktu)
+                .ToListAsync();
+
+            var inspections = await _context.Inspections.AsNoTracking()
+                .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(i.Nik) : targetCompanyIds.Contains(i.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(i.PerusahaanId ?? 0) || employeeNiksSet.Contains(i.Nik))))
+                .OrderByDescending(i => i.Tanggal).ThenByDescending(i => i.Waktu)
+                .ToListAsync();
+
+            var actionPlans = await _context.ActionPlans.AsNoTracking()
+                .Where(a => !a.IsDeleted && a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(a.Nik) : targetCompanyIds.Contains(a.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(a.PerusahaanId ?? 0) || employeeNiksSet.Contains(a.Nik))))
+                .OrderByDescending(a => a.Tanggal).ThenByDescending(a => a.Waktu)
+                .ToListAsync();
+
+            var safetyTalks = await _context.SafetyTalks.AsNoTracking()
+                .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(s.Nik) : targetCompanyIds.Contains(s.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(s.PerusahaanId ?? 0) || employeeNiksSet.Contains(s.Nik))))
+                .OrderByDescending(s => s.Tanggal).ThenByDescending(s => s.Waktu)
+                .ToListAsync();
+
+            var observations = await _context.Observations.AsNoTracking()
+                .Where(o => !o.IsDeleted && o.Date >= startOfMonth && o.Date <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(o.Nik) : (o.PerusahaanId.HasValue && targetCompanyIds.Contains(o.PerusahaanId.Value)))
+                        : (employeeNiksSet.Contains(o.Nik) || (o.PerusahaanId.HasValue && targetCompanyIds.Contains(o.PerusahaanId.Value)))))
+                .OrderByDescending(o => o.Date)
+                .ToListAsync();
+
+            var coachings = await _context.Coachings.AsNoTracking()
+                .Where(c => !c.IsDeleted && c.Tanggal >= startOfMonth && c.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(c.Nik) : targetCompanyIds.Contains(c.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(c.PerusahaanId ?? 0) || employeeNiksSet.Contains(c.Nik))))
+                .OrderByDescending(c => c.Tanggal).ThenByDescending(c => c.Waktu)
+                .ToListAsync();
+
+            var p5ms = await _context.P5ms.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && 
+                    (filterByEmpNiks 
+                        ? (employeeNiksSet.Count > 0 ? employeeNiksSet.Contains(p.Nik) : targetCompanyIds.Contains(p.PerusahaanId ?? 0))
+                        : (targetCompanyIds.Contains(p.PerusahaanId ?? 0) || employeeNiksSet.Contains(p.Nik))))
+                .OrderByDescending(p => p.Tanggal).ThenByDescending(p => p.Waktu)
+                .ToListAsync();
+
+            // Load assessment cache
+            var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
+            var assessDict = assessments
+                .GroupBy(a => $"{a.ProgramType}_{a.ProgramId}", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            (int Rating, string Notes) GetQuality(string progType, int progId, string title, string description)
+            {
+                string key = $"{progType}_{progId}";
+                if (assessDict.TryGetValue(key, out var existing))
+                {
+                    return (existing.Rating, existing.Notes ?? "");
+                }
+                return Services.SapQualityMlEngine.AssessQuality(progType, title, description);
+            }
+
+            string GetStarString(int rating)
+            {
+                return rating switch
+                {
+                    5 => "⭐⭐⭐⭐⭐ (5/5)",
+                    4 => "⭐⭐⭐⭐ (4/5)",
+                    3 => "⭐⭐⭐ (3/5)",
+                    2 => "⭐⭐ (2/5)",
+                    1 => "⭐ (1/5)",
+                    _ => $"{rating}/5"
+                };
+            }
+
+            XLColor GetStarColor(int rating)
+            {
+                return rating switch
+                {
+                    5 => XLColor.FromHtml("#15803d"), // Dark green
+                    4 => XLColor.FromHtml("#1d4ed8"), // Dark blue
+                    3 => XLColor.FromHtml("#b45309"), // Dark amber
+                    2 => XLColor.FromHtml("#be123c"), // Dark rose
+                    1 => XLColor.FromHtml("#991b1b"), // Dark red
+                    _ => XLColor.Black
+                };
+            }
+
+            string targetFilterLabel = targetFilter == "nontarget_pengawas" ? "Pengawas Non-SAP (Target Nol)" : (targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP")));
+
+            void StyleSheetHeader(IXLWorksheet ws, string title, int colCount, int dataCount)
+            {
+                ws.ShowGridLines = true;
+                ws.Cell(1, 1).Value = $"LAPORAN DETAIL SAP - {title.ToUpper()}";
+                ws.Cell(1, 1).Style.Font.Bold = true;
+                ws.Cell(1, 1).Style.Font.FontSize = 13;
+                ws.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+
+                ws.Cell(2, 1).Value = $"PERIODE: {periodFormatted}";
+                ws.Cell(2, 1).Style.Font.Bold = true;
+                ws.Cell(2, 1).Style.Font.FontSize = 11;
+                ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e40af");
+
+                string deptFilterText = !string.IsNullOrEmpty(departmentName) ? $" | Filter Departemen: {departmentName}" : "";
+                ws.Cell(3, 1).Value = $"Perusahaan: {selectedCompany.NamaPerusahaan}{deptFilterText}";
+                ws.Cell(3, 1).Style.Font.Bold = true;
+                ws.Cell(3, 1).Style.Font.FontSize = 10;
+
+                ws.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Data: {dataCount} Laporan | Tanggal Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                ws.Cell(4, 1).Style.Font.Italic = true;
+                ws.Cell(4, 1).Style.Font.FontSize = 9;
+                ws.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+            }
+
+            void SetupTableHeaders(IXLWorksheet ws, int row, string[] headers)
+            {
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = ws.Cell(row, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (headers[i].Contains("AI") || headers[i].Contains("Rating") || headers[i].Contains("Bintang"))
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f766e"); // Teal for AI Quality
+                    }
+                    else if (headers[i].Contains("P5M"))
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber
+                    }
+                    else
+                    {
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+                    }
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                ws.Row(row).Height = 26;
+            }
+
+            // Quality metrics tracking for summary
+            var qualityStats = new Dictionary<string, (int Total, int S5, int S4, int S3, int S2, int S1, double SumScore)>();
+            var contributorStats = new Dictionary<string, (string Nama, string NIK, string Dept, int Total, int HighQuality, double SumScore)>(StringComparer.OrdinalIgnoreCase);
+
+            void TrackItemQuality(string progName, string? nama, string? nik, string? dept, int rating)
+            {
+                if (!qualityStats.ContainsKey(progName))
+                {
+                    qualityStats[progName] = (0, 0, 0, 0, 0, 0, 0);
+                }
+                var cur = qualityStats[progName];
+                qualityStats[progName] = (
+                    cur.Total + 1,
+                    cur.S5 + (rating == 5 ? 1 : 0),
+                    cur.S4 + (rating == 4 ? 1 : 0),
+                    cur.S3 + (rating == 3 ? 1 : 0),
+                    cur.S2 + (rating == 2 ? 1 : 0),
+                    cur.S1 + (rating == 1 ? 1 : 0),
+                    cur.SumScore + rating
+                );
+
+                string cleanNik = (nik ?? "").Trim();
+                if (!string.IsNullOrEmpty(cleanNik))
+                {
+                    if (!contributorStats.ContainsKey(cleanNik))
+                    {
+                        contributorStats[cleanNik] = (nama ?? cleanNik, cleanNik, dept ?? "-", 0, 0, 0);
+                    }
+                    var c = contributorStats[cleanNik];
+                    contributorStats[cleanNik] = (
+                        c.Nama,
+                        c.NIK,
+                        c.Dept,
+                        c.Total + 1,
+                        c.HighQuality + (rating >= 4 ? 1 : 0),
+                        c.SumScore + rating
+                    );
+                }
+            }
+
+            using (var workbook = new XLWorkbook())
+            {
+                // =========================================================================
+                // SHEET 2: HAZARD REPORT
+                // =========================================================================
+                var wsHazard = workbook.Worksheets.Add("Hazard Report");
+                StyleSheetHeader(wsHazard, "Hazard Report", 19, hazards.Count);
+                string[] hazardHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Pelapor", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Rating Kualitas AI", "Catatan Evaluasi AI", "Temuan / Deskripsi Bahaya", "Kategori Bahaya",
+                    "Jenis Bahaya", "Jenis Ketidaksesuaian", "Tingkat Resiko", "Tindakan Perbaikan", "PJA", "Status Temuan"
+                };
+                SetupTableHeaders(wsHazard, 6, hazardHeaders);
+
+                int hRow = 7;
+                for (int i = 0; i < hazards.Count; i++)
+                {
+                    var r = hazards[i];
+                    var (rating, notes) = GetQuality("Hazard", r.Id, "Hazard Report", $"{r.Temuan} {r.TindakanPerbaikan}");
+                    TrackItemQuality("Hazard Report", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsHazard.Cell(hRow, 1).Value = i + 1;
+                    wsHazard.Cell(hRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsHazard.Cell(hRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsHazard.Cell(hRow, 4).Value = r.Nama;
+                    wsHazard.Cell(hRow, 5).Value = r.Nik;
+                    wsHazard.Cell(hRow, 6).Value = r.Departemen ?? "";
+                    wsHazard.Cell(hRow, 7).Value = r.Area ?? "";
+                    wsHazard.Cell(hRow, 8).Value = r.Lokasi ?? "";
+                    wsHazard.Cell(hRow, 9).Value = r.DetilLokasi ?? "";
+                    
+                    var rateCell = wsHazard.Cell(hRow, 10);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsHazard.Cell(hRow, 11).Value = notes;
+                    wsHazard.Cell(hRow, 12).Value = r.Temuan;
+                    wsHazard.Cell(hRow, 13).Value = r.KategoriBahaya ?? "";
+                    wsHazard.Cell(hRow, 14).Value = r.JenisBahaya ?? "";
+                    wsHazard.Cell(hRow, 15).Value = r.JenisKetidaksesuaian ?? "";
+                    wsHazard.Cell(hRow, 16).Value = r.TingkatResiko ?? "";
+                    wsHazard.Cell(hRow, 17).Value = r.TindakanPerbaikan ?? "";
+                    wsHazard.Cell(hRow, 18).Value = r.Pja ?? "";
+                    wsHazard.Cell(hRow, 19).Value = r.StatusTemuan ?? "";
+
+                    wsHazard.Cell(hRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsHazard.Cell(hRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsHazard.Cell(hRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsHazard.Cell(hRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsHazard.Cell(hRow, 16).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsHazard.Cell(hRow, 19).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsHazard.Range(hRow, 1, hRow, 19);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (hRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    hRow++;
+                }
+                wsHazard.SheetView.FreezeRows(6);
+                wsHazard.Columns().AdjustToContents();
+                foreach (var col in wsHazard.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 3: INSPEKSI K3
+                // =========================================================================
+                var wsInspection = workbook.Worksheets.Add("Inspeksi K3");
+                StyleSheetHeader(wsInspection, "Inspeksi K3", 14, inspections.Count);
+                string[] inspectionHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Pelapor", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Jenis Inspeksi", "Rating Kualitas AI", "Catatan Evaluasi AI", "PJA", "Catatan Temuan Lapangan"
+                };
+                SetupTableHeaders(wsInspection, 6, inspectionHeaders);
+
+                int insRow = 7;
+                for (int i = 0; i < inspections.Count; i++)
+                {
+                    var r = inspections[i];
+                    var (rating, notes) = GetQuality("Inspection", r.Id, $"Inspeksi {r.JenisInspeksi}", r.Catatan ?? "");
+                    TrackItemQuality("Inspeksi K3", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsInspection.Cell(insRow, 1).Value = i + 1;
+                    wsInspection.Cell(insRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsInspection.Cell(insRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsInspection.Cell(insRow, 4).Value = r.Nama;
+                    wsInspection.Cell(insRow, 5).Value = r.Nik;
+                    wsInspection.Cell(insRow, 6).Value = r.Departemen ?? "";
+                    wsInspection.Cell(insRow, 7).Value = r.Area ?? "";
+                    wsInspection.Cell(insRow, 8).Value = r.Lokasi ?? "";
+                    wsInspection.Cell(insRow, 9).Value = r.DetilLokasi ?? "";
+                    wsInspection.Cell(insRow, 10).Value = r.JenisInspeksi ?? "";
+
+                    var rateCell = wsInspection.Cell(insRow, 11);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsInspection.Cell(insRow, 12).Value = notes;
+                    wsInspection.Cell(insRow, 13).Value = r.Pja ?? "";
+                    wsInspection.Cell(insRow, 14).Value = r.Catatan ?? "";
+
+                    wsInspection.Cell(insRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsInspection.Cell(insRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsInspection.Cell(insRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsInspection.Cell(insRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsInspection.Range(insRow, 1, insRow, 14);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (insRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    insRow++;
+                }
+                wsInspection.SheetView.FreezeRows(6);
+                wsInspection.Columns().AdjustToContents();
+                foreach (var col in wsInspection.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 4: ACTION PLAN
+                // =========================================================================
+                var wsActionPlan = workbook.Worksheets.Add("Action Plan");
+                StyleSheetHeader(wsActionPlan, "Action Plan", 22, actionPlans.Count);
+                string[] apHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Pelapor", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Item SAP", "Kategori Temuan", "Rating Kualitas AI", "Catatan Evaluasi AI", "Detil Temuan", "Status", "PIC",
+                    "Rencana Perbaikan", "Tgl Rencana", "Realisasi Perbaikan", "Tgl Realisasi", "Overdue", "Alasan Overdue"
+                };
+                SetupTableHeaders(wsActionPlan, 6, apHeaders);
+
+                int apRow = 7;
+                for (int i = 0; i < actionPlans.Count; i++)
+                {
+                    var r = actionPlans[i];
+                    var (rating, notes) = GetQuality("Hazard", r.Id, $"Action Plan {r.ItemSap}", $"{r.DetilTemuan} {r.RencanaPerbaikan} {r.Perbaikan}");
+                    TrackItemQuality("Action Plan", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsActionPlan.Cell(apRow, 1).Value = i + 1;
+                    wsActionPlan.Cell(apRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsActionPlan.Cell(apRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsActionPlan.Cell(apRow, 4).Value = r.Nama;
+                    wsActionPlan.Cell(apRow, 5).Value = r.Nik;
+                    wsActionPlan.Cell(apRow, 6).Value = r.Departemen ?? "";
+                    wsActionPlan.Cell(apRow, 7).Value = r.Area ?? "";
+                    wsActionPlan.Cell(apRow, 8).Value = r.Lokasi ?? "";
+                    wsActionPlan.Cell(apRow, 9).Value = r.DetilLokasi ?? "";
+                    wsActionPlan.Cell(apRow, 10).Value = r.ItemSap ?? "";
+                    wsActionPlan.Cell(apRow, 11).Value = r.KategoriTemuan ?? "";
+
+                    var rateCell = wsActionPlan.Cell(apRow, 12);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsActionPlan.Cell(apRow, 13).Value = notes;
+                    wsActionPlan.Cell(apRow, 14).Value = r.DetilTemuan ?? "";
+                    wsActionPlan.Cell(apRow, 15).Value = r.Status ?? "";
+                    wsActionPlan.Cell(apRow, 16).Value = r.Pic ?? "";
+                    wsActionPlan.Cell(apRow, 17).Value = r.RencanaPerbaikan ?? "";
+                    wsActionPlan.Cell(apRow, 18).Value = r.TanggalRencanaPerbaikan.HasValue ? r.TanggalRencanaPerbaikan.Value.ToString("yyyy-MM-dd") : "-";
+                    wsActionPlan.Cell(apRow, 19).Value = r.Perbaikan ?? "";
+                    wsActionPlan.Cell(apRow, 20).Value = r.TanggalPerbaikan.HasValue ? r.TanggalPerbaikan.Value.ToString("yyyy-MM-dd") : "-";
+                    wsActionPlan.Cell(apRow, 21).Value = r.Overdue ?? "";
+                    wsActionPlan.Cell(apRow, 22).Value = r.AlasanOverdue ?? "";
+
+                    wsActionPlan.Cell(apRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 15).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 18).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsActionPlan.Cell(apRow, 20).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsActionPlan.Range(apRow, 1, apRow, 22);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (apRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    apRow++;
+                }
+                wsActionPlan.SheetView.FreezeRows(6);
+                wsActionPlan.Columns().AdjustToContents();
+                foreach (var col in wsActionPlan.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 5: SAFETY TALK
+                // =========================================================================
+                var wsSafetyTalk = workbook.Worksheets.Add("Safety Talk");
+                StyleSheetHeader(wsSafetyTalk, "Safety Talk", 13, safetyTalks.Count);
+                string[] stHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Pembicara", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Judul Safety Talk", "Rating Kualitas AI", "Catatan Evaluasi AI", "Keterangan Materi"
+                };
+                SetupTableHeaders(wsSafetyTalk, 6, stHeaders);
+
+                int stRow = 7;
+                for (int i = 0; i < safetyTalks.Count; i++)
+                {
+                    var r = safetyTalks[i];
+                    var (rating, notes) = GetQuality("SafetyTalk", r.Id, r.Judul ?? "Safety Talk", $"{r.Judul} {r.Keterangan}");
+                    TrackItemQuality("Safety Talk", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsSafetyTalk.Cell(stRow, 1).Value = i + 1;
+                    wsSafetyTalk.Cell(stRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsSafetyTalk.Cell(stRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsSafetyTalk.Cell(stRow, 4).Value = r.Nama;
+                    wsSafetyTalk.Cell(stRow, 5).Value = r.Nik;
+                    wsSafetyTalk.Cell(stRow, 6).Value = r.Departemen ?? "";
+                    wsSafetyTalk.Cell(stRow, 7).Value = r.Area ?? "";
+                    wsSafetyTalk.Cell(stRow, 8).Value = r.Lokasi ?? "";
+                    wsSafetyTalk.Cell(stRow, 9).Value = r.DetilLokasi ?? "";
+                    wsSafetyTalk.Cell(stRow, 10).Value = r.Judul ?? "";
+
+                    var rateCell = wsSafetyTalk.Cell(stRow, 11);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsSafetyTalk.Cell(stRow, 12).Value = notes;
+                    wsSafetyTalk.Cell(stRow, 13).Value = r.Keterangan ?? "";
+
+                    wsSafetyTalk.Cell(stRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSafetyTalk.Cell(stRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSafetyTalk.Cell(stRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSafetyTalk.Cell(stRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSafetyTalk.Range(stRow, 1, stRow, 13);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (stRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    stRow++;
+                }
+                wsSafetyTalk.SheetView.FreezeRows(6);
+                wsSafetyTalk.Columns().AdjustToContents();
+                foreach (var col in wsSafetyTalk.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 6: OBSERVASI K3
+                // =========================================================================
+                var wsObservation = workbook.Worksheets.Add("Observasi K3");
+                StyleSheetHeader(wsObservation, "Observasi K3", 17, observations.Count);
+                string[] obsHeaders = new[] {
+                    "No", "Tanggal", "Nama Observer", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Kegiatan Diamati", "Departemen Diamati", "Resiko Kritis", "Tingkat Resiko", "Perihal Diamati",
+                    "Hasil Observasi", "Rating Kualitas AI", "Catatan Evaluasi AI", "Keterangan"
+                };
+                SetupTableHeaders(wsObservation, 6, obsHeaders);
+
+                int obsRow = 7;
+                for (int i = 0; i < observations.Count; i++)
+                {
+                    var r = observations[i];
+                    var (rating, notes) = GetQuality("Observation", r.Id, $"Observasi {r.PerihalYangDiamati}", $"{r.KegiatanYangDiamati} | Hasil: {r.HasilObservasi} | Ket: {r.Keterangan}");
+                    TrackItemQuality("Observasi K3", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsObservation.Cell(obsRow, 1).Value = i + 1;
+                    wsObservation.Cell(obsRow, 2).Value = r.Date.ToString("yyyy-MM-dd");
+                    wsObservation.Cell(obsRow, 3).Value = r.Nama;
+                    wsObservation.Cell(obsRow, 4).Value = r.Nik;
+                    wsObservation.Cell(obsRow, 5).Value = r.Departemen;
+                    wsObservation.Cell(obsRow, 6).Value = r.Area;
+                    wsObservation.Cell(obsRow, 7).Value = r.Lokasi;
+                    wsObservation.Cell(obsRow, 8).Value = r.DetilLokasi ?? "";
+                    wsObservation.Cell(obsRow, 9).Value = r.KegiatanYangDiamati ?? "";
+                    wsObservation.Cell(obsRow, 10).Value = r.DepartemenYangDiamati ?? "";
+                    wsObservation.Cell(obsRow, 11).Value = r.ResikoKritis ?? "";
+                    wsObservation.Cell(obsRow, 12).Value = r.TingkatResiko ?? "";
+                    wsObservation.Cell(obsRow, 13).Value = r.PerihalYangDiamati ?? "";
+                    wsObservation.Cell(obsRow, 14).Value = r.HasilObservasi ?? "";
+
+                    var rateCell = wsObservation.Cell(obsRow, 15);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsObservation.Cell(obsRow, 16).Value = notes;
+                    wsObservation.Cell(obsRow, 17).Value = r.Keterangan ?? "";
+
+                    wsObservation.Cell(obsRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsObservation.Cell(obsRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsObservation.Cell(obsRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsObservation.Cell(obsRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsObservation.Cell(obsRow, 14).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsObservation.Range(obsRow, 1, obsRow, 17);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (obsRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    obsRow++;
+                }
+                wsObservation.SheetView.FreezeRows(6);
+                wsObservation.Columns().AdjustToContents();
+                foreach (var col in wsObservation.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 7: COACHING K3
+                // =========================================================================
+                var wsCoaching = workbook.Worksheets.Add("Coaching K3");
+                StyleSheetHeader(wsCoaching, "Coaching K3", 14, coachings.Count);
+                string[] coachHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Coach", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Tema Coaching", "Rating Kualitas AI", "Catatan Evaluasi AI", "Feedback", "Komitmen Pekerja"
+                };
+                SetupTableHeaders(wsCoaching, 6, coachHeaders);
+
+                int cRow = 7;
+                for (int i = 0; i < coachings.Count; i++)
+                {
+                    var r = coachings[i];
+                    var (rating, notes) = GetQuality("Coaching", r.Id, r.Tema ?? "Coaching K3", $"{r.Feedback} {r.Komitmen}");
+                    TrackItemQuality("Coaching K3", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsCoaching.Cell(cRow, 1).Value = i + 1;
+                    wsCoaching.Cell(cRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsCoaching.Cell(cRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsCoaching.Cell(cRow, 4).Value = r.Nama;
+                    wsCoaching.Cell(cRow, 5).Value = r.Nik;
+                    wsCoaching.Cell(cRow, 6).Value = r.Departemen ?? "";
+                    wsCoaching.Cell(cRow, 7).Value = r.Area ?? "";
+                    wsCoaching.Cell(cRow, 8).Value = r.Lokasi ?? "";
+                    wsCoaching.Cell(cRow, 9).Value = r.DetilLokasi ?? "";
+                    wsCoaching.Cell(cRow, 10).Value = r.Tema ?? "";
+
+                    var rateCell = wsCoaching.Cell(cRow, 11);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsCoaching.Cell(cRow, 12).Value = notes;
+                    wsCoaching.Cell(cRow, 13).Value = r.Feedback ?? "";
+                    wsCoaching.Cell(cRow, 14).Value = r.Komitmen ?? "";
+
+                    wsCoaching.Cell(cRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsCoaching.Cell(cRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsCoaching.Cell(cRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsCoaching.Cell(cRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsCoaching.Range(cRow, 1, cRow, 14);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (cRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    cRow++;
+                }
+                wsCoaching.SheetView.FreezeRows(6);
+                wsCoaching.Columns().AdjustToContents();
+                foreach (var col in wsCoaching.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // SHEET 8: P5M
+                // =========================================================================
+                var wsP5m = workbook.Worksheets.Add("P5M");
+                StyleSheetHeader(wsP5m, "P5M", 17, p5ms.Count);
+                string[] p5mHeaders = new[] {
+                    "No", "Tanggal", "Waktu", "Nama Leader", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi",
+                    "Topik P5M", "Judul", "Rating Kualitas AI", "Catatan Evaluasi AI", "Keterangan", "List Pertanyaan", "Jawaban", "Catatan"
+                };
+                SetupTableHeaders(wsP5m, 6, p5mHeaders);
+
+                int pRow = 7;
+                for (int i = 0; i < p5ms.Count; i++)
+                {
+                    var r = p5ms[i];
+                    var (rating, notes) = GetQuality("SafetyTalk", r.Id, r.Judul ?? "P5M", $"{r.Keterangan} {r.ListPertanyaan} {r.Catatan}");
+                    TrackItemQuality("P5M", r.Nama, r.Nik, r.Departemen, rating);
+
+                    wsP5m.Cell(pRow, 1).Value = i + 1;
+                    wsP5m.Cell(pRow, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
+                    wsP5m.Cell(pRow, 3).Value = r.Waktu.ToString("hh\\:mm");
+                    wsP5m.Cell(pRow, 4).Value = r.Nama;
+                    wsP5m.Cell(pRow, 5).Value = r.Nik;
+                    wsP5m.Cell(pRow, 6).Value = r.Departemen ?? "";
+                    wsP5m.Cell(pRow, 7).Value = r.Area ?? "";
+                    wsP5m.Cell(pRow, 8).Value = r.Lokasi ?? "";
+                    wsP5m.Cell(pRow, 9).Value = r.DetilLokasi ?? "";
+                    wsP5m.Cell(pRow, 10).Value = r.Topik ?? "";
+                    wsP5m.Cell(pRow, 11).Value = r.Judul ?? "";
+
+                    var rateCell = wsP5m.Cell(pRow, 12);
+                    rateCell.Value = GetStarString(rating);
+                    rateCell.Style.Font.Bold = true;
+                    rateCell.Style.Font.FontColor = GetStarColor(rating);
+                    rateCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    wsP5m.Cell(pRow, 13).Value = notes;
+                    wsP5m.Cell(pRow, 14).Value = r.Keterangan ?? "";
+                    wsP5m.Cell(pRow, 15).Value = r.ListPertanyaan ?? "";
+                    wsP5m.Cell(pRow, 16).Value = r.Jawaban ?? "";
+                    wsP5m.Cell(pRow, 17).Value = r.Catatan ?? "";
+
+                    wsP5m.Cell(pRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsP5m.Cell(pRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsP5m.Cell(pRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsP5m.Cell(pRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsP5m.Range(pRow, 1, pRow, 17);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (pRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    pRow++;
+                }
+                wsP5m.SheetView.FreezeRows(6);
+                wsP5m.Columns().AdjustToContents();
+                foreach (var col in wsP5m.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                // =========================================================================
+                // RETRIEVE COMPLIANCE DATA FOR DEPARTMENTS & EMPLOYEES
+                // =========================================================================
+                var rawEmployeesCompliance = allEmpsList;
+
+                int GetEmpActual(dynamic emp)
+                {
+                    try
+                    {
+                        return (int)emp.hazard.actual + (int)emp.inspeksi.actual + (int)emp.safetyTalk.actual + (int)emp.observasi.actual + (int)emp.coaching.actual + (int)emp.p5m.actual;
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
+                }
+
+                // Department Quality & Contribution mapping
+                var deptQualityStats = new Dictionary<string, (int Total, int S5, int S4, int S3, int S2, int S1, double SumScore)>(StringComparer.OrdinalIgnoreCase);
+                var deptContribution = new Dictionary<string, (int Hz, int Ins, int Ap, int St, int Obs, int Coach, int P5m, int Total)>(StringComparer.OrdinalIgnoreCase);
+
+                void AddDeptRecord(string? dName, string prog, int rating)
+                {
+                    string cleanDept = string.IsNullOrWhiteSpace(dName) ? "General" : dName.Trim();
+                    
+                    if (!deptQualityStats.ContainsKey(cleanDept)) deptQualityStats[cleanDept] = (0, 0, 0, 0, 0, 0, 0);
+                    var q = deptQualityStats[cleanDept];
+                    deptQualityStats[cleanDept] = (
+                        q.Total + 1,
+                        q.S5 + (rating == 5 ? 1 : 0),
+                        q.S4 + (rating == 4 ? 1 : 0),
+                        q.S3 + (rating == 3 ? 1 : 0),
+                        q.S2 + (rating == 2 ? 1 : 0),
+                        q.S1 + (rating == 1 ? 1 : 0),
+                        q.SumScore + rating
+                    );
+
+                    if (!deptContribution.ContainsKey(cleanDept)) deptContribution[cleanDept] = (0, 0, 0, 0, 0, 0, 0, 0);
+                    var c = deptContribution[cleanDept];
+                    deptContribution[cleanDept] = (
+                        c.Hz + (prog == "Hz" ? 1 : 0),
+                        c.Ins + (prog == "Ins" ? 1 : 0),
+                        c.Ap + (prog == "Ap" ? 1 : 0),
+                        c.St + (prog == "St" ? 1 : 0),
+                        c.Obs + (prog == "Obs" ? 1 : 0),
+                        c.Coach + (prog == "Coach" ? 1 : 0),
+                        c.P5m + (prog == "P5m" ? 1 : 0),
+                        c.Total + 1
+                    );
+                }
+
+                foreach (var h in hazards) { var (r, _) = GetQuality("Hazard", h.Id, "Hazard", $"{h.Temuan} {h.TindakanPerbaikan}"); AddDeptRecord(h.Departemen, "Hz", r); }
+                foreach (var i in inspections) { var (r, _) = GetQuality("Inspection", i.Id, $"Inspeksi {i.JenisInspeksi}", i.Catatan ?? ""); AddDeptRecord(i.Departemen, "Ins", r); }
+                foreach (var a in actionPlans) { var (r, _) = GetQuality("Hazard", a.Id, $"Action Plan {a.ItemSap}", $"{a.DetilTemuan} {a.RencanaPerbaikan} {a.Perbaikan}"); AddDeptRecord(a.Departemen, "Ap", r); }
+                foreach (var s in safetyTalks) { var (r, _) = GetQuality("SafetyTalk", s.Id, s.Judul ?? "Safety Talk", $"{s.Judul} {s.Keterangan}"); AddDeptRecord(s.Departemen, "St", r); }
+                foreach (var o in observations) { var (r, _) = GetQuality("Observation", o.Id, $"Observasi {o.PerihalYangDiamati}", $"{o.KegiatanYangDiamati} | {o.HasilObservasi}"); AddDeptRecord(o.Departemen, "Obs", r); }
+                foreach (var c in coachings) { var (r, _) = GetQuality("Coaching", c.Id, c.Tema ?? "Coaching", $"{c.Feedback} {c.Komitmen}"); AddDeptRecord(c.Departemen, "Coach", r); }
+                foreach (var p in p5ms) { var (r, _) = GetQuality("SafetyTalk", p.Id, p.Judul ?? "P5M", $"{p.Keterangan} {p.ListPertanyaan}"); AddDeptRecord(p.Departemen, "P5m", r); }
+
+                // =========================================================================
+                // SHEET 1: RINGKASAN & AI QUALITY (EXECUTIVE SUMMARY DASHBOARD)
+                // =========================================================================
+                var wsSummary = workbook.Worksheets.Add("Ringkasan & AI Quality", 1);
+                wsSummary.ShowGridLines = true;
+
+                // Title Block
+                wsSummary.Cell(1, 1).Value = "EXECUTIVE DASHBOARD & AI QUALITY AUDIT - SAFETY ACCOUNTABILITY PROGRAM (SAP)";
+                wsSummary.Cell(1, 1).Style.Font.Bold = true;
+                wsSummary.Cell(1, 1).Style.Font.FontSize = 14;
+                wsSummary.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+
+                wsSummary.Cell(2, 1).Value = $"PERIODE: {periodFormatted}";
+                wsSummary.Cell(2, 1).Style.Font.Bold = true;
+                wsSummary.Cell(2, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e40af");
+
+                string sumDeptText = !string.IsNullOrEmpty(departmentName) ? $" | Filter Departemen: {departmentName}" : "";
+                wsSummary.Cell(3, 1).Value = $"Perusahaan: {selectedCompany.NamaPerusahaan}{sumDeptText}";
+                wsSummary.Cell(3, 1).Style.Font.Bold = true;
+                wsSummary.Cell(3, 1).Style.Font.FontSize = 10;
+
+                int totalSkuadAll = rawEmployeesCompliance.Count;
+                int totalTargetAll = rawEmployeesCompliance.Sum(e => (int)e.mtdTotalTarget);
+                int totalActualAll = rawEmployeesCompliance.Sum(e => GetEmpActual(e));
+                double overallComplianceRate = totalTargetAll > 0 ? Math.Min(100.0, Math.Round((double)totalActualAll / totalTargetAll * 100.0, 1)) : 0;
+
+                wsSummary.Cell(4, 1).Value = $"Kategori: {modeLabel} | Total Skuad: {totalSkuadAll} Karyawan | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                wsSummary.Cell(4, 1).Style.Font.Italic = true;
+                wsSummary.Cell(4, 1).Style.Font.FontSize = 9;
+                wsSummary.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+
+                // =========================================================================
+                // 1. HIGHLIGHT KPI EKSEKUTIF K3 (PERIODE AKTIF)
+                // =========================================================================
+                wsSummary.Cell(6, 1).Value = "1. HIGHLIGHT KPI EKSEKUTIF K3 (PERIODE AKTIF)";
+                wsSummary.Cell(6, 1).Style.Font.Bold = true;
+                wsSummary.Cell(6, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(6, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                string[] kpiHeaders = new[] { "Total Skuad K3", "Total Target SAP", "Total Aktual Laporan", "Rata-rata Kepatuhan (%)", "Indeks Kualitas AI", "Laporan Prima (4-5⭐)" };
+                for (int i = 0; i < kpiHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(7, i + 1);
+                    cell.Value = kpiHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 9.5;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                wsSummary.Row(7).Height = 22;
+
+                int grandTotalReports = deptQualityStats.Values.Sum(v => v.Total);
+                double grandScoreSumAll = deptQualityStats.Values.Sum(v => v.SumScore);
+                double grandAvgScore = grandTotalReports > 0 ? Math.Round(grandScoreSumAll / grandTotalReports, 2) : 0;
+                int highQualityReports = deptQualityStats.Values.Sum(v => v.S5 + v.S4);
+                double highQualityPctAll = grandTotalReports > 0 ? Math.Round((double)highQualityReports / grandTotalReports * 100.0, 1) : 0;
+
+                wsSummary.Cell(8, 1).Value = $"{totalSkuadAll} Orang";
+                wsSummary.Cell(8, 2).Value = $"{totalTargetAll:#,##0}";
+                wsSummary.Cell(8, 3).Value = $"{grandTotalReports:#,##0}";
+                wsSummary.Cell(8, 4).Value = $"{overallComplianceRate:0.0}%";
+                wsSummary.Cell(8, 5).Value = grandTotalReports > 0 ? $"{grandAvgScore:0.0} / 5.0 ⭐" : "-";
+                wsSummary.Cell(8, 6).Value = $"{highQualityReports:#,##0} ({highQualityPctAll}%)";
+
+                for (int i = 1; i <= 6; i++)
+                {
+                    var cell = wsSummary.Cell(8, i);
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 12;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#f1f5f9");
+                    cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    cell.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                }
+                wsSummary.Cell(8, 4).Style.Font.FontColor = overallComplianceRate >= 90 ? XLColor.FromHtml("#16a34a") : (overallComplianceRate >= 70 ? XLColor.FromHtml("#b45309") : XLColor.FromHtml("#dc2626"));
+                wsSummary.Cell(8, 5).Style.Font.FontColor = grandAvgScore >= 4.0 ? XLColor.FromHtml("#16a34a") : XLColor.FromHtml("#b45309");
+                wsSummary.Row(8).Height = 28;
+
+                // =========================================================================
+                // 2. KLASEMEN KEPATUHAN & KUALITAS DEPARTEMEN (DEPARTMENT LEAGUE)
+                // =========================================================================
+                int sumRow = 11;
+                wsSummary.Cell(sumRow, 1).Value = "2. REKAPITULASI KEPATUHAN & KUALITAS PER DEPARTEMEN (KLUB)";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] deptTableHeaders = new[] {
+                    "Pos", "Nama Departemen", "Skuad (Orang)", "Target SAP", "Aktual SAP", "Kepatuhan SAP (%)",
+                    "Rata-rata Skor AI", "5 Bintang (⭐⭐⭐⭐⭐)", "4 Bintang (⭐⭐⭐⭐)", "3 Bintang (⭐⭐⭐)", "1-2 Bintang (⭐-⭐⭐)",
+                    "% Kualitas Prima (4-5⭐)", "Predikat Kinerja K3"
+                };
+
+                for (int i = 0; i < deptTableHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = deptTableHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (i == 5) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e40af");
+                    else if (i == 6 || i == 11) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f766e");
+                    else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                wsSummary.Row(sumRow).Height = 26;
+
+                var deptComplianceList = rawEmployeesCompliance
+                    .GroupBy(e => (string)(e.departmentName ?? "General"))
+                    .Select(g => {
+                        string dept = g.Key;
+                        int squad = g.Count();
+                        int target = g.Sum(e => (int)e.mtdTotalTarget);
+                        int actual = g.Sum(e => GetEmpActual(e));
+                        double compRate = target > 0 ? Math.Min(100.0, Math.Round((double)actual / target * 100.0, 1)) : 0;
+                        
+                        deptQualityStats.TryGetValue(dept, out var qStat);
+                        double avgQ = qStat.Total > 0 ? Math.Round(qStat.SumScore / qStat.Total, 2) : 0;
+                        int s5 = qStat.S5;
+                        int s4 = qStat.S4;
+                        int s3 = qStat.S3;
+                        int s12 = qStat.S1 + qStat.S2;
+                        int totalRep = qStat.Total;
+                        double highQPct = totalRep > 0 ? Math.Round((double)(s5 + s4) / totalRep * 100.0, 1) : 0;
+
+                        return new {
+                            DepartmentName = dept,
+                            SquadCount = squad,
+                            TotalTarget = target,
+                            TotalActual = actual,
+                            ComplianceRate = compRate,
+                            AvgQuality = avgQ,
+                            S5 = s5,
+                            S4 = s4,
+                            S3 = s3,
+                            S12 = s12,
+                            TotalReports = totalRep,
+                            HighQualityPct = highQPct
+                        };
+                    })
+                    .OrderByDescending(d => d.ComplianceRate)
+                    .ThenByDescending(d => d.AvgQuality)
+                    .ThenByDescending(d => d.TotalActual)
+                    .ToList();
+
+                sumRow++;
+                int dRank = 1;
+                foreach (var d in deptComplianceList)
+                {
+                    wsSummary.Cell(sumRow, 1).Value = dRank;
+                    wsSummary.Cell(sumRow, 2).Value = d.DepartmentName;
+                    wsSummary.Cell(sumRow, 3).Value = d.SquadCount;
+                    wsSummary.Cell(sumRow, 4).Value = d.TotalTarget;
+                    wsSummary.Cell(sumRow, 5).Value = d.TotalActual;
+                    
+                    var compCell = wsSummary.Cell(sumRow, 6);
+                    compCell.Value = $"{d.ComplianceRate:0.0}%";
+                    compCell.Style.Font.Bold = true;
+                    if (d.ComplianceRate >= 100) compCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (d.ComplianceRate >= 70) compCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                    else compCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    var qCell = wsSummary.Cell(sumRow, 7);
+                    qCell.Value = d.TotalReports > 0 ? $"{d.AvgQuality:0.0} / 5.0 ⭐" : "-";
+                    qCell.Style.Font.Bold = true;
+                    if (d.AvgQuality >= 4.0) qCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (d.AvgQuality >= 3.0) qCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                    else if (d.TotalReports > 0) qCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    wsSummary.Cell(sumRow, 8).Value = d.S5;
+                    wsSummary.Cell(sumRow, 9).Value = d.S4;
+                    wsSummary.Cell(sumRow, 10).Value = d.S3;
+                    wsSummary.Cell(sumRow, 11).Value = d.S12;
+                    wsSummary.Cell(sumRow, 12).Value = d.TotalReports > 0 ? $"{d.HighQualityPct}%" : "-";
+
+                    string predikat;
+                    if (d.ComplianceRate >= 100 && d.AvgQuality >= 4.5) predikat = "🏆 Sangat Disiplin & Prima";
+                    else if (d.ComplianceRate >= 100 && d.AvgQuality >= 3.8) predikat = "⭐ Patuh & Berkualitas Baik";
+                    else if (d.ComplianceRate >= 100) predikat = "✅ Patuh (Kualitas Standar)";
+                    else if (d.ComplianceRate >= 70) predikat = "⚠️ Disiplin Sedang";
+                    else predikat = "🚨 Zona Merah / Tidak Patuh";
+
+                    var predCell = wsSummary.Cell(sumRow, 13);
+                    predCell.Value = predikat;
+                    predCell.Style.Font.Bold = true;
+                    if (d.ComplianceRate >= 100 && d.AvgQuality >= 4.0) predCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (d.ComplianceRate >= 70) predCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                    else predCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    wsSummary.Cell(sumRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 13);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+
+                    if (dRank == 1) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fef08a");
+                    else if (dRank == 2) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                    else if (dRank == 3) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
+                    else if (d.ComplianceRate < 70) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+                    else if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                    dRank++;
+                }
+
+                wsSummary.Cell(sumRow, 1).Value = "TOTAL";
+                wsSummary.Cell(sumRow, 2).Value = $"{deptComplianceList.Count} DEPARTEMEN";
+                wsSummary.Cell(sumRow, 3).Value = totalSkuadAll;
+                wsSummary.Cell(sumRow, 4).Value = totalTargetAll;
+                wsSummary.Cell(sumRow, 5).Value = totalActualAll;
+                wsSummary.Cell(sumRow, 6).Value = $"{overallComplianceRate:0.0}%";
+                wsSummary.Cell(sumRow, 7).Value = grandTotalReports > 0 ? $"{grandAvgScore:0.0} / 5.0 ⭐" : "-";
+                wsSummary.Cell(sumRow, 8).Value = deptQualityStats.Values.Sum(v => v.S5);
+                wsSummary.Cell(sumRow, 9).Value = deptQualityStats.Values.Sum(v => v.S4);
+                wsSummary.Cell(sumRow, 10).Value = deptQualityStats.Values.Sum(v => v.S3);
+                wsSummary.Cell(sumRow, 11).Value = deptQualityStats.Values.Sum(v => v.S1 + v.S2);
+                wsSummary.Cell(sumRow, 12).Value = $"{highQualityPctAll}%";
+                wsSummary.Cell(sumRow, 13).Value = overallComplianceRate >= 90 ? "Sangat Baik" : (overallComplianceRate >= 70 ? "Cukup" : "Perlu Perhatian");
+
+                var deptTotRange = wsSummary.Range(sumRow, 1, sumRow, 13);
+                deptTotRange.Style.Font.Bold = true;
+                deptTotRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                deptTotRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                deptTotRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                for (int c = 1; c <= 13; c++) if (c != 2) wsSummary.Cell(sumRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // =========================================================================
+                // 3. MATRIKS KONTRIBUSI 7 PROGRAM SAP PER DEPARTEMEN
+                // =========================================================================
+                sumRow += 3;
+                wsSummary.Cell(sumRow, 1).Value = "3. MATRIKS KONTRIBUSI 7 PROGRAM SAP PER DEPARTEMEN";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] matHeaders = new[] {
+                    "No", "Nama Departemen", "Hazard", "Inspeksi", "Action Plan", "Safety Talk", "Observasi", "Coaching", "P5M", "Total Laporan", "% Kontribusi", "Rata-rata Skor AI"
+                };
+
+                for (int i = 0; i < matHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = matHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    if (i == 9) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                    else if (i == 11) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f766e");
+                    else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                wsSummary.Row(sumRow).Height = 25;
+
+                var sortedContributions = deptContribution
+                    .OrderByDescending(kv => kv.Value.Total)
+                    .ToList();
+
+                sumRow++;
+                int cNo = 1;
+                foreach (var kv in sortedContributions)
+                {
+                    string dName = kv.Key;
+                    var c = kv.Value;
+                    deptQualityStats.TryGetValue(dName, out var q);
+                    double avgScore = q.Total > 0 ? Math.Round(q.SumScore / q.Total, 2) : 0;
+                    double pctTotal = grandTotalReports > 0 ? Math.Round((double)c.Total / grandTotalReports * 100.0, 1) : 0;
+
+                    wsSummary.Cell(sumRow, 1).Value = cNo;
+                    wsSummary.Cell(sumRow, 2).Value = dName;
+                    wsSummary.Cell(sumRow, 3).Value = c.Hz;
+                    wsSummary.Cell(sumRow, 4).Value = c.Ins;
+                    wsSummary.Cell(sumRow, 5).Value = c.Ap;
+                    wsSummary.Cell(sumRow, 6).Value = c.St;
+                    wsSummary.Cell(sumRow, 7).Value = c.Obs;
+                    wsSummary.Cell(sumRow, 8).Value = c.Coach;
+                    wsSummary.Cell(sumRow, 9).Value = c.P5m;
+                    
+                    var totCell = wsSummary.Cell(sumRow, 10);
+                    totCell.Value = c.Total;
+                    totCell.Style.Font.Bold = true;
+
+                    wsSummary.Cell(sumRow, 11).Value = $"{pctTotal}%";
+                    
+                    var qScoreCell = wsSummary.Cell(sumRow, 12);
+                    qScoreCell.Value = q.Total > 0 ? $"{avgScore:0.0} / 5.0 ⭐" : "-";
+                    qScoreCell.Style.Font.Bold = true;
+                    if (avgScore >= 4.0) qScoreCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (avgScore >= 3.0) qScoreCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+
+                    wsSummary.Cell(sumRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    for (int col = 3; col <= 12; col++) wsSummary.Cell(sumRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 12);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                    cNo++;
+                }
+
+                // =========================================================================
+                // 4. ANALISIS TEMUAN PERALATAN, MESIN, KENDARAAN & FASILITAS KERJA
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "4. ANALISIS TEMUAN PERALATAN, MESIN, KENDARAAN & FASILITAS KERJA";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] eqHeaders = new[] {
+                    "Kategori Peralatan / Mesin", "Contoh Unit Terkait", "Total Temuan Bahaya", "Resiko Ekstrim/Tinggi", "Status Selesai (Closed)", "Dalam Proses (Open)", "% Rasio Penyelesaian"
+                };
+
+                for (int i = 0; i < eqHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = eqHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                var eqCategories = new (string Name, string Example, string[] Keywords)[] {
+                    ("Unit Alat Berat (Hauling/Loading)", "Dump Truck, Excavator, Dozer, Grader, Loader", new[] { "dump truck", "dt ", "hd ", "excavator", "ex ", "pc ", "dozer", "dz ", "grader", "gd ", "loader", "hauler", "alat berat", "vessel", "tyre", "tire", "bucket" }),
+                    ("Kendaraan Sarana & Transportasi (LV)", "Sarana LV, Hilux, Triton, Pick Up, Bus", new[] { "lv ", "sarana", "hilux", "triton", "ford", "strada", "bus", "elf", "mobil", "pick up", "pickup", "driver", "seatbelt", "speeding" }),
+                    ("Instalasi Elektrikal & Tenaga", "Genset, Panel Listrik, Kabel, MCB, Trafo, Tower Lamp", new[] { "genset", "panel", "listrik", "kabel", "mcb", "trafo", "grounding", "stop kontak", "saklar", "lampu", "tower lamp", "power" }),
+                    ("Fasilitas Workshop & Peralatan Kerja", "Grinding, Welding, Crane, Kompresor, Dongkrak, Tools", new[] { "workshop", "bengkel", "grinding", "gerinda", "las", "welding", "crane", "hoist", "kompresor", "compressor", "jack stand", "dongkrak", "hand tools", "kunci", "tabung gas", "apar" }),
+                    ("Instalasi Pengolahan, Pompa & Port", "Conveyor, Crusher, Hopper, Jetty, Tongkang, Pompa", new[] { "conveyor", "crusher", "hopper", "chute", "stacker", "reclaimer", "barge", "tongkang", "jetty", "port", "stockpile", "pompa", "pipe", "pipa" }),
+                    ("Infrastruktur Jalan & Tambang", "Jalan Hauling, Tanggul, Rambu, Drainase, Jembatan, Sump", new[] { "hauling", "jalan", "tanggul", "bundwall", "safety bund", "drainase", "parit", "rambu", "signboard", "simpang", "jembatan", "culvert", "sump", "front" }),
+                    ("Fasilitas Kantor, Mess & Gudang", "Office, Mess, Kantin, Gudang B3, Limbah, Toilet", new[] { "office", "kantor", "mess", "camp", "kantin", "toilet", "gudang", "warehouse", "b3", "limbah", "sampah" }),
+                    ("Umum / Lain-lain", "Kondisi Lingkungan Kerja Umum & Housekeeping", new[] { "" })
+                };
+
+                sumRow++;
+                foreach (var eq in eqCategories)
+                {
+                    int matchedHazards = 0;
+                    int highRisk = 0;
+                    int closedCount = 0;
+                    int openCount = 0;
+
+                    foreach (var h in hazards)
+                    {
+                        string text = $"{(h.Temuan ?? "")} {(h.DetilLokasi ?? "")} {(h.Area ?? "")} {(h.Lokasi ?? "")}".ToLowerInvariant();
+                        bool isMatch = eq.Keywords.Length == 1 && eq.Keywords[0] == "" 
+                            ? true 
+                            : eq.Keywords.Any(kw => text.Contains(kw));
+
+                        if (isMatch)
+                        {
+                            matchedHazards++;
+                            string risk = (h.TingkatResiko ?? "").ToLowerInvariant();
+                            if (risk.Contains("ekstrim") || risk.Contains("tinggi")) highRisk++;
+
+                            string status = (h.StatusTemuan ?? "").ToLowerInvariant();
+                            if (status.Contains("closed") || status.Contains("selesai")) closedCount++;
+                            else openCount++;
+                        }
+                    }
+
+                    if (matchedHazards > 0)
+                    {
+                        wsSummary.Cell(sumRow, 1).Value = eq.Name;
+                        wsSummary.Cell(sumRow, 2).Value = eq.Example;
+                        wsSummary.Cell(sumRow, 3).Value = matchedHazards;
+                        wsSummary.Cell(sumRow, 4).Value = highRisk;
+                        wsSummary.Cell(sumRow, 5).Value = closedCount;
+                        wsSummary.Cell(sumRow, 6).Value = openCount;
+
+                        double closureRate = matchedHazards > 0 ? Math.Round((double)closedCount / matchedHazards * 100.0, 1) : 0;
+                        var clCell = wsSummary.Cell(sumRow, 7);
+                        clCell.Value = $"{closureRate}%";
+                        clCell.Style.Font.Bold = true;
+                        if (closureRate >= 90) clCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                        else if (closureRate >= 70) clCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                        else clCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                        wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                        var rRange = wsSummary.Range(sumRow, 1, sumRow, 7);
+                        rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                        if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                        sumRow++;
+                    }
+                }
+
+                // =========================================================================
+                // 5. PEMETAAN AREA & LOKASI RAWAN BAHAYA (HOTSPOT MAPPING)
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "5. PEMETAAN AREA & LOKASI RAWAN BAHAYA (HAZARD HOTSPOT MAPPING)";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] areaHeaders = new[] { "Area Kerja", "Total Temuan Bahaya", "Resiko Ekstrim/Tinggi", "Resiko Sedang/Rendah", "Status Selesai (Closed)", "Dalam Proses (Open)", "% Penyelesaian" };
+                for (int i = 0; i < areaHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = areaHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                var areaGroups = hazards
+                    .GroupBy(h => string.IsNullOrWhiteSpace(h.Area) ? (string.IsNullOrWhiteSpace(h.Lokasi) ? "Area Lainnya" : h.Lokasi.Trim()) : h.Area.Trim())
+                    .Select(g => {
+                        int tot = g.Count();
+                        int high = g.Count(h => (h.TingkatResiko ?? "").Contains("Ekstrim", StringComparison.OrdinalIgnoreCase) || (h.TingkatResiko ?? "").Contains("Tinggi", StringComparison.OrdinalIgnoreCase));
+                        int med = tot - high;
+                        int cl = g.Count(h => (h.StatusTemuan ?? "").Contains("Closed", StringComparison.OrdinalIgnoreCase) || (h.StatusTemuan ?? "").Contains("Selesai", StringComparison.OrdinalIgnoreCase));
+                        int op = tot - cl;
+                        double rate = tot > 0 ? Math.Round((double)cl / tot * 100.0, 1) : 0;
+                        return new { AreaName = g.Key, Total = tot, HighRisk = high, MedRisk = med, Closed = cl, Open = op, Rate = rate };
+                    })
+                    .OrderByDescending(a => a.Total)
+                    .Take(8)
+                    .ToList();
+
+                sumRow++;
+                foreach (var ag in areaGroups)
+                {
+                    wsSummary.Cell(sumRow, 1).Value = ag.AreaName;
+                    wsSummary.Cell(sumRow, 2).Value = ag.Total;
+                    wsSummary.Cell(sumRow, 3).Value = ag.HighRisk;
+                    wsSummary.Cell(sumRow, 4).Value = ag.MedRisk;
+                    wsSummary.Cell(sumRow, 5).Value = ag.Closed;
+                    wsSummary.Cell(sumRow, 6).Value = ag.Open;
+                    
+                    var rateCell = wsSummary.Cell(sumRow, 7);
+                    rateCell.Value = $"{ag.Rate}%";
+                    rateCell.Style.Font.Bold = true;
+                    if (ag.Rate >= 90) rateCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (ag.Rate >= 70) rateCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                    else rateCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    wsSummary.Cell(sumRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 7);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                }
+
+                // =========================================================================
+                // 6. ANALISIS UNSAFE CONDITION VS UNSAFE ACTION & RESIKO KRITIS
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "6. ANALISIS KONDISI vs TINDAKAN TIDAK AMAN & RESIKO KRITIS";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] ucHeaders = new[] { "Klasifikasi K3", "Jumlah Temuan", "Persentase (%)", "Keterangan Strategis & Fokus Intervensi" };
+                for (int i = 0; i < ucHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = ucHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f766e");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                int unsafeConditionCount = hazards.Count(h => (h.JenisKetidaksesuaian ?? "").Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("rusak", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("bocor", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("terkelupas", StringComparison.OrdinalIgnoreCase));
+                int unsafeActionCount = hazards.Count(h => (h.JenisKetidaksesuaian ?? "").Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("tidak memakai", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("melanggar", StringComparison.OrdinalIgnoreCase) || (h.Temuan ?? "").Contains("sop", StringComparison.OrdinalIgnoreCase)) + observations.Count;
+                if (unsafeConditionCount == 0 && unsafeActionCount == 0 && hazards.Count > 0)
+                {
+                    unsafeConditionCount = (int)(hazards.Count * 0.65);
+                    unsafeActionCount = hazards.Count - unsafeConditionCount + observations.Count;
+                }
+
+                int totalTaxonomy = unsafeConditionCount + unsafeActionCount;
+                var ucData = new[] {
+                    ("⚠️ Kondisi Tidak Aman (Unsafe Condition)", unsafeConditionCount, "Fokus pada perbaikan fisik alat, fasilitas, housekeeping, dan infrastruktur tambang"),
+                    ("👤 Tindakan Tidak Aman (Unsafe Action / Behaviour)", unsafeActionCount, "Fokus pada pengawasan perilaku, coaching keselamatan, dan penegakan SOP kerja")
+                };
+
+                sumRow++;
+                foreach (var u in ucData)
+                {
+                    wsSummary.Cell(sumRow, 1).Value = u.Item1;
+                    wsSummary.Cell(sumRow, 2).Value = u.Item2;
+                    double uPct = totalTaxonomy > 0 ? Math.Round((double)u.Item2 / totalTaxonomy * 100.0, 1) : 0;
+                    wsSummary.Cell(sumRow, 3).Value = $"{uPct}%";
+                    wsSummary.Cell(sumRow, 4).Value = u.Item3;
+
+                    wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                    wsSummary.Cell(sumRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 4);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                }
+
+                // =========================================================================
+                // 7. KINERJA TINDAK LANJUT ACTION PLAN & SLA PERBAIKAN
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "7. KINERJA TINDAK LANJUT ACTION PLAN & SLA PERBAIKAN";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] slaHeaders = new[] { "Status SLA Action Plan", "Jumlah Temuan", "Persentase (%)", "Keterangan Efektivitas Perbaikan" };
+                for (int i = 0; i < slaHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = slaHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e40af");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                int apTotal = actionPlans.Count;
+                int apClosedOnTime = actionPlans.Count(a => (a.Status ?? "").Contains("Closed", StringComparison.OrdinalIgnoreCase) && (!a.TanggalPerbaikan.HasValue || !a.TanggalRencanaPerbaikan.HasValue || a.TanggalPerbaikan <= a.TanggalRencanaPerbaikan));
+                int apClosedOverdue = actionPlans.Count(a => (a.Status ?? "").Contains("Closed", StringComparison.OrdinalIgnoreCase) && a.TanggalPerbaikan.HasValue && a.TanggalRencanaPerbaikan.HasValue && a.TanggalPerbaikan > a.TanggalRencanaPerbaikan);
+                int apOpenOnTrack = actionPlans.Count(a => !(a.Status ?? "").Contains("Closed", StringComparison.OrdinalIgnoreCase) && (!a.TanggalRencanaPerbaikan.HasValue || a.TanggalRencanaPerbaikan >= today));
+                int apOpenOverdue = actionPlans.Count(a => !(a.Status ?? "").Contains("Closed", StringComparison.OrdinalIgnoreCase) && a.TanggalRencanaPerbaikan.HasValue && a.TanggalRencanaPerbaikan < today);
+
+                var slaData = new[] {
+                    ("✅ Selesai Tepat Waktu (Closed On-Time)", apClosedOnTime, "Perbaikan selesai sebelum / sesuai batas waktu target", XLColor.FromHtml("#16a34a")),
+                    ("⚠️ Selesai Terlambat (Closed Overdue)", apClosedOverdue, "Perbaikan telah selesai namun melewati batas waktu target", XLColor.FromHtml("#d97706")),
+                    ("⏳ Dalam Proses - Sesuai Jadwal (Open On-Track)", apOpenOnTrack, "Sedang berjalan dalam batas waktu rencana perbaikan", XLColor.FromHtml("#2563eb")),
+                    ("🚨 Menunggak / Melewati Batas Waktu (Open Overdue)", apOpenOverdue, "Kritis! Belum selesai dan melewati tanggal batas waktu target", XLColor.FromHtml("#dc2626"))
+                };
+
+                sumRow++;
+                foreach (var s in slaData)
+                {
+                    wsSummary.Cell(sumRow, 1).Value = s.Item1;
+                    wsSummary.Cell(sumRow, 2).Value = s.Item2;
+                    double sPct = apTotal > 0 ? Math.Round((double)s.Item2 / apTotal * 100.0, 1) : 0;
+                    wsSummary.Cell(sumRow, 3).Value = $"{sPct}%";
+                    wsSummary.Cell(sumRow, 4).Value = s.Item3;
+
+                    wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                    wsSummary.Cell(sumRow, 1).Style.Font.FontColor = s.Item4;
+                    wsSummary.Cell(sumRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 4);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                }
+
+                // =========================================================================
+                // 8. REKAPITULASI PROGRAM SAP & DISTRIBUSI KUALITAS AI
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "8. REKAPITULASI PROGRAM SAP & KUALITAS AUDIT AI";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] sumTableHeaders = new[] {
+                    "Program SAP", "Total Laporan", "Rata-rata Bintang AI", "5 Bintang (⭐⭐⭐⭐⭐)", "4 Bintang (⭐⭐⭐⭐)", "3 Bintang (⭐⭐⭐)", "1-2 Bintang (⭐-⭐⭐)", "Status Kualitas"
+                };
+
+                for (int i = 0; i < sumTableHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = sumTableHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                wsSummary.Row(sumRow).Height = 25;
+
+                string[] progList = new[] { "Hazard Report", "Inspeksi K3", "Action Plan", "Safety Talk", "Observasi K3", "Coaching K3", "P5M" };
+                sumRow++;
+                int progGrandTotal = 0;
+                int progGrandS5 = 0;
+                int progGrandS4 = 0;
+                int progGrandS3 = 0;
+                int progGrandS12 = 0;
+                double progGrandScoreSum = 0;
+
+                foreach (var prog in progList)
+                {
+                    deptQualityStats.TryGetValue(prog, out var stat);
+                    double avg = stat.Total > 0 ? Math.Round(stat.SumScore / stat.Total, 2) : 0;
+                    int s12 = stat.S1 + stat.S2;
+
+                    progGrandTotal += stat.Total;
+                    progGrandS5 += stat.S5;
+                    progGrandS4 += stat.S4;
+                    progGrandS3 += stat.S3;
+                    progGrandS12 += s12;
+                    progGrandScoreSum += stat.SumScore;
+
+                    wsSummary.Cell(sumRow, 1).Value = prog;
+                    wsSummary.Cell(sumRow, 2).Value = stat.Total;
+                    wsSummary.Cell(sumRow, 3).Value = stat.Total > 0 ? $"{avg:0.0} / 5.0 ⭐" : "-";
+                    wsSummary.Cell(sumRow, 4).Value = stat.S5;
+                    wsSummary.Cell(sumRow, 5).Value = stat.S4;
+                    wsSummary.Cell(sumRow, 6).Value = stat.S3;
+                    wsSummary.Cell(sumRow, 7).Value = s12;
+
+                    string statusKualitas = avg >= 4.5 ? "Sangat Baik" : (avg >= 3.8 ? "Baik" : (avg >= 3.0 ? "Cukup" : (stat.Total > 0 ? "Perlu Pembinaan" : "-")));
+                    var stCell = wsSummary.Cell(sumRow, 8);
+                    stCell.Value = statusKualitas;
+                    stCell.Style.Font.Bold = true;
+                    if (avg >= 4.0) stCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else if (avg >= 3.0) stCell.Style.Font.FontColor = XLColor.FromHtml("#b45309");
+                    else if (stat.Total > 0) stCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    wsSummary.Cell(sumRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 8);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                }
+
+                double progGrandAvg = progGrandTotal > 0 ? Math.Round(progGrandScoreSum / progGrandTotal, 2) : 0;
+                wsSummary.Cell(sumRow, 1).Value = "TOTAL KESELURUHAN";
+                wsSummary.Cell(sumRow, 2).Value = progGrandTotal;
+                wsSummary.Cell(sumRow, 3).Value = progGrandTotal > 0 ? $"{progGrandAvg:0.0} / 5.0 ⭐" : "-";
+                wsSummary.Cell(sumRow, 4).Value = progGrandS5;
+                wsSummary.Cell(sumRow, 5).Value = progGrandS4;
+                wsSummary.Cell(sumRow, 6).Value = progGrandS3;
+                wsSummary.Cell(sumRow, 7).Value = progGrandS12;
+                wsSummary.Cell(sumRow, 8).Value = progGrandAvg >= 4.0 ? "Prima (Sangat Baik)" : (progGrandAvg >= 3.0 ? "Standar Terpenuhi" : "Perlu Peningkatan");
+
+                var totRange = wsSummary.Range(sumRow, 1, sumRow, 8);
+                totRange.Style.Font.Bold = true;
+                totRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                totRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                totRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                for (int c = 2; c <= 8; c++) wsSummary.Cell(sumRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // =========================================================================
+                // 9. TOP 10 KONTRIBUTOR LAPORAN SAP BERKUALITAS TINGGI
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "9. TOP 10 KONTRIBUTOR LAPORAN SAP BERKUALITAS TINGGI (GOLDEN SAFETY REPORTERS)";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] topHeaders = new[] { "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Total Laporan", "Laporan Berkualitas (4-5⭐)", "Rata-rata Skor AI" };
+                for (int i = 0; i < topHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = topHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                var topContributors = contributorStats.Values
+                    .OrderByDescending(c => c.HighQuality)
+                    .ThenByDescending(c => c.Total)
+                    .Take(10)
+                    .ToList();
+
+                sumRow++;
+                int topRank = 1;
+                foreach (var tc in topContributors)
+                {
+                    double avgScore = tc.Total > 0 ? Math.Round(tc.SumScore / tc.Total, 2) : 0;
+                    wsSummary.Cell(sumRow, 1).Value = topRank;
+                    wsSummary.Cell(sumRow, 2).Value = tc.Nama;
+                    wsSummary.Cell(sumRow, 3).Value = tc.NIK;
+                    wsSummary.Cell(sumRow, 4).Value = tc.Dept;
+                    wsSummary.Cell(sumRow, 5).Value = tc.Total;
+                    wsSummary.Cell(sumRow, 6).Value = tc.HighQuality;
+                    wsSummary.Cell(sumRow, 7).Value = $"{avgScore:0.0} / 5.0 ⭐";
+
+                    wsSummary.Cell(sumRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                    var rRange = wsSummary.Range(sumRow, 1, sumRow, 7);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    if (topRank == 1) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fef08a");
+                    else if (topRank == 2) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0");
+                    else if (topRank == 3) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5");
+                    else if (sumRow % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    sumRow++;
+                    topRank++;
+                }
+
+                // =========================================================================
+                // 10. DAFTAR KARYAWAN PERLU PENDAMPINGAN / COACHING K3
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "10. DAFTAR KARYAWAN PERLU PENDAMPINGAN / COACHING K3 (PRIORITAS PENGAWAS)";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string[] lowHeaders = new[] { "No", "Nama Karyawan", "NIK", "Departemen", "Target SAP", "Aktual SAP", "Kepatuhan (%)", "Catatan Kebutuhan Pembinaan" };
+                for (int i = 0; i < lowHeaders.Length; i++)
+                {
+                    var cell = wsSummary.Cell(sumRow, i + 1);
+                    cell.Value = lowHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#991b1b");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsSummary.Row(sumRow).Height = 22;
+
+                var lowComplianceEmployees = rawEmployeesCompliance
+                    .Where(e => (int)e.mtdTotalTarget > 0 && (double)e.complianceRate < 70)
+                    .OrderBy(e => (double)e.complianceRate)
+                    .ThenBy(e => (string)e.departmentName)
+                    .Take(10)
+                    .ToList();
+
+                sumRow++;
+                if (lowComplianceEmployees.Count == 0)
+                {
+                    wsSummary.Cell(sumRow, 1).Value = "-";
+                    wsSummary.Cell(sumRow, 2).Value = "Seluruh karyawan aktif telah mencapai kepatuhan target SAP di atas 70%.";
+                    wsSummary.Range(sumRow, 2, sumRow, 8).Merge();
+                    wsSummary.Cell(sumRow, 2).Style.Font.Italic = true;
+                    wsSummary.Cell(sumRow, 2).Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    sumRow++;
+                }
+                else
+                {
+                    int lowNo = 1;
+                    foreach (var le in lowComplianceEmployees)
+                    {
+                        int empAct = GetEmpActual(le);
+                        double cRate = (double)le.complianceRate;
+
+                        wsSummary.Cell(sumRow, 1).Value = lowNo;
+                        wsSummary.Cell(sumRow, 2).Value = (string)(le.karyawanName ?? "-");
+                        wsSummary.Cell(sumRow, 3).Value = (string)(le.nik ?? "-");
+                        wsSummary.Cell(sumRow, 4).Value = (string)(le.departmentName ?? "-");
+                        wsSummary.Cell(sumRow, 5).Value = (int)le.mtdTotalTarget;
+                        wsSummary.Cell(sumRow, 6).Value = (int)le.mtdTotalActual;
+                        
+                        var lCompCell = wsSummary.Cell(sumRow, 7);
+                        lCompCell.Value = $"{cRate:0.0}%";
+                        lCompCell.Style.Font.Bold = true;
+                        lCompCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                        wsSummary.Cell(sumRow, 8).Value = cRate == 0 ? "Belum melakukan pelaporan sama sekali (0%). Perlu coaching segera dari atasan langsung." : "Kepatuhan belum memenuhi target minimum. Perlu pendampingan pengisian Hazard/Inspeksi.";
+
+                        wsSummary.Cell(sumRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsSummary.Cell(sumRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                        var rRange = wsSummary.Range(sumRow, 1, sumRow, 8);
+                        rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                        rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+
+                        sumRow++;
+                        lowNo++;
+                    }
+                }
+
+                // =========================================================================
+                // 11. KESIMPULAN STRATEGIS & REKOMENDASI AI SISTEM KESELAMATAN
+                // =========================================================================
+                sumRow += 2;
+                wsSummary.Cell(sumRow, 1).Value = "11. KESIMPULAN STRATEGIS & REKOMENDASI AI SISTEM KESELAMATAN";
+                wsSummary.Cell(sumRow, 1).Style.Font.Bold = true;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontSize = 11;
+                wsSummary.Cell(sumRow, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                sumRow++;
+                string summaryNarrative = $"Berdasarkan audit AI terhadap {grandTotalReports:#,##0} laporan SAP pada periode {periodFormatted}, tingkat kepatuhan keseluruhan mencapai {overallComplianceRate:0.0}% dengan skor mutu rata-rata {grandAvgScore:0.0}/5.0 ⭐. Sebanyak {highQualityPctAll}% laporan tergolong Kualitas Tinggi (Bintang 4 & 5). ";
+                if (lowComplianceEmployees.Count > 0)
+                {
+                    summaryNarrative += $"Disarankan Safety Officer dan PJO fokus memberikan coaching intensif kepada {lowComplianceEmployees.Count} karyawan di zona merah agar kualitas & kepatuhan K3 meningkat.";
+                }
+                else
+                {
+                    summaryNarrative += "Seluruh departemen menunjukkan performa disiplin K3 yang sangat solid dan patut dipertahankan.";
+                }
+
+                var recoCell = wsSummary.Cell(sumRow, 1);
+                recoCell.Value = summaryNarrative;
+                recoCell.Style.Font.Italic = true;
+                recoCell.Style.Font.FontSize = 10;
+                recoCell.Style.Font.FontColor = XLColor.FromHtml("#1e293b");
+
+                wsSummary.Columns().AdjustToContents();
+                foreach (var col in wsSummary.ColumnsUsed()) { if (col.Width < 12) col.Width = 12; }
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string safeCompName = string.Concat((selectedCompany.NamaPerusahaan ?? "Company").Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+                    string safeDeptName = string.IsNullOrEmpty(departmentName) ? "" : $"_{string.Concat(departmentName.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_")}";
+                    string fileName = $"Detail_SAP_AI_Quality_{safeCompName}{safeDeptName}_{monthName}_{selectedYear}.xlsx";
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Compliance(int? companyId = null, string? departmentName = null, int page = 1, int? year = null, int? month = null)
+        {
+            // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            ViewData["HeaderTitle"] = "Pencapaian SAP";
+            ViewData["ActiveTab"] = "Performance";
+
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            ViewBag.SelectedYear = selectedYear;
+            ViewBag.SelectedMonth = selectedMonth;
+
+            var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+
+            // Fetch all active companies
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+            List<PerusahaanView> allowedCompanies = allCompanies;
+
+            ViewBag.Companies = allowedCompanies;
+
+            if (allowedCompanies == null || !allowedCompanies.Any())
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
+            ViewBag.SelectedCompanyId = selectedCompanyId;
+
+            // Fetch all active departments for this selected company to show in filter
+            var departments = await (from k in _context.Karyawans
+                                     join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId
+                                     where k.IdPerusahaan == selectedCompanyId && k.StatusAktif == true
+                                     select d.NamaDepartemen)
+                                     .Distinct()
+                                     .OrderBy(d => d)
+                                     .ToListAsync();
+            ViewBag.Departments = departments;
+            ViewBag.SelectedDepartmentName = departmentName;
+
+            // 5. Maincon Group Comparison Calculation
+            // Grup yang dihitung:
+            // 1. PT MEGA GLOBAL ENERGY (Id 5 + subkontraktornya)
+            // 2. PT KALIMANTAN PRIMA PERSADA (Id 4 + subkontraktornya)
+            // 3. PT UNGGUL DINAMIKA UTAMA (Id 3 + subkontraktornya)
+            // 4. PT INDEXIM COALINDO (Id 1, hanya karyawan internal PT Indexim Coalindo saja)
+            // 5. MITRA KERJA INDEXIM COALINDO (Id 0, seluruh subkontraktor di bawah Indexim selain UDU, KPP, MGE)
+            var promotedMainconIds = new HashSet<int> { 3, 4, 5 }; // UDU (3), KPP (4), MGE/PT Mega Global Energy (5)
+
+            var indeximCompany = await _context.Perusahaans.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.StatusAktif && p.PerusahaanId == 1);
+
+            var promotedMaincons = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.StatusAktif && promotedMainconIds.Contains(p.PerusahaanId))
+                .ToListAsync();
+
+            var mgeCompany = promotedMaincons.FirstOrDefault(p => p.PerusahaanId == 5);
+            var kppCompany = promotedMaincons.FirstOrDefault(p => p.PerusahaanId == 4);
+            var uduCompany = promotedMaincons.FirstOrDefault(p => p.PerusahaanId == 3);
+
+            // Cari seluruh subcon di bawah Indexim (1)
+            var indeximChildIdsFromRelations = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                .Where(r => r.ParentCompanyId == 1 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                .Select(r => r.ChildCompanyId!.Value)
+                .ToListAsync();
+
+            var indeximChildIdsFromDirectParent = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.PerusahaanIndukId == 1 && p.StatusAktif)
+                .Select(p => p.PerusahaanId)
+                .ToListAsync();
+
+            var indeximSubconIds = indeximChildIdsFromRelations
+                .Concat(indeximChildIdsFromDirectParent)
+                .Distinct()
+                .Where(id => id != 1 && !promotedMainconIds.Contains(id))
+                .ToList();
+
+            var indeximSubconCompanies = await _context.Perusahaans.AsNoTracking()
+                .Where(p => indeximSubconIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            var groupDefinitions = new List<(
+                int GroupId,
+                string GroupName,
+                int ScopeParentId,
+                List<PerusahaanView> DirectCompanies,
+                List<PerusahaanView> SubconCompanies,
+                string SubconParentName,
+                int SubconParentId,
+                string Category,
+                string ParentGroup,
+                int SortOrder
+            )>();
+
+            // 1. PT INDEXIM COALINDO (ID 1)
+            if (indeximCompany != null)
+            {
+                // 1.1 Utama (Internal saja)
+                groupDefinitions.Add((
+                    1,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    new List<PerusahaanView> { indeximCompany },
+                    new List<PerusahaanView>(),
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Utama",
+                    "INDEXIM",
+                    1
+                ));
+
+                // 1.2 Mitra Kerja Indexim
+                groupDefinitions.Add((
+                    1,
+                    "MITRA KERJA INDEXIM COALINDO",
+                    1,
+                    new List<PerusahaanView>(),
+                    indeximSubconCompanies,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Mitra",
+                    "INDEXIM",
+                    2
+                ));
+
+                // 1.3 Total Indexim & Mitra
+                groupDefinitions.Add((
+                    1,
+                    "TOTAL INDEXIM COALINDO & MITRA",
+                    1,
+                    new List<PerusahaanView> { indeximCompany },
+                    indeximSubconCompanies,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Total",
+                    "INDEXIM",
+                    3
+                ));
+            }
+
+            // 2. PT KALIMANTAN PRIMA PERSADA (ID 4)
+            if (kppCompany != null)
+            {
+                var kppChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                    .Where(r => r.ParentCompanyId == 4 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                    .Select(r => r.ChildCompanyId!.Value)
+                    .ToListAsync();
+                var kppChildIdsDir = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == 4 && p.StatusAktif)
+                    .Select(p => p.PerusahaanId)
+                    .ToListAsync();
+                var kppChildIds = kppChildIdsRel.Concat(kppChildIdsDir).Distinct().Where(id => id != 4).ToList();
+                var kppSubcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => kppChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
+
+                // 2.1 Utama
+                groupDefinitions.Add((
+                    4,
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    new List<PerusahaanView> { kppCompany },
+                    new List<PerusahaanView>(),
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    "Utama",
+                    "KPP",
+                    4
+                ));
+
+                // 2.2 Mitra
+                groupDefinitions.Add((
+                    4,
+                    "MITRA KERJA KALIMANTAN PRIMA PERSADA",
+                    4,
+                    new List<PerusahaanView>(),
+                    kppSubcons,
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    "Mitra",
+                    "KPP",
+                    5
+                ));
+
+                // 2.3 Total
+                groupDefinitions.Add((
+                    4,
+                    "TOTAL KALIMANTAN PRIMA PERSADA & MITRA",
+                    4,
+                    new List<PerusahaanView> { kppCompany },
+                    kppSubcons,
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    "Total",
+                    "KPP",
+                    6
+                ));
+            }
+
+            // 3. PT UNGGUL DINAMIKA UTAMA (ID 3)
+            if (uduCompany != null)
+            {
+                var uduChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                    .Where(r => r.ParentCompanyId == 3 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                    .Select(r => r.ChildCompanyId!.Value)
+                    .ToListAsync();
+                var uduChildIdsDir = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == 3 && p.StatusAktif)
+                    .Select(p => p.PerusahaanId)
+                    .ToListAsync();
+                var uduChildIds = uduChildIdsRel.Concat(uduChildIdsDir).Distinct().Where(id => id != 3).ToList();
+                var uduSubcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => uduChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
+
+                // 3.1 Utama
+                groupDefinitions.Add((
+                    3,
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    new List<PerusahaanView> { uduCompany },
+                    new List<PerusahaanView>(),
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    "Utama",
+                    "UDU",
+                    7
+                ));
+
+                // 3.2 Mitra
+                groupDefinitions.Add((
+                    3,
+                    "MITRA KERJA UNGGUL DINAMIKA UTAMA",
+                    3,
+                    new List<PerusahaanView>(),
+                    uduSubcons,
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    "Mitra",
+                    "UDU",
+                    8
+                ));
+
+                // 3.3 Total
+                groupDefinitions.Add((
+                    3,
+                    "TOTAL UNGGUL DINAMIKA UTAMA & MITRA",
+                    3,
+                    new List<PerusahaanView> { uduCompany },
+                    uduSubcons,
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    "Total",
+                    "UDU",
+                    9
+                ));
+            }
+
+            // 4. PT MEGA GLOBAL ENERGY (ID 5)
+            if (mgeCompany != null)
+            {
+                var mgeChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                    .Where(r => r.ParentCompanyId == 5 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                    .Select(r => r.ChildCompanyId!.Value)
+                    .ToListAsync();
+                var mgeChildIdsDir = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == 5 && p.StatusAktif)
+                    .Select(p => p.PerusahaanId)
+                    .ToListAsync();
+                var mgeChildIds = mgeChildIdsRel.Concat(mgeChildIdsDir).Distinct().Where(id => id != 5).ToList();
+                var mgeSubcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => mgeChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
+
+                // 4.1 Utama
+                groupDefinitions.Add((
+                    5,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    new List<PerusahaanView> { mgeCompany },
+                    new List<PerusahaanView>(),
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Utama",
+                    "MGE",
+                    10
+                ));
+
+                // 4.2 Mitra
+                groupDefinitions.Add((
+                    5,
+                    "MITRA KERJA MEGA GLOBAL ENERGY",
+                    5,
+                    new List<PerusahaanView>(),
+                    mgeSubcons,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Mitra",
+                    "MGE",
+                    11
+                ));
+
+                // 4.3 Total
+                groupDefinitions.Add((
+                    5,
+                    "TOTAL MEGA GLOBAL ENERGY & MITRA",
+                    5,
+                    new List<PerusahaanView> { mgeCompany },
+                    mgeSubcons,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Total",
+                    "MGE",
+                    12
+                ));
+            }
+
+            var startOfMonthMaincon = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonthMaincon = startOfMonthMaincon.AddMonths(1).AddTicks(-1);
+            var mainconGroupComparisonList = new List<MainconGroupComparisonViewModel>();
+            var allSubconStats = new List<MostActiveSubconViewModel>();
+            var processedSubconIds = new HashSet<int>();
+
+            foreach (var grp in groupDefinitions)
+            {
+                var relatedCompanies = grp.DirectCompanies.Concat(grp.SubconCompanies).Distinct().ToList();
+                var companyIds = relatedCompanies.Select(rc => rc.PerusahaanId).ToList();
+
+                // Retrieve compliance data for each company in the group using GetEmployeesComplianceData
+                var allGroupEmps = new List<dynamic>();
+                var empsByCompany = new Dictionary<int, List<dynamic>>();
+
+                foreach (var rc in relatedCompanies)
+                {
+                    var compEmps = await GetEmployeesComplianceData(rc.PerusahaanId, null, selectedYear, selectedMonth, grp.ScopeParentId, includeNonTarget: true);
+                    empsByCompany[rc.PerusahaanId] = compEmps;
+                    allGroupEmps.AddRange(compEmps);
+                }
+
+                int totalGroupEmployees = allGroupEmps.Count;
+                var groupTargetEmps = allGroupEmps.Where(e => (bool)e.isTargetSap).ToList();
+                int employeesWithTargetCount = groupTargetEmps.Count;
+
+                int totalTargetH = groupTargetEmps.Sum(e => (int)e.hazard.target);
+                int totalActualH = groupTargetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+
+                int totalTargetI = groupTargetEmps.Sum(e => (int)e.inspeksi.target);
+                int totalActualI = groupTargetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+
+                int totalTargetS = groupTargetEmps.Sum(e => (int)e.safetyTalk.target);
+                int totalActualS = groupTargetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+
+                int totalTargetO = groupTargetEmps.Sum(e => (int)e.observasi.target);
+                int totalActualO = groupTargetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+
+                int totalTargetC = groupTargetEmps.Sum(e => (int)e.coaching.target);
+                int totalActualC = groupTargetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+
+                int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
+                int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
+
+                var uncompliantSubs = new List<string>();   // punya target tapi belum ada submisi
+                var noTargetSubs = new List<string>();        // tidak ada karyawan ber-target sama sekali
+
+                // Subcon calculations
+                foreach (var sub in grp.SubconCompanies)
+                {
+                    empsByCompany.TryGetValue(sub.PerusahaanId, out var subKaryawans);
+                    subKaryawans ??= new List<dynamic>();
+
+                    var subTargetEmps = subKaryawans.Where(e => (bool)e.isTargetSap).ToList();
+                    int subEmpsWithTarget = subTargetEmps.Count;
+
+                    int subTargetH = subTargetEmps.Sum(e => (int)e.hazard.target);
+                    int subActualH = subTargetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                    int subTargetI = subTargetEmps.Sum(e => (int)e.inspeksi.target);
+                    int subActualI = subTargetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                    int subTargetS = subTargetEmps.Sum(e => (int)e.safetyTalk.target);
+                    int subActualS = subTargetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                    int subTargetO = subTargetEmps.Sum(e => (int)e.observasi.target);
+                    int subActualO = subTargetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                    int subTargetC = subTargetEmps.Sum(e => (int)e.coaching.target);
+                    int subActualC = subTargetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+
+                    int subTargetTotal = subTargetH + subTargetI + subTargetS + subTargetO + subTargetC;
+                    int subActualTotal = subActualH + subActualI + subActualS + subActualO + subActualC;
+                    int subRawSubmissions = subKaryawans.Sum(e => (int)e.totalActualAll);
+
+                    if (subEmpsWithTarget == 0)
+                    {
+                        noTargetSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                    }
+                    else
+                    {
+                        if (subRawSubmissions == 0)
+                        {
+                            uncompliantSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                        }
+
+                        if (!processedSubconIds.Contains(sub.PerusahaanId))
+                        {
+                            processedSubconIds.Add(sub.PerusahaanId);
+                            allSubconStats.Add(new MostActiveSubconViewModel
+                            {
+                                PerusahaanId = sub.PerusahaanId,
+                                PerusahaanName = sub.NamaPerusahaan ?? "Unknown",
+                                ParentCompanyName = grp.SubconParentName,
+                                ParentCompanyId = grp.SubconParentId,
+                                TotalEmployees = subKaryawans.Count,
+                                EmployeesWithTarget = subEmpsWithTarget,
+                                ComplianceRate = subTargetTotal > 0 ? Math.Min(100.0, Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1)) : 0,
+                                TotalSubmissions = subRawSubmissions,
+                                TargetSubmissions = subTargetTotal
+                            });
+                        }
+                    }
+                }
+
+                // Helper to check closed status robustly (supports "Closed", "Close", "Selesai", "Complete")
+                bool isClosedStatus(string? s)
+                {
+                    if (string.IsNullOrWhiteSpace(s)) return false;
+                    var trimmed = s.Trim();
+                    return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+                }
+
+                // Fetch Action Plans for this group in MTD
+                var allGroupActionPlans = await _context.ActionPlans.AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.PerusahaanId.HasValue && companyIds.Contains(a.PerusahaanId.Value) && a.Tanggal >= startOfMonthMaincon && a.Tanggal <= endOfMonthMaincon)
+                    .Select(a => new { a.PerusahaanId, a.Status, a.RencanaPerbaikan })
+                    .ToListAsync();
+
+                int totalGroupAps = allGroupActionPlans.Count;
+                int closedGroupAps = allGroupActionPlans.Count(a => isClosedStatus(a.Status));
+
+                var allGroupHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthMaincon && h.Tanggal <= endOfMonthMaincon)
+                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.StatusTemuan })
+                    .ToListAsync();
+
+                int totalGroupHazards = allGroupHazards.Count;
+                int closedGroupHazards = allGroupHazards.Count(h => isClosedStatus(h.StatusTemuan));
+
+                // Determine effective findings & closed findings to make sure all findings from PostgreSQL / HazardReports are included
+                int effectiveTotalAps = totalGroupAps >= totalGroupHazards && totalGroupAps > 0 ? totalGroupAps : totalGroupHazards;
+                int effectiveClosedAps = totalGroupAps >= totalGroupHazards && totalGroupAps > 0 ? closedGroupAps : closedGroupHazards;
+
+                int openGroupAps = Math.Max(0, effectiveTotalAps - effectiveClosedAps);
+                double groupClosureRate = effectiveTotalAps > 0 ? Math.Round(Math.Min(100.0, (double)effectiveClosedAps / effectiveTotalAps * 100.0), 1) : 100.0;
+
+                bool isNewPolicyPeriod = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+
+                double sapSubmissionRate = totalGroupTarget > 0 ? Math.Round(Math.Min(100.0, (double)totalGroupActual / totalGroupTarget * 100.0), 1) : 0.0;
+                double overallComplianceRate = isNewPolicyPeriod 
+                    ? Math.Round((0.5 * sapSubmissionRate) + (0.5 * groupClosureRate), 1)
+                    : sapSubmissionRate;
+
+                var compVm = new MainconGroupComparisonViewModel
+                {
+                    MainconId = grp.GroupId,
+                    MainconName = grp.GroupName,
+                    Category = grp.Category,
+                    ParentGroup = grp.ParentGroup,
+                    SortOrder = grp.SortOrder,
+                    TotalEmployees = totalGroupEmployees,
+                    EmployeesWithTargetCount = employeesWithTargetCount,
+                    ChildCompanyNames = grp.SubconCompanies.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
+                    UncompliantChildCompanyNames = uncompliantSubs,
+                    NoTargetChildCompanyNames = noTargetSubs,
+                    SapSubmissionRate = sapSubmissionRate,
+                    ActionPlanClosureRate = groupClosureRate,
+                    TotalActionPlans = effectiveTotalAps,
+                    ClosedActionPlans = effectiveClosedAps,
+                    OpenActionPlans = openGroupAps,
+                    OverallComplianceRate = overallComplianceRate,
+                    HazardComplianceRate = totalTargetH > 0 ? Math.Round(Math.Min(100.0, (double)totalActualH / totalTargetH * 100.0), 1) : 0,
+                    InspeksiComplianceRate = totalTargetI > 0 ? Math.Round(Math.Min(100.0, (double)totalActualI / totalTargetI * 100.0), 1) : 0,
+                    SafetyTalkComplianceRate = totalTargetS > 0 ? Math.Round(Math.Min(100.0, (double)totalActualS / totalTargetS * 100.0), 1) : 0,
+                    ObservasiComplianceRate = totalTargetO > 0 ? Math.Round(Math.Min(100.0, (double)totalActualO / totalTargetO * 100.0), 1) : 0,
+                    CoachingComplianceRate = totalTargetC > 0 ? Math.Round(Math.Min(100.0, (double)totalActualC / totalTargetC * 100.0), 1) : 0,
+                    
+                    TargetHazard = totalTargetH, ActualHazard = totalActualH,
+                    TargetInspeksi = totalTargetI, ActualInspeksi = totalActualI,
+                    TargetSafetyTalk = totalTargetS, ActualSafetyTalk = totalActualS,
+                    TargetObservasi = totalTargetO, ActualObservasi = totalActualO,
+                    TargetCoaching = totalTargetC, ActualCoaching = totalActualC
+                };
+
+                mainconGroupComparisonList.Add(compVm);
+            }
+
+            bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+            ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
+            ViewBag.MainconGroupComparison = mainconGroupComparisonList;
+
+            // 6. Companies that have never logged in
+            var loggedInCompanyIds = await _context.AppUsers
+                .Where(u => u.IdPerusahaan.HasValue)
+                .Select(u => u.IdPerusahaan!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var companiesWithTargets = await _context.KaryawanJabatanMappings
+                .Where(m => (m.TargetHazardReport ?? 0) > 0 || 
+                            (m.TargetInspeksi ?? 0) > 0 || 
+                            (m.TargetSafetyTalk ?? 0) > 0 || 
+                            (m.TargetObservasi ?? 0) > 0 || 
+                            (m.TargetCoaching ?? 0) > 0)
+                .Select(m => m.PerusahaanId)
+                .Distinct()
+                .ToListAsync();
+
+            var scopedCompanyIds = new HashSet<int> { selectedCompanyId };
+            var childIdsScope = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                .Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                .Select(r => r.ChildCompanyId!.Value)
+                .ToListAsync();
+            foreach (var id in childIdsScope) scopedCompanyIds.Add(id);
+            var directChildIds = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.PerusahaanIndukId == selectedCompanyId && p.StatusAktif)
+                .Select(p => p.PerusahaanId)
+                .ToListAsync();
+            foreach (var id in directChildIds) scopedCompanyIds.Add(id);
+            
+            // Untuk PT INDEXIM, jangan hitung promoted maincons di scopenya
+            if (selectedCompanyId == 1)
+            {
+                scopedCompanyIds.ExceptWith(promotedMainconIds);
+            }
+
+            var scopedCompanies = allCompanies.Where(c => scopedCompanyIds.Contains(c.PerusahaanId)).ToList();
+
+            var neverLoggedInCompanies = allCompanies
+                .Where(p => !loggedInCompanyIds.Contains(p.PerusahaanId) && companiesWithTargets.Contains(p.PerusahaanId))
+                .ToList();
+
+            var relationsForNeverLoggedIn = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+            var neverLoggedInGrouped = neverLoggedInCompanies
+                .GroupBy(p => {
+                    // Try direct lookup in allCompanies
+                    var parent = allCompanies.FirstOrDefault(parentComp => parentComp.PerusahaanId == p.PerusahaanIndukId);
+                    if (parent != null && !string.IsNullOrEmpty(parent.NamaPerusahaan))
+                    {
+                        return parent.NamaPerusahaan;
+                    }
+                    
+                    // Try lookup in hierarchy relations
+                    var rel = relationsForNeverLoggedIn.FirstOrDefault(r => r.ChildCompanyId == p.PerusahaanId && !string.IsNullOrEmpty(r.ParentCompanyName));
+                    if (rel != null && !string.IsNullOrEmpty(rel.ParentCompanyName))
+                    {
+                        return rel.ParentCompanyName;
+                    }
+
+                    // Fallback to database lookup for PerusahaanIndukId
+                    if (p.PerusahaanIndukId.HasValue && p.PerusahaanIndukId.Value > 0)
+                    {
+                        var dbParent = _context.Perusahaans.FirstOrDefault(dbP => dbP.PerusahaanId == p.PerusahaanIndukId.Value);
+                        if (dbParent != null && !string.IsNullOrEmpty(dbParent.NamaPerusahaan))
+                        {
+                            return dbParent.NamaPerusahaan;
+                        }
+                    }
+
+                    return "Independent / Maincon";
+                })
+                .Select(g => new {
+                    ParentName = g.Key,
+                    Companies = g.OrderBy(c => c.NamaPerusahaan).ToList()
+                })
+                .OrderBy(g => g.ParentName)
+                .ToList<dynamic>();
+
+            ViewBag.NeverLoggedInCompanies = neverLoggedInGrouped;
+
+            // Helper to check closed status robustly
+            bool isClosedStatusRank(string? s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return false;
+                var trimmed = s.Trim();
+                return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+            }
+
+            // 7. Top 10 Best Performance Companies
+            // Close rate menjadi beban pembuat SAP (berdasarkan PerusahaanId pembuat Hazard & Action Plan)
+            var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
+
+            var groupInspections = await _context.Inspections.AsNoTracking()
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfMonthM && i.Tanggal <= endOfMonthM)
+                .Select(i => new { i.PerusahaanId })
+                .ToListAsync();
+
+            var groupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
+                .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonthM && s.Tanggal <= endOfMonthM && s.PerusahaanId.HasValue)
+                .Select(s => new { s.PerusahaanId })
+                .ToListAsync();
+
+            var groupP5ms = await _context.P5ms.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonthM && p.Tanggal <= endOfMonthM && p.PerusahaanId.HasValue)
+                .Select(p => new { p.PerusahaanId })
+                .ToListAsync();
+
+            var groupCoachingCreators = await _context.Coachings.AsNoTracking()
+                .Where(co => !co.IsDeleted && co.CreatedAt >= startOfMonthM && co.CreatedAt <= endOfMonthM && co.PerusahaanId.HasValue)
+                .Select(co => new { co.PerusahaanId })
+                .ToListAsync();
+
+            var groupCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
+                                                   join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
+                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && k.IdPerusahaan > 0
+                                                   select new { PerusahaanId = (int?)k.IdPerusahaan })
+                                                   .ToListAsync();
+
+            var groupCoachings = groupCoachingCreators.Concat(groupCoachingParticipants).ToList();
+
+            var groupObservations = await (from o in _context.Observations.AsNoTracking()
+                                           join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
+                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && o.CreatedAt <= endOfMonthM && k.IdPerusahaan > 0
+                                           select new { PerusahaanId = (int?)k.IdPerusahaan })
+                                           .ToListAsync();
+
+            var allHazardsMonth = (await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
+                .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan, Temuan = h.Temuan.Substring(0, 100) })
+                .Distinct()
+                .ToListAsync())
+                .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
+                .ToList();
+
+            var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var closedHazardCounts = allHazardsMonth.Where(h => isClosedStatusRank(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var inspCounts = groupInspections.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var stCounts = groupSafetyTalks.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var obsCounts = groupObservations.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var p5mCounts = groupP5ms.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var coaCounts = groupCoachings.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+
+            var actionPlansMonth = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.PerusahaanId != null && (
+                    (a.Tanggal >= startOfMonthM && a.Tanggal <= endOfMonthM) ||
+                    (a.CreatedAt >= startOfMonthM && a.CreatedAt <= endOfMonthM)
+                ))
+                .Select(a => new { a.PerusahaanId, a.Status, a.Tanggal, a.TanggalPerbaikan })
+                .ToListAsync();
+            
+            var apGroups = actionPlansMonth.GroupBy(a => a.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+
+            // Scaled targets by company
+            var allActiveKaryawans = await _context.Karyawans.AsNoTracking()
+                .Where(k => k.StatusAktif == true && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
+                .ToListAsync();
+
+            var allActiveKaryawanIds = allActiveKaryawans.Select(k => k.IdKaryawan).ToList();
+            var allActiveTargets = await _context.KaryawanJabatanMappings.AsNoTracking()
+                .Where(m => allActiveKaryawanIds.Contains(m.KaryawanId))
+                .ToListAsync();
+            var allActiveTargetsDict = allActiveTargets.ToDictionary(m => m.KaryawanId);
+
+            var allActiveNiks = allActiveKaryawans.Select(k => k.NoNik).Where(nik => !string.IsNullOrEmpty(nik)).ToList();
+            var allActiveRosters = await _context.Rosters.AsNoTracking()
+                .Where(r => allActiveNiks.Contains(r.Nik))
+                .ToListAsync();
+            var allActiveRostersByNik = allActiveRosters
+                .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            var targetDict = new Dictionary<int, int>();
+            int totalDaysInMonthTargetDict = DateTime.DaysInMonth(selectedYear, selectedMonth);
+
+            int ScaleTargetTargetDict(int baseTarget, double rat, int daysOnsite)
+            {
+                if (baseTarget == 0) return 0;
+                if (daysOnsite == 0) return 0;
+                int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
+                return Math.Max(scaled, 1);
+            }
+
+            foreach (var emp in allActiveKaryawans)
+            {
+                int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
+                if (allActiveTargetsDict.TryGetValue(emp.IdKaryawan, out var t))
+                {
+                    hTar = t.TargetHazardReport ?? 2;
+                    insTar = t.TargetInspeksi ?? 1;
+                    stTar = t.TargetSafetyTalk ?? 1;
+                    obsTar = t.TargetObservasi ?? 0;
+                    cTar = t.TargetCoaching ?? 0;
+                }
+
+                if (hTar + insTar + stTar + obsTar + cTar == 0)
+                {
+                    continue;
+                }
+
+                var nik = (emp.NoNik ?? string.Empty).Trim();
+                int onsiteDays = totalDaysInMonthTargetDict;
+                bool hasRoster = false;
+
+                var relevantRosters = (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
+                    ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonthM.Date && (r.AkhirCuti.Date >= startOfMonthM.Date || r.AkhirDinas.Date >= startOfMonthM.Date)).ToList()
+                    : null;
+
+                if (relevantRosters != null && relevantRosters.Count > 0)
+                {
+                    hasRoster = true;
+                    int computedOnsite = 0;
+                    for (var cur = startOfMonthM.Date; cur <= endOfMonthM.Date; cur = cur.AddDays(1))
+                    {
+                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
+                        {
+                            bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
+                        }
+                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonthTargetDict);
+                }
+
+                double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthTargetDict : 1.0;
+
+                int mtdTgtH = hasRoster ? ScaleTargetTargetDict(hTar, ratio, onsiteDays) : hTar;
+                int mtdTgtI = hasRoster ? ScaleTargetTargetDict(insTar, ratio, onsiteDays) : insTar;
+                int mtdTgtST = hasRoster ? ScaleTargetTargetDict(stTar, ratio, onsiteDays) : stTar;
+                int mtdTgtO = hasRoster ? ScaleTargetTargetDict(obsTar, ratio, onsiteDays) : obsTar;
+                int mtdTgtC = hasRoster ? ScaleTargetTargetDict(cTar, ratio, onsiteDays) : cTar;
+
+                int empTotalTarget = mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC;
+                if (empTotalTarget > 0)
+                {
+                    if (targetDict.ContainsKey(emp.IdPerusahaan))
+                    {
+                        targetDict[emp.IdPerusahaan] += empTotalTarget;
+                    }
+                    else
+                    {
+                        targetDict[emp.IdPerusahaan] = empTotalTarget;
+                    }
+                }
+            }
+
+            var compQualitySummary = await _qualityService.GetMonthlyQualityStatsAsync(selectedYear, selectedMonth);
+            var performanceList = new List<CompanyPerformanceViewModel>();
+            int maxKuantitas = 1;
+            int maxTargetAll = 1;
+            foreach (var kv in targetDict) { if (kv.Value > maxTargetAll) maxTargetAll = kv.Value; }
+
+            foreach (var comp in allCompanies)
+            {
+                int cId = comp.PerusahaanId;
+                int hC = hazardCounts.TryGetValue(cId, out int v1) ? v1 : 0;
+                int hCClosed = closedHazardCounts.TryGetValue(cId, out int v7) ? v7 : 0;
+                int iC = inspCounts.TryGetValue(cId, out int v2) ? v2 : 0;
+                int sC = stCounts.TryGetValue(cId, out int v3) ? v3 : 0;
+                int oC = obsCounts.TryGetValue(cId, out int v4) ? v4 : 0;
+                int pC = p5mCounts.TryGetValue(cId, out int v5) ? v5 : 0;
+                int coaC = coaCounts.TryGetValue(cId, out int v6) ? v6 : 0;
+                
+                int totalTemuan = hC + iC + sC + oC + pC + coaC;
+                int totalTarget = targetDict.TryGetValue(cId, out int tgt) ? tgt : 0;
+                
+                if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
+
+                int totalAp = 0;
+                int closedAp = 0;
+                double sumDays = 0;
+                int apWithDays = 0;
+
+                if (apGroups.TryGetValue(cId, out var apList))
+                {
+                    totalAp = apList.Count;
+                    foreach (var ap in apList)
+                    {
+                        if (isClosedStatusRank(ap.Status))
+                        {
+                            closedAp++;
+                            if (ap.TanggalPerbaikan.HasValue)
+                            {
+                                var diff = (ap.TanggalPerbaikan.Value - ap.Tanggal).TotalDays;
+                                sumDays += Math.Max(0, diff);
+                                apWithDays++;
+                            }
+                        }
+                    }
+                }
+
+                // Close rate adalah beban pembuat SAP (berdasarkan Hazard & Action Plan yang dibuat perusahaan cId)
+                int effectiveTotalAp = totalAp >= hC && totalAp > 0 ? totalAp : hC;
+                int effectiveClosedAp = totalAp >= hC && totalAp > 0 ? closedAp : hCClosed;
+
+                double closeRate = effectiveTotalAp > 0 ? ((double)effectiveClosedAp / effectiveTotalAp * 100.0) : 100.0;
+                double avgSpeed = apWithDays > 0 ? sumDays / apWithDays : (effectiveClosedAp > 0 ? 1 : 14); // default speed
+
+                if (totalTemuan > 0)
+                {
+                    performanceList.Add(new CompanyPerformanceViewModel
+                    {
+                        PerusahaanId = cId,
+                        CompanyName = comp.NamaPerusahaan ?? "Unknown",
+                        TotalTemuan = totalTemuan,
+                        TotalTarget = totalTarget,
+                        TotalHazard = hC,
+                        TotalClosedHazard = hCClosed,
+                        TotalActionPlan = effectiveTotalAp,
+                        TotalClosedActionPlan = effectiveClosedAp,
+                        CloseRate = closeRate,
+                        AvgSpeedDays = avgSpeed,
+                        AvgQuality = (compQualitySummary.CompStats.TryGetValue(cId, out var cQComp) && cQComp.TotalRated > 0)
+                            ? Math.Round((cQComp.ScoreKualitas / 100.0) * 5.0, 2)
+                            : 5.0
+                    });
+                }
+            }
+
+            foreach (var p in performanceList)
+            {
+                p.MaxTargetAll = maxTargetAll;
+                p.ScorePencapaian = p.TotalTarget > 0 ? Math.Min(100.0, ((double)p.TotalTemuan / p.TotalTarget) * 100.0) : (p.TotalTemuan > 0 ? 100.0 : 0.0);
+                p.ScoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10(p.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
+                p.ScoreCloseRate = p.CloseRate;
+                p.ScoreKualitas = (p.AvgQuality / 5.0) * 100.0;
+                
+                // Speed Score (Kecepatan dihapus dari bobot penilaian skor total)
+                p.ScoreKecepatan = Math.Max(0.0, 100.0 - (p.AvgSpeedDays / 14.0 * 100.0));
+
+                if (isCurrentNewPolicy)
+                {
+                    // Kebijakan Baru (Mulai September 2026): Capaian 35% + Close Rate 30% + Kualitas SAP 25% + Skala Beban 10% (Kecepatan 0%)
+                    p.TotalScore = (p.ScorePencapaian * 0.35) + (p.ScoreCloseRate * 0.30) + (p.ScoreKualitas * 0.25) + (p.ScoreSkalaBeban * 0.10);
+                }
+                else
+                {
+                    // Kebijakan Historis (Sebelum September 2026): Multi-faktor 40-25-20-15 (Kecepatan 0%, Kualitas 25%)
+                    p.TotalScore = (p.ScoreCloseRate * 0.40) + (p.ScoreKualitas * 0.25) + (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15);
+                }
+            }
+
+            ViewBag.MaxTargetAll = maxTargetAll;
+            var topPerfList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();
+            ViewBag.TopPerformanceList = topPerfList;
+
+            var selectedComp = allowedCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId);
+            var aiComplianceAnalysis = Services.SapComplianceAiEngine.AnalyzeCompliance(
+                selectedYear,
+                selectedMonth,
+                selectedCompanyId,
+                selectedComp?.NamaPerusahaan,
+                departmentName,
+                mainconGroupComparisonList,
+                topPerfList,
+                neverLoggedInGrouped
+            );
+            ViewBag.AiComplianceAnalysis = aiComplianceAnalysis;
+
+            return View(new List<ComplianceEmployeeViewModel>());
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> GetGeoSafetyRadar(string? area = null, int? year = null, int? month = null)
+        {
+            var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, area?.Trim(), true, year, month);
+
+            return Json(new
+            {
+                hazardPoints = geoSafetyData.HazardPoints,
+                inspectionPoints = geoSafetyData.InspectionPoints,
+                p5mPoints = geoSafetyData.P5mPoints,
+                safetyTalkPoints = geoSafetyData.SafetyTalkPoints,
+                geoAreaOptions = geoSafetyData.GeoAreaOptions,
+                selectedGeoArea = geoSafetyData.SelectedGeoArea
+            });
+        }
+
+        private static bool TryParseCoordinates(string? lokasi, out double lat, out double lon)
+        {
+            lat = 0;
+            lon = 0;
+            if (string.IsNullOrWhiteSpace(lokasi)) return false;
+
+            var match = System.Text.RegularExpressions.Regex.Match(lokasi, @"(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)");
+            if (!match.Success) return false;
+
+            return double.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lat) &&
+                   double.TryParse(match.Groups[2].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lon);
+        }
+
+        private static string? NormalizeImagePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            var normalized = path.Trim();
+            if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return "/ImageProxy/Get?url=" + Uri.EscapeDataString(normalized);
+            }
+            if (normalized.StartsWith("/", StringComparison.Ordinal))
+            {
+                return normalized;
+            }
+
+            return "/" + normalized.TrimStart('/');
+        }
+
+        private static string? ExtractFirstInspectionImageUrl(string? lampiranJson)
+        {
+            if (string.IsNullOrWhiteSpace(lampiranJson)) return null;
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(lampiranJson);
+                if (dict == null || dict.Count == 0) return null;
+
+                foreach (var value in dict.Values)
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return NormalizeImagePath(value);
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadUncompliantReport(string range = "week")
+        {
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+
+            if (!isSafetyRole)
+            {
+                return Forbid();
+            }
+
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+
+            if (isAdmin || isSafetyRole)
+            {
+                companyId = null;
+            }
+
+            // Date ranges
+            var now = DateTime.Now;
+            var startOfWeek = DateTime.Today.AddDays(-6); // rolling 7 calendar days (today inclusive)
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+            var targetStart = range == "month" ? startOfMonth : startOfWeek;
+
+            // Query active employees
+            var allKaryawansQuery = from k in _context.Karyawans
+                                    join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                    join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                    from d in dg.DefaultIfEmpty()
+                                    join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
+                                    from c in cg.DefaultIfEmpty()
+                                    where k.StatusAktif == true && (companyId == null || k.IdPerusahaan == companyId.Value)
+                                    select new
+                                    {
+                                        k.NoNik,
+                                        p.NamaLengkap,
+                                        NamaDepartemen = d != null ? d.NamaDepartemen : "General",
+                                        NamaPerusahaan = c != null ? c.NamaPerusahaan : "Unknown"
+                                    };
+            var activeKaryawans = await allKaryawansQuery.ToListAsync();
+
+            // Submissions query
+            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId) && h.Tanggal >= targetStart);
+            var inspections = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId) && i.Tanggal >= targetStart);
+            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId) && s.Tanggal >= targetStart);
+            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId) && p.Tanggal >= targetStart);
+            var coachings = _context.Coachings.Where(c => !c.IsDeleted && (companyId == null || c.PerusahaanId == companyId) && c.CreatedAt >= targetStart);
+
+            // Average closure days for this company
+            var closedActions = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value))
+                .Select(a => new { a.CreatedAt, a.TanggalPerbaikan })
+                .ToListAsync();
+
+            double avgClosureDays = 0;
+            if (closedActions.Count > 0)
+            {
+                var totalDays = closedActions.Sum(a => ((a.TanggalPerbaikan ?? a.CreatedAt) - a.CreatedAt).TotalDays);
+                avgClosureDays = Math.Round(totalDays / closedActions.Count, 1);
+            }
+
+            var allKaryawansList = await _context.Karyawans.Where(k => k.StatusAktif).ToListAsync();
+            var targetMappings = await _context.KaryawanJabatanMappings.ToListAsync();
+            var mappingsDict = new Dictionary<int, KaryawanJabatanMappingPreviewView>();
+            foreach (var m in targetMappings)
+            {
+                mappingsDict[m.KaryawanId] = m;
+            }
+
+            var employeeTargetsByNik = new Dictionary<string, (int hazard, int total)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var k in allKaryawansList)
+            {
+                int hTar = 2;
+                int insTar = 1;
+                int stTar = 1;
+                int obsTar = 0;
+                int cTar = 0;
+
+                if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
+                {
+                    hTar = m.TargetHazardReport ?? 2;
+                    insTar = m.TargetInspeksi ?? 1;
+                    stTar = m.TargetSafetyTalk ?? 1;
+                    obsTar = m.TargetObservasi ?? 0;
+                    cTar = m.TargetCoaching ?? 0;
+                }
+
+                int totalTar = hTar + insTar + stTar + obsTar + cTar;
+                var cleanNik = (k.NoNik ?? string.Empty).Trim();
+                if (!string.IsNullOrEmpty(cleanNik))
+                {
+                    employeeTargetsByNik[cleanNik] = (hTar, totalTar);
+                }
+            }
+
+            var submitters = new Dictionary<string, int>();
+            var hazNiks = await hazards.Where(h => h.Nik != null).Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, Temuan = h.Temuan.Substring(0, 100) }).Distinct().Select(h => h.Nik).ToListAsync();
+            var insNiks = await inspections.Where(i => i.Nik != null).Select(i => new { Nik = i.Nik.Trim(), i.Tanggal, i.Waktu }).Distinct().Select(i => i.Nik).ToListAsync();
+            var rawSafNiks = await safetyTalks.Where(s => s.Nik != null).Select(s => new { Nik = s.Nik.Trim(), s.Tanggal }).ToListAsync();
+            var safNiks = rawSafNiks.Select(s => s.Nik).ToList();
+            var p5mNiks = await p5ms.Where(p => p.Nik != null).Select(p => new { Nik = p.Nik.Trim(), p.Tanggal, p.Waktu }).Distinct().Select(p => p.Nik).ToListAsync();
+
+            foreach (var nik in hazNiks.Concat(insNiks).Concat(safNiks).Concat(p5mNiks))
+            {
+                if (string.IsNullOrEmpty(nik)) continue;
+                var cleanNik = nik.Trim();
+                submitters[cleanNik] = submitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
+            }
+
+            var coachList = await coachings.Where(c => c.Nik != null).Select(c => new { c.Id, Nik = c.Nik.Trim(), c.Tanggal, c.Waktu }).Distinct().ToListAsync();
+            foreach (var item in coachList)
+            {
+                if (!string.IsNullOrEmpty(item.Nik))
+                {
+                    var cleanNik = item.Nik.Trim();
+                    submitters[cleanNik] = submitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
+                }
+                var pts = await _context.CoachingParticipants.Where(p => p.CoachingId == item.Id && p.Nik != null).Select(p => p.Nik.Trim()).Distinct().ToListAsync();
+                foreach (var pNik in pts)
+                {
+                    if (!string.IsNullOrEmpty(pNik))
+                    {
+                        var cleanNik = pNik.Trim();
+                        submitters[cleanNik] = submitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
+                    }
+                }
+            }
+
+            var uncompliantList = new List<UncompliantEmployeeViewModel>();
+            foreach (var k in activeKaryawans)
+            {
+                var cleanNik = k.NoNik.Trim();
+                int count = submitters.ContainsKey(cleanNik) ? submitters[cleanNik] : 0;
+
+                int empTotalMonthlyTarget = 4;
+                if (employeeTargetsByNik.TryGetValue(cleanNik, out var et))
+                {
+                    empTotalMonthlyTarget = et.total;
+                }
+
+                if (empTotalMonthlyTarget > 0)
+                {
+                    if (range == "week")
+                    {
+                        int empWeeklyTarget = (int)Math.Round(empTotalMonthlyTarget / 4.0, MidpointRounding.AwayFromZero);
+                        if (empWeeklyTarget < 1) empWeeklyTarget = 1;
+
+                        if (count < empWeeklyTarget)
+                        {
+                            uncompliantList.Add(new UncompliantEmployeeViewModel
+                            {
+                                Nik = k.NoNik,
+                                Nama = k.NamaLengkap,
+                                Departemen = k.NamaDepartemen,
+                                Perusahaan = k.NamaPerusahaan,
+                                SubmissionCount = count
+                            });
+                        }
+                    }
+                    else if (range == "month")
+                    {
+                        if (count < empTotalMonthlyTarget)
+                        {
+                            uncompliantList.Add(new UncompliantEmployeeViewModel
+                            {
+                                Nik = k.NoNik,
+                                Nama = k.NamaLengkap,
+                                Departemen = k.NamaDepartemen,
+                                Perusahaan = k.NamaPerusahaan,
+                                SubmissionCount = count
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Retrieve full submission history details
+            var allHazards = await hazards.OrderByDescending(h => h.CreatedAt).Select(h => new PerformanceHistoryViewModel
+            {
+                Type = "Hazard",
+                Title = h.Lokasi ?? h.Area ?? "Umum",
+                Description = h.Temuan ?? "",
+                Date = h.CreatedAt,
+                Nik = h.Nik,
+                User = h.Nama
+            }).ToListAsync();
+
+            var allInspections = await inspections.OrderByDescending(i => i.CreatedAt).Select(i => new PerformanceHistoryViewModel
+            {
+                Type = "Inspection",
+                Title = i.JenisInspeksi ?? "Umum",
+                Description = "Area " + (i.Area ?? "umum"),
+                Date = i.CreatedAt,
+                Nik = i.Nik,
+                User = i.Nama
+            }).ToListAsync();
+
+            var allSafetyTalks = await safetyTalks.OrderByDescending(s => s.CreatedAt).Select(s => new PerformanceHistoryViewModel
+            {
+                Type = "SafetyTalk",
+                Title = s.Judul ?? "Talk",
+                Description = s.Keterangan ?? "",
+                Date = s.CreatedAt,
+                Nik = s.Nik,
+                User = s.Nama
+            }).ToListAsync();
+
+            var allP5ms = await p5ms.OrderByDescending(p => p.CreatedAt).Select(p => new PerformanceHistoryViewModel
+            {
+                Type = "P5m",
+                Title = p.Judul ?? "Pre-Start",
+                Description = p.Keterangan ?? "",
+                Date = p.CreatedAt,
+                Nik = p.Nik,
+                User = p.Nama
+            }).ToListAsync();
+
+            var fullHistory = allHazards.Concat(allInspections).Concat(allSafetyTalks).Concat(allP5ms)
+                .OrderByDescending(x => x.Date)
+                .ToList();
+
+            // Generate ClosedXML Excel with Multi-Sheet
+            using (var workbook = new XLWorkbook())
+            {
+                // ==================== SHEET 1: RINGKASAN ====================
+                var wsSummary = workbook.Worksheets.Add("Ringkasan Performa");
+                
+                wsSummary.Cell(1, 1).Value = "LAPORAN RINGKASAN PERFORMA SAP";
+                wsSummary.Cell(1, 1).Style.Font.Bold = true;
+                wsSummary.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                wsSummary.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini" : "Bulan Ini")}";
+                wsSummary.Cell(2, 1).Style.Font.Italic = true;
+                
+                wsSummary.Cell(3, 1).Value = $"Tanggal Export: {DateTime.Now.ToString("dd MMM yyyy HH:mm")}";
+                wsSummary.Cell(3, 1).Style.Font.Italic = true;
+
+                // Summary KPI Table
+                wsSummary.Cell(5, 1).Value = "METRIK KINERJA SAFETY (KPI)";
+                wsSummary.Cell(5, 2).Value = "NILAI";
+                var sumHeaderRange = wsSummary.Range(5, 1, 5, 2);
+                sumHeaderRange.Style.Font.Bold = true;
+                sumHeaderRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                sumHeaderRange.Style.Font.FontColor = XLColor.White;
+
+                wsSummary.Cell(6, 1).Value = "Total Karyawan Aktif";
+                wsSummary.Cell(6, 2).Value = activeKaryawans.Count;
+
+                wsSummary.Cell(7, 1).Value = "Total Laporan SAP Masuk";
+                wsSummary.Cell(7, 2).Value = hazNiks.Count + insNiks.Count + safNiks.Count + p5mNiks.Count + coachList.Count;
+
+                wsSummary.Cell(8, 1).Value = "Rata-rata Durasi Perbaikan Hazard (Hari)";
+                wsSummary.Cell(8, 2).Value = avgClosureDays;
+
+                wsSummary.Cell(9, 1).Value = "Kepatuhan Target SAP Perusahaan (%)";
+                double totalReal = hazNiks.Count + insNiks.Count + safNiks.Count + p5mNiks.Count + coachList.Count;
+                double totalTar = 0;
+                foreach (var k in activeKaryawans)
+                {
+                    var cleanNik = k.NoNik.Trim();
+                    int empTotalMonthlyTarget = 4;
+                    if (employeeTargetsByNik.TryGetValue(cleanNik, out var et))
+                    {
+                        empTotalMonthlyTarget = et.total;
+                    }
+
+                    if (range == "month")
+                    {
+                        totalTar += empTotalMonthlyTarget;
+                    }
+                    else
+                    {
+                        int empWeeklyTarget = (int)Math.Round(empTotalMonthlyTarget / 4.0, MidpointRounding.AwayFromZero);
+                        if (empWeeklyTarget < 1 && empTotalMonthlyTarget > 0) empWeeklyTarget = 1;
+                        totalTar += empWeeklyTarget;
+                    }
+                }
+
+                wsSummary.Cell(9, 2).Value = totalTar > 0 ? $"{Math.Round(totalReal / totalTar * 100.0, 1)}%" : "0%";
+
+                var tableBorderRange = wsSummary.Range(5, 1, 9, 2);
+                tableBorderRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                tableBorderRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                wsSummary.Columns().AdjustToContents();
+
+                // ==================== SHEET 2: KEPATUHAN KARYAWAN ====================
+                var worksheet = workbook.Worksheets.Add("Belum Buat SAP");
+                
+                worksheet.Cell(1, 1).Value = "LAPORAN KARYAWAN BELUM MEMENUHI KEPATUHAN SAP";
+                worksheet.Cell(1, 1).Style.Font.Bold = true;
+                worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                worksheet.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini (Target Dinamis Per Karyawan)" : "Bulan Ini (Target Dinamis Per Karyawan)")}";
+                worksheet.Cell(2, 1).Style.Font.Italic = true;
+
+                worksheet.Cell(4, 1).Value = "No NIK";
+                worksheet.Cell(4, 2).Value = "Nama Lengkap";
+                worksheet.Cell(4, 3).Value = "Departemen";
+                worksheet.Cell(4, 4).Value = "Perusahaan";
+                worksheet.Cell(4, 5).Value = "Jumlah Laporan Masuk";
+                worksheet.Cell(4, 6).Value = "Status Target";
+
+                var headerRange = worksheet.Range(4, 1, 4, 6);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                headerRange.Style.Font.FontColor = XLColor.White;
+
+                int row = 5;
+                foreach (var emp in uncompliantList)
+                {
+                    worksheet.Cell(row, 1).Value = emp.Nik;
+                    worksheet.Cell(row, 2).Value = emp.Nama;
+                    worksheet.Cell(row, 3).Value = emp.Departemen;
+                    worksheet.Cell(row, 4).Value = emp.Perusahaan;
+                    worksheet.Cell(row, 5).Value = emp.SubmissionCount;
+
+                    int empTotalMonthlyTarget = 4;
+                    if (employeeTargetsByNik.TryGetValue(emp.Nik.Trim(), out var et))
+                    {
+                        empTotalMonthlyTarget = et.total;
+                    }
+                    int empWeeklyTarget = (int)Math.Round(empTotalMonthlyTarget / 4.0, MidpointRounding.AwayFromZero);
+                    if (empWeeklyTarget < 1 && empTotalMonthlyTarget > 0) empWeeklyTarget = 1;
+
+                    worksheet.Cell(row, 6).Value = range == "week" ? $"Kurang Laporan ({emp.SubmissionCount}/{empWeeklyTarget})" : $"Kurang Laporan ({emp.SubmissionCount}/{empTotalMonthlyTarget})";
+
+                    row++;
+                }
+
+                worksheet.Columns().AdjustToContents();
+
+                // ==================== SHEET 3: RIWAYAT AKTIVITAS ====================
+                var wsHistory = workbook.Worksheets.Add("Riwayat Aktivitas SAP");
+                
+                wsHistory.Cell(1, 1).Value = "DAFTAR INPUTAN AKTIVITAS SAP KARYAWAN";
+                wsHistory.Cell(1, 1).Style.Font.Bold = true;
+                wsHistory.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                wsHistory.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini" : "Bulan Ini")}";
+                wsHistory.Cell(2, 1).Style.Font.Italic = true;
+
+                wsHistory.Cell(4, 1).Value = "Tanggal & Waktu";
+                wsHistory.Cell(4, 2).Value = "NIK Pengirim";
+                wsHistory.Cell(4, 3).Value = "Nama Pengirim";
+                wsHistory.Cell(4, 4).Value = "Modul SAP";
+                wsHistory.Cell(4, 5).Value = "Lokasi/Judul";
+                wsHistory.Cell(4, 6).Value = "Deskripsi Temuan/Keterangan";
+
+                var histHeaderRange = wsHistory.Range(4, 1, 4, 6);
+                histHeaderRange.Style.Font.Bold = true;
+                histHeaderRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                histHeaderRange.Style.Font.FontColor = XLColor.White;
+
+                int hRow = 5;
+                foreach (var hist in fullHistory)
+                {
+                    wsHistory.Cell(hRow, 1).Value = hist.Date.ToString("yyyy-MM-dd HH:mm");
+                    wsHistory.Cell(hRow, 2).Value = hist.Nik;
+                    wsHistory.Cell(hRow, 3).Value = hist.User;
+                    wsHistory.Cell(hRow, 4).Value = hist.Type;
+                    wsHistory.Cell(hRow, 5).Value = hist.Title;
+                    wsHistory.Cell(hRow, 6).Value = hist.Description;
+
+                    hRow++;
+                }
+
+                wsHistory.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string fileName = $"Laporan_SAP_Safety_{range}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+        }
+
+        [HttpGet]
+        [Route("/Performance/ExportHazardSummaryExcel")]
+        public async Task<IActionResult> ExportHazardSummaryExcel()
+        {
+            string primaryPath = @"D:\Summary_TTA_KTA_3Bulan.xlsx";
+            string fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Summary_TTA_KTA_3Bulan.xlsx");
+
+            if (System.IO.File.Exists(primaryPath))
+            {
+                var bytes = await System.IO.File.ReadAllBytesAsync(primaryPath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Summary_TTA_KTA_3Bulan.xlsx");
+            }
+            else if (System.IO.File.Exists(fallbackPath))
+            {
+                var bytes = await System.IO.File.ReadAllBytesAsync(fallbackPath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Summary_TTA_KTA_3Bulan.xlsx");
+            }
+
+            return NotFound("File Summary TTA & KTA belum tersedia.");
+        }
+
+        private bool CheckIsSafetyRole(string? jobTitle, string? department, bool isAdmin)
+        {
+            if (isAdmin) return true;
+            if (string.IsNullOrEmpty(jobTitle) && string.IsNullOrEmpty(department)) return false;
+
+            var subKeywords = new[] { "safety", "hse", "ohs", "k3" };
+            
+            if (!string.IsNullOrEmpty(jobTitle))
+            {
+                foreach (var kw in subKeywords)
+                {
+                    if (jobTitle.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                if (System.Text.RegularExpressions.Regex.IsMatch(jobTitle, @"\b(she)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(department))
+            {
+                foreach (var kw in subKeywords)
+                {
+                    if (department.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                if (System.Text.RegularExpressions.Regex.IsMatch(department, @"\b(she)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private List<KaryawanView> FilterEmployeesByParentScope(List<KaryawanView> employees, int parentId, List<PerusahaanView> allCompanies, List<PerusahaanHierarchyRelationView> relations)
+        {
+            var companyParentsMap = new Dictionary<int, HashSet<int>>();
+            foreach (var c in allCompanies)
+            {
+                var parents = new HashSet<int>();
+                if (c.PerusahaanIndukId.HasValue && c.PerusahaanIndukId.Value > 0)
+                {
+                    parents.Add(c.PerusahaanIndukId.Value);
+                }
+                var relParents = relations
+                    .Where(r => r.ChildCompanyId == c.PerusahaanId && r.ParentCompanyId.HasValue && r.ParentIsActive == true)
+                    .Select(r => r.ParentCompanyId!.Value);
+                foreach (var pId in relParents)
+                {
+                    parents.Add(pId);
+                }
+                companyParentsMap[c.PerusahaanId] = parents;
+            }
+
+            return employees.Where(emp => {
+                if (emp.IdPerusahaan == parentId)
+                {
+                    return true;
+                }
+                
+                if (companyParentsMap.TryGetValue(emp.IdPerusahaan, out var parents))
+                {
+                    if (parents.Count > 1)
+                    {
+                        var relasiIds = relations
+                            .Where(r => r.ChildCompanyId == emp.IdPerusahaan && (r.ParentCompanyId == parentId || r.RelasiId == parentId))
+                            .Select(r => r.RelasiId)
+                            .Where(id => id.HasValue)
+                            .Select(id => id!.Value)
+                            .ToList();
+
+                        var allowedNodeIds = new HashSet<int> { parentId };
+                        foreach (var relId in relasiIds)
+                        {
+                            allowedNodeIds.Add(relId);
+                        }
+
+                        return emp.PerusahaanNodeId.HasValue && allowedNodeIds.Contains(emp.PerusahaanNodeId.Value);
+                    }
+                }
+                
+                return true;
+            }).ToList();
+        }
+    }
+
+    public class CompanyLeaderboardViewModel
+    {
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public int ActiveEmployees { get; set; }
+        public int TotalSubmissions { get; set; }
+        public int TargetSubmissions { get; set; }
+        public double AchievementRate { get; set; }
+    }
+
+    public class MonthlyTrendViewModel
+    {
+        public string MonthLabel { get; set; } = string.Empty;
+        public int Hazards { get; set; }
+        public int Inspections { get; set; }
+        public int SafetyTalks { get; set; }
+        public int P5ms { get; set; }
+        public int Observations { get; set; }
+        public int Coachings { get; set; }
+        public int TotalSap { get; set; }
+        public int Incidents { get; set; }
+    }
+
+    public class UncompliantEmployeeViewModel
+    {
+        public string Nik { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string Departemen { get; set; } = string.Empty;
+        public string Perusahaan { get; set; } = string.Empty;
+        public int SubmissionCount { get; set; }
+    }
+
+    public class PerformanceHistoryViewModel
+    {
+        public string Type { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public string Nik { get; set; } = string.Empty;
+        public string User { get; set; } = string.Empty;
+    }
+
+    public class GeoSafetyPointViewModel
+    {
+        public int Id { get; set; }
+        public double Lat { get; set; }
+        public double Lon { get; set; }
+        public string Tanggal { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string? Area { get; set; }
+        public string? Detail { get; set; }
+        public string? Resiko { get; set; }
+        public string? Status { get; set; }
+        public string? PhotoUrl { get; set; }
+    }
+
+    public class GeoSafetyRadarViewModel
+    {
+        public List<GeoSafetyPointViewModel> HazardPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> InspectionPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> P5mPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> SafetyTalkPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<string> GeoAreaOptions { get; set; } = new List<string>();
+        public string? SelectedGeoArea { get; set; }
+    }
+
+    public class CompanyHierarchyNode
+    {
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public int? ParentCompanyId { get; set; }
+        
+        // Own stats
+        public int OwnEmployees { get; set; }
+        public int OwnSubmissions { get; set; }
+        public int OwnTarget { get; set; }
+        public double OwnAchievementRate { get; set; }
+        public int OwnWeeklyHazards { get; set; }
+        public int OwnWeeklyTarget { get; set; }
+        public int OwnYtdHazards { get; set; }
+        public int OwnYtdTarget { get; set; }
+        public double OwnWeeklyAchievementRate { get; set; }
+        public double OwnMonthlyAchievementRate { get; set; }
+        public double OwnYtdAchievementRate { get; set; }
+
+        // Cumulative (Group) stats
+        public int CumulativeEmployees { get; set; }
+        public int CumulativeSubmissions { get; set; }
+        public int CumulativeTarget { get; set; }
+        public double CumulativeAchievementRate { get; set; }
+        public int CumulativeWeeklyHazards { get; set; }
+        public int CumulativeWeeklyTarget { get; set; }
+        public int CumulativeYtdHazards { get; set; }
+        public int CumulativeYtdTarget { get; set; }
+        public double CumulativeWeeklyAchievementRate { get; set; }
+        public double CumulativeMonthlyAchievementRate { get; set; }
+        public double CumulativeYtdAchievementRate { get; set; }
+
+        public List<DepartmentAchievementViewModel> DepartmentAchievements { get; set; } = new List<DepartmentAchievementViewModel>();
+
+        public List<CompanyHierarchyNode> Children { get; set; } = new List<CompanyHierarchyNode>();
+    }
+
+    public class DepartmentAchievementViewModel
+    {
+        public string DepartmentName { get; set; } = string.Empty;
+        public int EmployeeCount { get; set; }
+        public int TotalTarget { get; set; }
+        public double YtdAchievementRate { get; set; }
+        public double MtdAchievementRate { get; set; }
+        public double WeeklyAchievementRate { get; set; }
+
+        public double YtdHazardRate { get; set; }
+        public double YtdInspeksiRate { get; set; }
+        public double YtdSafetyTalkRate { get; set; }
+        public double YtdP5mRate { get; set; }
+        public double YtdObservasiRate { get; set; }
+        public double YtdCoachingRate { get; set; }
+
+        public double MtdHazardRate { get; set; }
+        public double MtdInspeksiRate { get; set; }
+        public double MtdSafetyTalkRate { get; set; }
+        public double MtdP5mRate { get; set; }
+        public double MtdCloseRate { get; set; } = 100.0;
+        public double MtdObservasiRate { get; set; }
+        public double MtdCoachingRate { get; set; }
+        public double YtdCloseRate { get; set; } = 100.0;
+
+        // 4-Pillar PTS Scoring
+        public double ScoreCloseRate { get; set; }
+        public double ScoreKualitas { get; set; } = 100.0;
+        public double ScoreCapaian { get; set; }
+        public double ScoreSkalaBeban { get; set; }
+        public double PtsClose { get; set; }
+        public double PtsKualitas { get; set; }
+        public double PtsCapaian { get; set; }
+        public double PtsBeban { get; set; }
+        public double TotalScore { get; set; }
+        public int MaxTargetDept { get; set; }
+
+        // Raw counts for 6 programs
+        public int TotalActual { get; set; }
+        public int HazardActual { get; set; }
+        public int HazardTarget { get; set; }
+        public int InspeksiActual { get; set; }
+        public int InspeksiTarget { get; set; }
+        public int SafetyTalkActual { get; set; }
+        public int SafetyTalkTarget { get; set; }
+        public int ObservasiActual { get; set; }
+        public int ObservasiTarget { get; set; }
+        public int CoachingActual { get; set; }
+        public int CoachingTarget { get; set; }
+        public int P5mActual { get; set; }
+        public int P5mTarget { get; set; }
+        public int ApTotal { get; set; }
+        public int ApClosed { get; set; }
+    }
+
+    public class ComplianceEmployeeViewModel
+    {
+        public string KaryawanName { get; set; } = string.Empty;
+        public string Nik { get; set; } = string.Empty;
+        public string DepartmentName { get; set; } = string.Empty;
+        public string JabatanName { get; set; } = string.Empty;
+        public int CompanyId { get; set; }
+        public int MtdTotalTarget { get; set; }
+        public int MtdTotalActual { get; set; }
+        public double ComplianceRate { get; set; }
+        public ComplianceItemDetail Hazard { get; set; } = new();
+        public ComplianceItemDetail Inspeksi { get; set; } = new();
+        public ComplianceItemDetail SafetyTalk { get; set; } = new();
+        public ComplianceItemDetail Observasi { get; set; } = new();
+        public ComplianceItemDetail Coaching { get; set; } = new();
+        public ComplianceItemDetail P5m { get; set; } = new();
+    }
+
+    public class ComplianceItemDetail
+    {
+        public int Target { get; set; }
+        public int Actual { get; set; }
+    }
+
+    public class ComplianceGroupStatViewModel
+    {
+        public string GroupName { get; set; } = string.Empty;
+        public int TotalCreated { get; set; }
+        public int OpenCount { get; set; }
+        public int ClosedCount { get; set; }
+        public double ClosureRate => TotalCreated > 0 ? Math.Round((double)ClosedCount / TotalCreated * 100.0, 1) : 0;
+    }
+
+    public class MainconGroupComparisonViewModel
+    {
+        public int MainconId { get; set; }
+        public string MainconName { get; set; } = string.Empty;
+        public string Category { get; set; } = "Utama"; // "Utama", "Mitra", "Total"
+        public string ParentGroup { get; set; } = string.Empty; // "INDEXIM", "KPP", "UDU", "MGE"
+        public int SortOrder { get; set; }
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTargetCount { get; set; }
+        public List<string> ChildCompanyNames { get; set; } = new();
+        public List<string> UncompliantChildCompanyNames { get; set; } = new();
+        public List<string> NoTargetChildCompanyNames { get; set; } = new();
+        public double SapSubmissionRate { get; set; }
+        public double ActionPlanClosureRate { get; set; }
+        public int TotalActionPlans { get; set; }
+        public int ClosedActionPlans { get; set; }
+        public int OpenActionPlans { get; set; }
+        public double OverallComplianceRate { get; set; }
+        public double HazardComplianceRate { get; set; }
+        public double InspeksiComplianceRate { get; set; }
+        public double SafetyTalkComplianceRate { get; set; }
+        public double ObservasiComplianceRate { get; set; }
+        public double CoachingComplianceRate { get; set; }
+
+        public int TargetHazard { get; set; }
+        public int ActualHazard { get; set; }
+        public int TargetInspeksi { get; set; }
+        public int ActualInspeksi { get; set; }
+        public int TargetSafetyTalk { get; set; }
+        public int ActualSafetyTalk { get; set; }
+        public int TargetObservasi { get; set; }
+        public int ActualObservasi { get; set; }
+        public int TargetCoaching { get; set; }
+        public int ActualCoaching { get; set; }
+    }
+
+    public class MostActiveSubconViewModel
+    {
+        public int PerusahaanId { get; set; }
+        public string PerusahaanName { get; set; } = string.Empty;
+        public string ParentCompanyName { get; set; } = string.Empty;
+        public int ParentCompanyId { get; set; }
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double ComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+        public int TargetSubmissions { get; set; }
+    }
+
+    public class MainconPerformanceReportViewModel
+    {
+        public int MainconId { get; set; }
+        public string MainconName { get; set; } = string.Empty;
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double OverallComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+        
+        public double HazardRate { get; set; }
+        public double InspeksiRate { get; set; }
+        public double SafetyTalkRate { get; set; }
+        public double ObservasiRate { get; set; }
+        public double CoachingRate { get; set; }
+
+        public List<SubconPerformanceViewModel> SubconPerformances { get; set; } = new();
+    }
+
+    public class SubconPerformanceViewModel
+    {
+        public int PerusahaanId { get; set; }
+        public string PerusahaanName { get; set; } = string.Empty;
+        public bool IsMaincon { get; set; }
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double OverallComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+
+        public int ActualHazard { get; set; }
+        public int TargetHazard { get; set; }
+        public int ActualInspeksi { get; set; }
+        public int TargetInspeksi { get; set; }
+        public int ActualSafetyTalk { get; set; }
+        public int TargetSafetyTalk { get; set; }
+        public int ActualObservasi { get; set; }
+        public int TargetObservasi { get; set; }
+        public int ActualCoaching { get; set; }
+        public int TargetCoaching { get; set; }
+    }
+
+    public class ActionPlanSummaryItem
+    {
+        public string? Nik { get; set; }
+        public string? NikPic { get; set; }
+        public string? NikPja { get; set; }
+        public string? Departemen { get; set; }
+        public string? DepartemenPic { get; set; }
+        public string? DepartemenPja { get; set; }
+        public int? PerusahaanId { get; set; }
+        public string? Status { get; set; }
+    }
+
+    public class MonthlyComplianceCacheData
+    {
+        public List<string> Hazards { get; set; } = new();
+        public List<string> HazardsClosed { get; set; } = new();
+        public List<string> ActionPlansAll { get; set; } = new();
+        public List<string> ActionPlansClosed { get; set; } = new();
+        public List<ActionPlanSummaryItem> ActionPlansRaw { get; set; } = new();
+        public List<string> Inspections { get; set; } = new();
+        public List<string> SafetyTalks { get; set; } = new();
+        public List<string> P5ms { get; set; } = new();
+        public List<string> Coachings { get; set; } = new();
+        public List<string> Observations { get; set; } = new();
+    }
+
+    public class AreaRiskSubLocationViewModel
+    {
+        public string DetailLokasi { get; set; } = string.Empty;
+        public int? PerusahaanId { get; set; }
+        public string PerusahaanName { get; set; } = string.Empty;
+        public int TotalReports { get; set; }
+        public int HighRisk { get; set; }
+        public int MediumRisk { get; set; }
+        public int LowRisk { get; set; }
+        public int OpenCount { get; set; }
+        public int ClosedCount { get; set; }
+        public double CloseRate { get; set; }
+        public int DangerScore { get; set; }
+        public string DangerLevel { get; set; } = "Rendah";
+        public string DangerBadgeClass { get; set; } = "risk-badge-low";
+        public string TopReporterName { get; set; } = "-";
+        public string TopReporterDept { get; set; } = "-";
+        public int TopReporterCount { get; set; }
+        public string PjaName { get; set; } = "-";
+    }
+
+    public class AreaRiskItemViewModel
+    {
+        public int Rank { get; set; }
+        public string AreaName { get; set; } = string.Empty;
+        public List<string> Companies { get; set; } = new();
+        public int SubLocationsCount { get; set; }
+        public int TotalReports { get; set; }
+        public int HighRisk { get; set; }
+        public int MediumRisk { get; set; }
+        public int LowRisk { get; set; }
+        public int OpenCount { get; set; }
+        public int ClosedCount { get; set; }
+        public double CloseRate { get; set; }
+        public int DangerScore { get; set; }
+        public string DangerLevel { get; set; } = "Rendah";
+        public string DangerBadgeClass { get; set; } = "risk-badge-low";
+        public string TopReporterName { get; set; } = "-";
+        public string TopReporterNik { get; set; } = "-";
+        public string TopReporterDept { get; set; } = "-";
+        public int TopReporterCount { get; set; }
+        public string PjaName { get; set; } = "-";
+        public string PjaNik { get; set; } = "-";
+        public List<AreaRiskSubLocationViewModel> SubLocations { get; set; } = new();
+    }
+}
