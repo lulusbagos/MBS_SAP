@@ -3519,7 +3519,7 @@
                         <i class="bi bi-shield-exclamation text-warning me-2"></i>Peringkat Area Berisiko &amp; Pemetaan Titik Lokasi
                     </h6>
                     <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
-                        Pemetaan hierarki Area Utama &rarr; Breakdown Detail Titik Lokasi per entitas perusahaan, tingkat bahaya, dan progres penutupan temuan.
+                        Pemetaan hierarki Area Utama &rarr; Breakdown Detail Titik Lokasi per entitas perusahaan, tingkat bahaya, dan progres penutupan temuan. <span class="text-primary fw-semibold"><i class="bi bi-hand-index-thumb me-1"></i>Klik baris area untuk melihat detail titik lokasi.</span>
                     </p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -7567,14 +7567,32 @@
             const selCompany = document.getElementById('selAreaRiskCompany');
             if (selCompany) {
                 const currentVal = selCompany.value;
-                selCompany.innerHTML = '<option value="0">Semua Perusahaan (Site-Wide)</option>';
+                selCompany.innerHTML = '';
+
+                if (_areaRiskData.isTopParent) {
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = '0';
+                    defaultOpt.textContent = 'Semua Perusahaan (Site-Wide)';
+                    selCompany.appendChild(defaultOpt);
+                } else if (_areaRiskData.companies.length > 1) {
+                    const groupOpt = document.createElement('option');
+                    groupOpt.value = '-1';
+                    groupOpt.textContent = 'Semua Perusahaan (Grup & Subkon)';
+                    selCompany.appendChild(groupOpt);
+                }
+
                 _areaRiskData.companies.forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c.id;
                     opt.textContent = c.name;
                     selCompany.appendChild(opt);
                 });
-                if (currentVal) selCompany.value = currentVal;
+
+                if (!_areaRiskData.isTopParent && _areaRiskData.myCompanyId > 0) {
+                    selCompany.value = _areaRiskData.myCompanyId;
+                } else if (currentVal && Array.from(selCompany.options).some(o => o.value === currentVal)) {
+                    selCompany.value = currentVal;
+                }
                 _areaRiskCompaniesLoaded = true;
             }
         }
@@ -7697,9 +7715,9 @@
 
             html += `
                 <!-- Master Area Row -->
-                <tr class="area-risk-row" id="areaRow_${item.rank}" data-rank="${item.rank}" data-area-name="${escapeHtml((item.areaName || '').toLowerCase())}">
+                <tr class="area-risk-row" id="areaRow_${item.rank}" data-rank="${item.rank}" data-area-name="${escapeHtml((item.areaName || '').toLowerCase())}" style="cursor: pointer;" onclick="toggleSubLocation(${item.rank})">
                     <td style="text-align: center;">
-                        <button type="button" class="area-expand-btn" id="btnExpand_${item.rank}" onclick="toggleSubLocation(${item.rank})" title="Buka / Tutup Detail Titik Lokasi">
+                        <button type="button" class="area-expand-btn" id="btnExpand_${item.rank}" onclick="event.stopPropagation(); toggleSubLocation(${item.rank});" title="Buka / Tutup Detail Titik Lokasi">
                             <i class="bi bi-chevron-right"></i>
                         </button>
                     </td>

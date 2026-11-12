@@ -2418,10 +2418,21 @@ namespace MBS_SAP.Controllers
             bool isAllYear = selectedMonth <= 0;
 
             var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            int? effectiveCompanyId = (companyId.HasValue && companyId.Value > 0) ? companyId.Value : null;
+            bool isTopParent = !scopeCompanyId.HasValue || scopeCompanyId.Value == 1 || User.IsInRole("Admin") ||
+                               string.Equals(User.FindFirst("Role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+
+            int? effectiveCompanyId = null;
+            if (companyId.HasValue && companyId.Value > 0)
+            {
+                effectiveCompanyId = companyId.Value;
+            }
+            else if (!isTopParent && scopeCompanyId.HasValue && (!companyId.HasValue || companyId.Value == 0))
+            {
+                effectiveCompanyId = scopeCompanyId.Value;
+            }
 
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"AreaRiskAnalytics_v1_{scopeCompanyId}_{selectedYear}_{selectedMonth}_{effectiveCompanyId ?? 0}";
+            var cacheKey = $"AreaRiskAnalytics_v3_{scopeCompanyId}_{selectedYear}_{selectedMonth}_{effectiveCompanyId ?? -1}";
 
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") &&
                                 string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -2452,21 +2463,22 @@ namespace MBS_SAP.Controllers
                 .Select(p => new { id = p.PerusahaanId, name = p.NamaPerusahaan })
                 .ToListAsync();
 
+            var visibleCompanies = isTopParent
+                ? allCompanies
+                : allCompanies.Where(c => allowedCompanyIds.Contains(c.id)).ToList();
+
             var companyDict = allCompanies.ToDictionary(c => c.id, c => c.name);
 
             var hazardQuery = _context.HazardReports.AsNoTracking()
                 .Where(h => !h.IsDeleted && h.Tanggal >= startDate && h.Tanggal <= endDate);
 
-            if (effectiveCompanyId.HasValue)
+            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)))
             {
                 hazardQuery = hazardQuery.Where(h => h.PerusahaanId == effectiveCompanyId.Value);
             }
-            else if (scopeCompanyId.HasValue && !User.IsInRole("Admin") && User.FindFirst("Role")?.Value != "Owner" && scopeCompanyId.Value != 1)
+            else if (!isTopParent)
             {
-                if (!companyId.HasValue)
-                {
-                    hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
-                }
+                hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
             }
 
             var rawList = await hazardQuery
@@ -2710,6 +2722,8 @@ namespace MBS_SAP.Controllers
                 month = selectedMonth,
                 isAllYear = isAllYear,
                 companyId = effectiveCompanyId,
+                myCompanyId = scopeCompanyId ?? 0,
+                isTopParent = isTopParent,
                 summary = new
                 {
                     totalAreas = areaResults.Count,
@@ -2730,7 +2744,7 @@ namespace MBS_SAP.Controllers
                 },
                 areas = areaResults,
                 topReporters = overallTopReporters,
-                companies = allCompanies
+                companies = visibleCompanies
             };
 
             cache.Set(cacheKey, responseData, TimeSpan.FromMinutes(5));
@@ -2746,7 +2760,18 @@ namespace MBS_SAP.Controllers
             bool isAllYear = selectedMonth <= 0;
 
             var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            int? effectiveCompanyId = (companyId.HasValue && companyId.Value > 0) ? companyId.Value : null;
+            bool isTopParent = !scopeCompanyId.HasValue || scopeCompanyId.Value == 1 || User.IsInRole("Admin") ||
+                               string.Equals(User.FindFirst("Role")?.Value, "Owner", StringComparison.OrdinalIgnoreCase);
+
+            int? effectiveCompanyId = null;
+            if (companyId.HasValue && companyId.Value > 0)
+            {
+                effectiveCompanyId = companyId.Value;
+            }
+            else if (!isTopParent && scopeCompanyId.HasValue && (!companyId.HasValue || companyId.Value == 0))
+            {
+                effectiveCompanyId = scopeCompanyId.Value;
+            }
 
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
@@ -2769,21 +2794,22 @@ namespace MBS_SAP.Controllers
                 .Select(p => new { id = p.PerusahaanId, name = p.NamaPerusahaan })
                 .ToListAsync();
 
+            var visibleCompanies = isTopParent
+                ? allCompanies
+                : allCompanies.Where(c => allowedCompanyIds.Contains(c.id)).ToList();
+
             var companyDict = allCompanies.ToDictionary(c => c.id, c => c.name);
 
             var hazardQuery = _context.HazardReports.AsNoTracking()
                 .Where(h => !h.IsDeleted && h.Tanggal >= startDate && h.Tanggal <= endDate);
 
-            if (effectiveCompanyId.HasValue)
+            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)))
             {
                 hazardQuery = hazardQuery.Where(h => h.PerusahaanId == effectiveCompanyId.Value);
             }
-            else if (scopeCompanyId.HasValue && !User.IsInRole("Admin") && User.FindFirst("Role")?.Value != "Owner" && scopeCompanyId.Value != 1)
+            else if (!isTopParent)
             {
-                if (!companyId.HasValue)
-                {
-                    hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
-                }
+                hazardQuery = hazardQuery.Where(h => h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value));
             }
 
             var rawList = await hazardQuery
@@ -2967,8 +2993,8 @@ namespace MBS_SAP.Controllers
             areaResults = areaResults.OrderByDescending(a => a.DangerScore).ThenByDescending(a => a.TotalReports).ToList();
             for (int i = 0; i < areaResults.Count; i++) areaResults[i].Rank = i + 1;
 
-            string selectedCompanyName = "Semua Perusahaan";
-            if (effectiveCompanyId.HasValue && companyDict.TryGetValue(effectiveCompanyId.Value, out var scn))
+            string selectedCompanyName = isTopParent ? "Semua Perusahaan" : (visibleCompanies.Count == 1 ? visibleCompanies[0].name : string.Join(", ", visibleCompanies.Select(c => c.name)));
+            if (effectiveCompanyId.HasValue && (isTopParent || allowedCompanyIds.Contains(effectiveCompanyId.Value)) && companyDict.TryGetValue(effectiveCompanyId.Value, out var scn))
             {
                 selectedCompanyName = scn;
             }
