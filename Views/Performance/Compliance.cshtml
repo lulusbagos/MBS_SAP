@@ -1808,8 +1808,14 @@ _Digenerate Otomatis oleh MBS SAP AI Safety Advisor (Kepmen ESDM 1827 K)_`;
                     Khusus perusahaan di bawah Indexim <strong>kecuali</strong> PT UNGGUL DINAMIKA UTAMA, PT KALIMANTAN PRIMA PERSADA, PT MEGA GLOBAL ENERGY, &amp; PT INDEXIM COALINDO.
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="/Performance/ExportMitraIndeximExcel?year=@selectedYear&month=@selectedMonth"
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <input type="text" id="mitraIndeximSearch" class="form-control form-control-sm" placeholder="Cari mitra..." onkeyup="filterMitraIndeximTable()" style="width: 165px; font-size: 11.5px; border-radius: 8px;" />
+                <select id="mitraIndeximTargetFilter" class="form-select form-select-sm fw-bold" onchange="filterMitraIndeximTable()" style="width: 175px; font-size: 11.5px; border-radius: 8px;">
+                    <option value="ALL">Semua Mitra (@(ViewBag.TopIndeximMitraPerformanceList != null ? ((List<MBS_SAP.Models.CompanyPerformanceViewModel>)ViewBag.TopIndeximMitraPerformanceList).Count : 0))</option>
+                    <option value="TARGET_ONLY">Hanya Wajib SAP &gt; 0</option>
+                </select>
+                <a id="btnExportMitraIndexim"
+                   href="/Performance/ExportMitraIndeximExcel?year=@selectedYear&month=@selectedMonth&onlyWithTarget=false"
                    class="btn btn-sm btn-success fw-bold d-inline-flex align-items-center gap-1"
                    style="font-size: 11px; border-radius: 8px;">
                     <i class="bi bi-file-earmark-excel-fill"></i> Download Excel (@selectedMonthName @selectedYear)
@@ -1869,7 +1875,7 @@ _Digenerate Otomatis oleh MBS SAP AI Safety Advisor (Kepmen ESDM 1827 K)_`;
                                     : (mRank == 3 ? "color: #b45309; font-size: 14px; font-weight: 800;" : "color: var(--text-muted); font-weight: 700;"));
                                 string mCloseColor = comp.ScoreCloseRate >= 80 ? "#10b981" : (comp.ScoreCloseRate >= 50 ? "#f59e0b" : "#ef4444");
 
-                                <tr style="@mRowBg border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="window.location.href='/Performance/Compliance?companyId=@comp.PerusahaanId&month=@ViewBag.SelectedMonth&year=@ViewBag.SelectedYear'">
+                                <tr class="mitra-indexim-row" data-name="@((comp.CompanyName ?? "").ToLowerInvariant())" data-has-target="@(comp.TotalTarget > 0 ? "1" : "0")" style="@mRowBg border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="window.location.href='/Performance/Compliance?companyId=@comp.PerusahaanId&month=@ViewBag.SelectedMonth&year=@ViewBag.SelectedYear'">
                                     <td class="text-center align-middle" style="@mRankStyle">
                                         @if (mRank <= 3)
                                         {
@@ -1931,6 +1937,32 @@ _Digenerate Otomatis oleh MBS SAP AI Safety Advisor (Kepmen ESDM 1827 K)_`;
                         </tbody>
                     </table>
                 </div>
+                <script>
+                    function filterMitraIndeximTable() {
+                        const q = (document.getElementById('mitraIndeximSearch')?.value || '').toLowerCase().trim();
+                        const mode = document.getElementById('mitraIndeximTargetFilter')?.value || 'ALL';
+                        const rows = document.querySelectorAll('.mitra-indexim-row');
+                        let visibleRank = 1;
+                        rows.forEach(tr => {
+                            const name = tr.getAttribute('data-name') || '';
+                            const hasTarget = tr.getAttribute('data-has-target') === '1';
+                            const show = (!q || name.includes(q)) && (mode !== 'TARGET_ONLY' || hasTarget);
+                            tr.style.display = show ? '' : 'none';
+                            if (show) {
+                                const rankCell = tr.querySelector('td:first-child');
+                                if (rankCell) {
+                                    rankCell.innerHTML = visibleRank <= 3 ? `<i class="bi bi-medal-fill"></i> ${visibleRank}` : `${visibleRank}`;
+                                }
+                                visibleRank++;
+                            }
+                        });
+                        const btn = document.getElementById('btnExportMitraIndexim');
+                        if (btn) {
+                            const onlyTarget = mode === 'TARGET_ONLY';
+                            btn.href = `/Performance/ExportMitraIndeximExcel?year=@selectedYear&month=@selectedMonth&onlyWithTarget=${onlyTarget}`;
+                        }
+                    }
+                </script>
             }
             else
             {

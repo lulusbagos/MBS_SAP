@@ -11666,7 +11666,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportMitraIndeximExcel(int? year = null, int? month = null)
+        public async Task<IActionResult> ExportMitraIndeximExcel(int? year = null, int? month = null, bool onlyWithTarget = false)
         {
             int selectedYear = year ?? DateTime.Today.Year;
             int selectedMonth = (month.HasValue && month.Value >= 1 && month.Value <= 12) ? month.Value : DateTime.Today.Month;
@@ -11793,6 +11793,11 @@ namespace MBS_SAP.Controllers
                     cTgt, cCap, cRaw,
                     p5mTgt, p5mRaw
                 ));
+            }
+
+            if (onlyWithTarget)
+            {
+                rows = rows.Where(r => r.TargetEmps > 0).ToList();
             }
 
             rows = rows
@@ -12185,7 +12190,7 @@ namespace MBS_SAP.Controllers
                 hRng.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
                 var vRng = wsExec.Range(5, cs, 5, ce).Merge();
-                vRng.FormulaA1 = formula;
+                wsExec.Cell(5, cs).FormulaA1 = formula;
                 vRng.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
                 vRng.Style.Font.Bold = true;
                 vRng.Style.Font.FontSize = 15;
