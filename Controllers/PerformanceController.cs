@@ -532,6 +532,7 @@ namespace MBS_SAP.Controllers
             var p5ms = new List<string>();
             var coachings = new List<string>();
             var observations = new List<string>();
+            var reportsByNik = new Dictionary<string, List<SapReportTimestampItem>>(StringComparer.OrdinalIgnoreCase);
 
             // isClosedStatus check is handled by static IsClosedStatus
 
@@ -543,6 +544,7 @@ namespace MBS_SAP.Controllers
                 var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
 
                 List<string> dbHazards, dbHazardsClosed, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
+                List<SapReportTimestampItem> allTimeline;
 
                 if (HttpContext.Items[reqCacheKey] is MonthlyComplianceCacheData cachedData)
                 {
@@ -554,6 +556,7 @@ namespace MBS_SAP.Controllers
                     dbP5ms = cachedData.P5ms;
                     allCoachings = cachedData.Coachings;
                     dbObservations = cachedData.Observations;
+                    allTimeline = cachedData.AllReportsTimeline ?? new List<SapReportTimestampItem>();
                 }
                 else
                 {
@@ -568,13 +571,13 @@ namespace MBS_SAP.Controllers
 
                     rawActionPlansList = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
-                    dbInspections = (await _context.Inspections
+                    var rawInspections = (await _context.Inspections
                         .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && i.Nik != null)
                         .Select(i => new { Nik = i.Nik.Trim(), i.Tanggal, i.Waktu })
                         .Distinct()
-                        .ToListAsync())
-                        .Select(i => i.Nik)
-                        .ToList();
+                        .ToListAsync());
+
+                    dbInspections = rawInspections.Select(i => i.Nik).ToList();
 
                     var rawSafetyTalks = await _context.SafetyTalks
                         .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && s.Nik != null)
@@ -584,21 +587,19 @@ namespace MBS_SAP.Controllers
 
                     dbSafetyTalks = rawSafetyTalks.Select(s => s.Nik).ToList();
 
-                    dbP5ms = (await _context.P5ms
+                    var rawP5ms = (await _context.P5ms
                         .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && p.Nik != null)
                         .Select(p => new { Nik = p.Nik.Trim(), p.Tanggal, p.Waktu })
                         .Distinct()
-                        .ToListAsync())
-                        .Select(p => p.Nik)
-                        .ToList();
+                        .ToListAsync());
+
+                    dbP5ms = rawP5ms.Select(p => p.Nik).ToList();
 
                     var coachingCreators = (await _context.Coachings
                         .Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth && c.Nik != null)
                         .Select(c => new { Nik = c.Nik.Trim(), c.Tanggal, c.Waktu })
                         .Distinct()
-                        .ToListAsync())
-                        .Select(c => c.Nik)
-                        .ToList();
+                        .ToListAsync());
 
                     var coachingParticipants = (await _context.CoachingParticipants
                         .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth && p.Nik != null)
@@ -608,15 +609,41 @@ namespace MBS_SAP.Controllers
                         .Select(p => p.Nik)
                         .ToList();
 
-                    allCoachings = coachingCreators.Concat(coachingParticipants).ToList();
+                    allCoachings = coachingCreators.Select(c => c.Nik).Concat(coachingParticipants).ToList();
 
-                    dbObservations = (await _context.Observations
+                    var rawObservations = (await _context.Observations
                         .Where(o => !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && o.Nik != null)
                         .Select(o => new { Nik = o.Nik.Trim(), Date = o.Date, o.KegiatanYangDiamati })
                         .Distinct()
-                        .ToListAsync())
-                        .Select(o => o.Nik)
-                        .ToList();
+                        .ToListAsync());
+
+                    dbObservations = rawObservations.Select(o => o.Nik).ToList();
+
+                    allTimeline = new List<SapReportTimestampItem>();
+                    foreach (var h in rawHazards)
+                    {
+                        if (!string.IsNullOrEmpty(h.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = h.Nik, Timestamp = h.Tanggal.Date.Add(h.Waktu), Tipe = "H" });
+                    }
+                    foreach (var i in rawInspections)
+                    {
+                        if (!string.IsNullOrEmpty(i.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = i.Nik, Timestamp = i.Tanggal.Date.Add(i.Waktu), Tipe = "I" });
+                    }
+                    foreach (var s in rawSafetyTalks)
+                    {
+                        if (!string.IsNullOrEmpty(s.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = s.Nik, Timestamp = s.Tanggal.Date.Add(s.Waktu), Tipe = "ST" });
+                    }
+                    foreach (var p in rawP5ms)
+                    {
+                        if (!string.IsNullOrEmpty(p.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = p.Nik, Timestamp = p.Tanggal.Date.Add(p.Waktu), Tipe = "P5M" });
+                    }
+                    foreach (var c in coachingCreators)
+                    {
+                        if (!string.IsNullOrEmpty(c.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = c.Nik, Timestamp = c.Tanggal.Date.Add(c.Waktu), Tipe = "C" });
+                    }
+                    foreach (var o in rawObservations)
+                    {
+                        if (!string.IsNullOrEmpty(o.Nik)) allTimeline.Add(new SapReportTimestampItem { Nik = o.Nik, Timestamp = o.Date, Tipe = "O" });
+                    }
 
                     HttpContext.Items[reqCacheKey] = new MonthlyComplianceCacheData
                     {
@@ -627,7 +654,8 @@ namespace MBS_SAP.Controllers
                         SafetyTalks = dbSafetyTalks,
                         P5ms = dbP5ms,
                         Coachings = allCoachings,
-                        Observations = dbObservations
+                        Observations = dbObservations,
+                        AllReportsTimeline = allTimeline
                     };
                 }
 
@@ -638,6 +666,11 @@ namespace MBS_SAP.Controllers
                 p5ms = dbP5ms.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 coachings = allCoachings.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 observations = dbObservations.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+
+                reportsByNik = allTimeline
+                    .Where(r => r.Nik != null && employeeNiksSet.Contains(r.Nik))
+                    .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Timestamp).ToList(), StringComparer.OrdinalIgnoreCase);
             }
 
             var rosters = await _context.Rosters
@@ -800,6 +833,58 @@ namespace MBS_SAP.Controllers
                 bool isNewHire = k.TanggalMasuk.HasValue && k.TanggalMasuk.Value >= startOfMonth && k.TanggalMasuk.Value <= endOfMonth;
                 string? tanggalMasukStr = k.TanggalMasuk.HasValue ? k.TanggalMasuk.Value.ToString("dd MMM yyyy") : null;
 
+                DateTime? targetCompletionTime = null;
+                DateTime? lastReportTime = null;
+
+                if (reportsByNik.TryGetValue(nik, out var empTimeline) && empTimeline.Count > 0)
+                {
+                    lastReportTime = empTimeline.Last().Timestamp;
+
+                    if (isTargetSap)
+                    {
+                        int cH = 0, cI = 0, cST = 0, cO = 0, cC = 0, cP5 = 0;
+                        DateTime? dtH = null, dtI = null, dtST = null, dtO = null, dtC = null, dtP5 = null;
+
+                        foreach (var rep in empTimeline)
+                        {
+                            if (rep.Tipe == "H") { cH++; if (cH == mtdTgtH && mtdTgtH > 0 && dtH == null) dtH = rep.Timestamp; }
+                            else if (rep.Tipe == "I") { cI++; if (cI == mtdTgtI && mtdTgtI > 0 && dtI == null) dtI = rep.Timestamp; }
+                            else if (rep.Tipe == "ST") { cST++; if (cST == mtdTgtST && mtdTgtST > 0 && dtST == null) dtST = rep.Timestamp; }
+                            else if (rep.Tipe == "O") { cO++; if (cO == mtdTgtO && mtdTgtO > 0 && dtO == null) dtO = rep.Timestamp; }
+                            else if (rep.Tipe == "C") { cC++; if (cC == mtdTgtC && mtdTgtC > 0 && dtC == null) dtC = rep.Timestamp; }
+                            else if (rep.Tipe == "P5M") { cP5++; if (cP5 == mtdTgtP5 && mtdTgtP5 > 0 && dtP5 == null) dtP5 = rep.Timestamp; }
+                        }
+
+                        bool isAllTargetMet = (mtdTgtH == 0 || cH >= mtdTgtH) &&
+                                              (mtdTgtI == 0 || cI >= mtdTgtI) &&
+                                              (mtdTgtST == 0 || cST >= mtdTgtST) &&
+                                              (mtdTgtO == 0 || cO >= mtdTgtO) &&
+                                              (mtdTgtC == 0 || cC >= mtdTgtC) &&
+                                              (mtdTgtP5 == 0 || cP5 >= mtdTgtP5);
+
+                        if (isAllTargetMet)
+                        {
+                            var targetDates = new List<DateTime>();
+                            if (mtdTgtH > 0 && dtH.HasValue) targetDates.Add(dtH.Value);
+                            if (mtdTgtI > 0 && dtI.HasValue) targetDates.Add(dtI.Value);
+                            if (mtdTgtST > 0 && dtST.HasValue) targetDates.Add(dtST.Value);
+                            if (mtdTgtO > 0 && dtO.HasValue) targetDates.Add(dtO.Value);
+                            if (mtdTgtC > 0 && dtC.HasValue) targetDates.Add(dtC.Value);
+                            if (mtdTgtP5 > 0 && dtP5.HasValue) targetDates.Add(dtP5.Value);
+
+                            if (targetDates.Count > 0)
+                            {
+                                targetCompletionTime = targetDates.Max();
+                            }
+                        }
+                    }
+                }
+
+                DateTime completionOrLastReportTime = targetCompletionTime ?? lastReportTime ?? DateTime.MaxValue;
+                string? completionTimeStr = targetCompletionTime.HasValue 
+                    ? targetCompletionTime.Value.ToString("dd MMM HH:mm") 
+                    : (lastReportTime.HasValue ? lastReportTime.Value.ToString("dd MMM HH:mm") : null);
+
                 result.Add(new {
                     karyawanName = k.NamaLengkap,
                     nik = nik,
@@ -835,6 +920,11 @@ namespace MBS_SAP.Controllers
                     hasRoster = hasRoster,
                     isNewHire = isNewHire,
                     tanggalMasukStr = tanggalMasukStr,
+                    targetCompletionTime = targetCompletionTime,
+                    lastReportTime = lastReportTime,
+                    completionOrLastReportTime = completionOrLastReportTime,
+                    completionTimeStr = completionTimeStr,
+                    isTargetCompleted = targetCompletionTime.HasValue,
                     hazard = new { target = mtdTgtH, actual = mtdActH },
                     inspeksi = new { target = mtdTgtI, actual = mtdActI },
                     safetyTalk = new { target = mtdTgtST, actual = mtdActST },
@@ -4878,6 +4968,11 @@ namespace MBS_SAP.Controllers
                             hasRoster = (bool)e.hasRoster,
                             isNewHire = (bool)(e.isNewHire ?? false),
                             tanggalMasukStr = (string?)e.tanggalMasukStr,
+                            targetCompletionTime = (DateTime?)e.targetCompletionTime,
+                            lastReportTime = (DateTime?)e.lastReportTime,
+                            completionOrLastReportTime = (DateTime?)e.completionOrLastReportTime,
+                            completionTimeStr = (string?)e.completionTimeStr,
+                            isTargetCompleted = (bool)(e.isTargetCompleted ?? false),
                             hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                             inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                             safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
@@ -4887,11 +4982,11 @@ namespace MBS_SAP.Controllers
                         };
                     })
                     .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                    .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
-                    .ThenByDescending(e => (double)e.totalScore)
-                    .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS sama
+                    .ThenByDescending(e => (double)e.totalScore) // Penempatan ranking perkaryawan mengacu pada Skor PTS (konsisten dengan Klasemen Perusahaan & Departemen)
                     .ThenByDescending(e => (double)e.complianceRate)
                     .ThenByDescending(e => (double)e.closeRate)
+                    .ThenBy(e => (DateTime)(e.completionOrLastReportTime ?? DateTime.MaxValue)) // Jika nilai sama: ambil yang tercepat tuntas/lapor di bulan berjalan
+                    .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS & waktu sama
                     .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                     .ToList();
                 var sortedByVolume = sortedEmployees
@@ -5174,6 +5269,11 @@ namespace MBS_SAP.Controllers
                         hasRoster = (bool)e.hasRoster,
                         isNewHire = (bool)(e.isNewHire ?? false),
                         tanggalMasukStr = (string?)e.tanggalMasukStr,
+                        targetCompletionTime = (DateTime?)e.targetCompletionTime,
+                        lastReportTime = (DateTime?)e.lastReportTime,
+                        completionOrLastReportTime = (DateTime?)e.completionOrLastReportTime,
+                        completionTimeStr = (string?)e.completionTimeStr,
+                        isTargetCompleted = (bool)(e.isTargetCompleted ?? false),
                         hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                         inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                         safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
@@ -5203,11 +5303,11 @@ namespace MBS_SAP.Controllers
                 {
                     var sortedList = sortedEmployees
                         .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                        .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
-                        .ThenByDescending(e => (double)e.totalScore)
-                        .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS sama
+                        .ThenByDescending(e => (double)e.totalScore) // Penempatan ranking perkaryawan mengacu pada Skor PTS (konsisten dengan Klasemen Perusahaan & Departemen)
                         .ThenByDescending(e => (double)e.complianceRate)
                         .ThenByDescending(e => (double)e.closeRate)
+                        .ThenBy(e => (DateTime)(e.completionOrLastReportTime ?? DateTime.MaxValue)) // Jika nilai sama: ambil yang tercepat tuntas/lapor di bulan berjalan
+                        .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS & waktu sama
                         .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                         .ToList();
 
@@ -5777,6 +5877,11 @@ namespace MBS_SAP.Controllers
                         mtdTotalActual = empActual,
                         onsiteDays = (int)e.onsiteDays,
                         hasRoster = (bool)e.hasRoster,
+                        targetCompletionTime = (DateTime?)e.targetCompletionTime,
+                        lastReportTime = (DateTime?)e.lastReportTime,
+                        completionOrLastReportTime = (DateTime?)e.completionOrLastReportTime,
+                        completionTimeStr = (string?)e.completionTimeStr,
+                        isTargetCompleted = (bool)(e.isTargetCompleted ?? false),
                         hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                         inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                         safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
@@ -5786,11 +5891,11 @@ namespace MBS_SAP.Controllers
                     };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
-                .ThenByDescending(e => (double)e.totalScore)
-                .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat skor sama
+                .ThenByDescending(e => (double)e.totalScore) // Penempatan ranking perkaryawan mengacu pada Skor PTS (konsisten dengan Klasemen Perusahaan & Departemen)
                 .ThenByDescending(e => (double)e.complianceRate)
                 .ThenByDescending(e => (double)e.closeRate)
+                .ThenBy(e => (DateTime)(e.completionOrLastReportTime ?? DateTime.MaxValue)) // Jika nilai sama: ambil yang tercepat tuntas/lapor di bulan berjalan
+                .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat skor & waktu sama
                 .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                 .ToList();
 
@@ -12626,6 +12731,13 @@ namespace MBS_SAP.Controllers
         public string? Status { get; set; }
     }
 
+    public class SapReportTimestampItem
+    {
+        public string Nik { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public string Tipe { get; set; } = string.Empty;
+    }
+
     public class MonthlyComplianceCacheData
     {
         public List<string> Hazards { get; set; } = new();
@@ -12638,6 +12750,7 @@ namespace MBS_SAP.Controllers
         public List<string> P5ms { get; set; } = new();
         public List<string> Coachings { get; set; } = new();
         public List<string> Observations { get; set; } = new();
+        public List<SapReportTimestampItem> AllReportsTimeline { get; set; } = new();
     }
 
     public class AreaRiskSubLocationViewModel

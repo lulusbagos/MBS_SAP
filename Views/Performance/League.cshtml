@@ -3901,9 +3901,16 @@
                                                     <div class="player-score-sub" style="font-size: 10px; color: #64748b; font-weight: 600;" title="Kepatuhan Capaian Target SAP & Keaktifan Laporan (Nilai tambah saat skor PTS sama)">
                                                         Capaian: <span style="color: @GetRateColor((double)emp.complianceRate); font-weight: 700;">@emp.complianceRate%</span>
                                                         <span class="text-muted mx-0.5">&bull;</span>
-                                                        <span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;" title="Total realisasi laporan safety: @emp.totalActualAll laporan. Keaktifan melapor menjadi nilai tambah saat PTS sama.">
+                                                        <span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;" title="Total realisasi laporan safety: @emp.totalActualAll laporan.">
                                                             <i class="bi bi-shield-check me-0.5"></i>@emp.totalActualAll Lap
                                                         </span>
+                                                        @if (!string.IsNullOrEmpty((string?)emp.completionTimeStr))
+                                                        {
+                                                            <span class="text-muted mx-0.5">&bull;</span>
+                                                            <span class="badge py-0 px-1" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-size: 8.5px; font-weight: 600;" title="@(emp.isTargetCompleted == true ? "Waktu Target Tuntas: " : "Laporan Terakhir: ")@emp.completionTimeStr (Jika nilai sama, yang tercepat di peringkat atas)">
+                                                                <i class="bi @(emp.isTargetCompleted == true ? "bi-check2-circle text-success" : "bi-clock-history text-muted") me-0.5"></i>@emp.completionTimeStr
+                                                            </span>
+                                                        }
                                                     </div>
                                                 }
                                             </td>
@@ -4207,15 +4214,15 @@
 
                     <div class="mt-2.5 text-muted px-1" style="font-size: 10.5px; line-height: 1.45; border-top: 1px dashed #e2e8f0; padding-top: 6px;">
                         <div class="d-flex align-items-start gap-1">
-                            <i class="bi bi-shield-check me-1 text-success fs-6 mt-0.5"></i>
+                            <i class="bi bi-trophy me-1 text-warning fs-6 mt-0.5"></i>
                             <div>
-                                <strong>Syarat Mutlak Kelayakan Juara (Podium):</strong> Pengawas wajib <strong>Tuntas 100% Seluruh Target Program K3</strong> (Capaian 100% / form dots hijau penuh <span class="badge bg-success text-white py-0 px-1" style="font-size: 9px;">W</span> tanpa ada program yang draw/kurang). Pengawas yang kewajiban programnya belum tuntas tidak berhak menempati podium juara.
+                                <strong>Penentuan Peringkat Skuad K3 (Acuan Skor Poin):</strong> Peringkat skuad pemain diukur berdasarkan <strong>Total Skor PTS 4 Pilar</strong> tertinggi secara konsisten, selaras dengan penentuan peringkat klasemen Perusahaan dan Departemen.
                             </div>
                         </div>
                         <div class="d-flex align-items-start gap-1 mt-1">
-                            <i class="bi bi-trophy me-1 text-warning fs-6 mt-0.5"></i>
+                            <i class="bi bi-shield-check me-1 text-success fs-6 mt-0.5"></i>
                             <div>
-                                <strong>Penentuan Peringkat Juara:</strong> Di antara pengawas yang tuntas 100%, peringkat ditentukan oleh <strong>Skor PTS 4 Pilar</strong> tertinggi. Jika skor PTS sama, <strong>keaktifan kuantitas laporan safety riil</strong> (<span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;">Lap</span>) menjadi nilai tambah apresiasi.
+                                <strong>Kriteria Pemecah Seri (Tie-Breaker):</strong> Jika skor PTS sama, urutan ditentukan berturut-turut dari <strong>% Capaian Target SAP</strong>, <strong>% Close Rate Action Plan</strong>, serta <strong>kecepatan waktu tuntas target (karyawan yang tercepat menyelesaikan targetnya berada di peringkat lebih tinggi)</strong>, dan kuantitas laporan safety riil (<span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;">Lap</span>).
                             </div>
                         </div>
                     </div>
