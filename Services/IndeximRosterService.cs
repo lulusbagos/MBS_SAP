@@ -114,7 +114,11 @@ namespace MBS_SAP.Services
                             ELSE 'OFF'
                         END AS classified_type
                     FROM DB_ONE.dbo.tbl_m_roster_detail r WITH (NOLOCK)
-                    LEFT JOIN DB_ONE.dbo.tbl_m_roster_keterangan k WITH (NOLOCK) ON r.status = k.kode
+                    LEFT JOIN (
+                        SELECT kode, MAX(kategori) AS kategori
+                        FROM DB_ONE.dbo.tbl_m_roster_keterangan WITH (NOLOCK)
+                        GROUP BY kode
+                    ) k ON r.status = k.kode
                     WHERE r.working_date >= @startDate AND r.working_date <= @endDate
                       AND r.nik IS NOT NULL AND r.nik <> ''
                     ORDER BY r.nik, r.working_date;
