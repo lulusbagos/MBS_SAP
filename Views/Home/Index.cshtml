@@ -803,7 +803,14 @@
                         <i class="bi bi-calendar3" style="font-size: 20px; color: white;"></i>
                     </div>
                     <span style="font-weight: 700; font-size: 13px;">Roster Kerja</span>
-                    <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;" id="rosterStatusBadge">Atur Roster</span>
+                    @if (ViewData["IsIndexim"] is bool isIdxHome && isIdxHome && ViewData["HasOneRoster"] is bool hasOneHome && hasOneHome)
+                    {
+                        <span class="badge" style="background-color: rgba(14, 165, 233, 0.15); color: #0284c7; font-size: 10px; font-weight: 600;"><i class="bi bi-cloud-check-fill me-1"></i>Sync ONE</span>
+                    }
+                    else
+                    {
+                        <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;" id="rosterStatusBadge">Atur Roster</span>
+                    }
                 </a>
 
                 <a asp-controller="Incident" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
@@ -1656,25 +1663,32 @@
                                                             </td>
                                                             <td class="text-end pe-0 py-2" style="vertical-align: middle;">
                                                                 <div class="d-flex justify-content-end gap-1">
-                                                                    <button type="button" class="btn btn-sm btn-outline-info btn-edit-roster" 
-                                                                            data-id="@h.Id" 
-                                                                            data-tipe="@h.TipeRoster" 
-                                                                            data-awal-dinas="@h.AwalDinas.ToString("yyyy-MM-dd")" 
-                                                                            data-akhir-dinas="@h.AkhirDinas.ToString("yyyy-MM-dd")" 
-                                                                            data-awal-cuti="@h.AwalCuti.ToString("yyyy-MM-dd")" 
-                                                                            data-akhir-cuti="@h.AkhirCuti.ToString("yyyy-MM-dd")" 
-                                                                            data-keterangan="@(h.Keterangan ?? "")" 
-                                                                            title="Edit Roster" 
-                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
-                                                                        <i class="bi bi-pencil-square"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-roster-item" 
-                                                                            data-id="@h.Id" 
-                                                                            data-tipe="@h.TipeRoster" 
-                                                                            title="Hapus Roster" 
-                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
-                                                                        <i class="bi bi-trash3"></i>
-                                                                    </button>
+                                                                    @if (!isIndexim || !hasOneRoster)
+                                                                    {
+                                                                        <button type="button" class="btn btn-sm btn-outline-info btn-edit-roster" 
+                                                                                data-id="@h.Id" 
+                                                                                data-tipe="@h.TipeRoster" 
+                                                                                data-awal-dinas="@h.AwalDinas.ToString("yyyy-MM-dd")" 
+                                                                                data-akhir-dinas="@h.AkhirDinas.ToString("yyyy-MM-dd")" 
+                                                                                data-awal-cuti="@h.AwalCuti.ToString("yyyy-MM-dd")" 
+                                                                                data-akhir-cuti="@h.AkhirCuti.ToString("yyyy-MM-dd")" 
+                                                                                data-keterangan="@(h.Keterangan ?? "")" 
+                                                                                title="Edit Roster" 
+                                                                                style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                            <i class="bi bi-pencil-square"></i>
+                                                                        </button>
+                                                                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-roster-item" 
+                                                                                data-id="@h.Id" 
+                                                                                data-tipe="@h.TipeRoster" 
+                                                                                title="Hapus Roster" 
+                                                                                style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                            <i class="bi bi-trash3"></i>
+                                                                        </button>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span class="badge bg-light text-muted border" style="font-size: 9.5px;" title="Roster reguler dikelola terpusat di ONE DB HC">Terkunci (ONE)</span>
+                                                                    }
                                                                 </div>
                                                             </td>
                                                         }
@@ -1963,10 +1977,10 @@
                 $('#rosterSettingsModal').data('initialEditTipe', initialEditTipe);
 
                 @{
-                    bool isIndeximScript = (ViewData["IsIndexim"] as bool?) ?? false;
-                    bool hasOneRosterScript = (ViewData["HasOneRoster"] as bool?) ?? false;
+                    bool isIdxJs = (ViewData["IsIndexim"] as bool?) ?? false;
+                    bool hasOneJs = (ViewData["HasOneRoster"] as bool?) ?? false;
                 }
-                const isIndeximOneRoster = @(isIndeximScript && hasOneRosterScript ? "true" : "false");
+                const isIndeximOneRoster = @(isIdxJs && hasOneJs ? "true" : "false");
                 function updateSaveButtonVisibility() {
                     const currentTipe = $('#tipeRosterSelected').val() || 'REGULER';
                     if (isIndeximOneRoster && currentTipe !== 'TUGAS') {
