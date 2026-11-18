@@ -48,6 +48,12 @@ namespace MBS_SAP.Models
         public string? GolB_Json { get; set; } // Checklist results for Gol. B
         public string? GolC_Json { get; set; } // Checklist results for Gol. C
 
+        [Column("is_electric")]
+        public bool IsElectric { get; set; } = false;
+
+        [Column("gol_ev_json")]
+        public string? GolEv_Json { get; set; } // Checklist results for Mobil Elektrik (EV)
+
         [Column("is_deleted")]
         public bool IsDeleted { get; set; } = false;
 

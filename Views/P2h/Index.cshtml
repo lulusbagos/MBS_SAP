@@ -244,6 +244,28 @@
                     </div>
                 </div>
 
+                <!-- Mobil Elektrik (EV) Checkbox Switch -->
+                <div class="p-3 mb-3" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.1)); border: 1.5px solid #10b981; border-radius: 14px;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                            </div>
+                            <div>
+                                <label class="form-check-label fw-bold mb-0" for="checkIsElectric" style="font-size: 13px; color: var(--text-main); cursor: pointer;">
+                                    Mobil Elektrik / Kendaraan Listrik (EV)
+                                </label>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    Centang jika unit ini mobil listrik/baterai untuk mengaktifkan item pemeriksaan sistem EV.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="checkIsElectric" name="isElectric" value="true" style="width: 2.6em; height: 1.4em; cursor: pointer;" onchange="toggleElectricChecklist(this.checked)">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Checklist Header + Quick Actions -->
                 <div class="d-flex justify-content-between align-items-center mt-4 mb-3 flex-wrap gap-2">
                     <h6 class="mb-0" style="font-weight: 700; color: var(--text-main); border-left: 3px solid var(--color-primary); padding-left: 8px;">CHECKLIST KONDISI UNIT</h6>
@@ -389,6 +411,50 @@
                         </div>
                     </div>
 
+                    <!-- GOLONGAN EV (MOBIL ELEKTRIK) - HANYA AKTIF JIKA DICENTANG -->
+                    <div class="accordion-item d-none" id="accordionItemEV" style="background-color: var(--bg-card); border: 2px solid #10b981; border-radius: 10px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header" id="headingEV">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEV" aria-expanded="true" aria-controls="collapseEV" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15)); color: var(--text-main); font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge bg-success me-2"><i class="bi bi-lightning-charge-fill me-1"></i>GOL. EV</span> Mobil Elektrik (Baterai &amp; Kelistrikan - Total @MBS_SAP.Controllers.P2hController.GolEV.Length Item)
+                            </button>
+                        </h2>
+                        <div id="collapseEV" class="accordion-collapse collapse show" aria-labelledby="headingEV" data-bs-parent="#checklistAccordion">
+                            <div class="accordion-body px-3 py-2">
+                                @for (int i = 0; i < MBS_SAP.Controllers.P2hController.GolEV.Length; i++)
+                                {
+                                    var idx = i;
+                                    var itemText = MBS_SAP.Controllers.P2hController.GolEV[idx];
+                                    <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golEV_@idx">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div class="checkpoint-name text-break" style="font-size: 13px; font-weight: 600; color: var(--text-main); max-width: 70%;">
+                                                @(idx + 1). @itemText
+                                            </div>
+                                            <div class="btn-group" role="group">
+                                                <input type="radio" class="btn-check" name="golEV_status_@idx" id="golEV_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golEV', @idx, 'GOOD')">
+                                                <label class="btn btn-sm btn-outline-success px-3" for="golEV_good_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">BAIK</label>
+
+                                                <input type="radio" class="btn-check" name="golEV_status_@idx" id="golEV_bad_@idx" value="NOT_GOOD" autocomplete="off" onchange="toggleDefectPhoto('golEV', @idx, 'NOT_GOOD')">
+                                                <label class="btn btn-sm btn-outline-danger px-3" for="golEV_bad_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">RUSAK</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Photo upload for defect -->
+                                        <div class="defect-photo-wrapper mt-2 ps-3" id="photo_wrapper_golEV_@idx" style="display: none; border-left: 2px solid var(--color-red);">
+                                            <label class="form-label-sap text-danger mb-1" style="font-size: 11px;">
+                                                <i class="bi bi-camera-fill me-1"></i> Foto Kerusakan (Wajib)
+                                            </label>
+                                            <input type="file" name="golEV_photo_@idx" id="photo_input_golEV_@idx" class="input-sap py-1" accept="image/*" style="height: auto; border-color: rgba(244, 63, 94, 0.4);" />
+                                            <div id="photo_preview_wrapper_golEV_@idx" class="mt-1 d-none">
+                                                <span class="text-muted" style="font-size: 10px;">Foto terunggah: </span>
+                                                <a id="photo_preview_link_golEV_@idx" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 10px;">Lihat Foto</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <button type="submit" id="btnSubmitP2h" class="btn btn-sap-primary w-100 py-3" style="background: linear-gradient(135deg, #0284c7, #0ea5e9); border-color: #0284c7; font-weight: 700; border-radius: 12px; letter-spacing: 0.5px;">
@@ -423,6 +489,7 @@
                         var defectsA = new List<string>();
                         var defectsB = new List<string>();
                         var defectsC = new List<string>();
+                        var defectsEV = new List<string>();
                         
                         try
                         {
@@ -441,10 +508,15 @@
                                 var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolC_Json);
                                 if (list != null) defectsC.AddRange(list.Where(x => x.Status == "NOT_GOOD").Select(x => x.Name));
                             }
+                            if (item.IsElectric && !string.IsNullOrEmpty(item.GolEv_Json))
+                            {
+                                var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolEv_Json);
+                                if (list != null) defectsEV.AddRange(list.Where(x => x.Status == "NOT_GOOD").Select(x => x.Name));
+                            }
                         }
                         catch {}
 
-                        var totalDefects = defectsA.Count + defectsB.Count + defectsC.Count;
+                        var totalDefects = defectsA.Count + defectsB.Count + defectsC.Count + defectsEV.Count;
                         var isGood = totalDefects == 0;
                         var borderClass = isGood ? "border-primary-accent" : "border-red-accent";
                         var resultBadgeClass = isGood ? "bg-success" : "bg-danger";
@@ -453,11 +525,17 @@
                         <div class="card-sap animate-fade-in @delayClass @borderClass mb-0">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div style="width: 32px; height: 32px; font-size: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(2, 132, 199, 0.15); color: #38bdf8;">
-                                        <i class="bi bi-truck-front-fill"></i>
+                                    <div style="width: 32px; height: 32px; font-size: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: @(item.IsElectric ? "rgba(16, 185, 129, 0.15)" : "rgba(2, 132, 199, 0.15)"); color: @(item.IsElectric ? "#10b981" : "#38bdf8");">
+                                        <i class="bi @(item.IsElectric ? "bi-lightning-charge-fill" : "bi-truck-front-fill")"></i>
                                     </div>
                                     <div>
                                         <span style="font-weight: 700; font-size: 14px; color: var(--text-main);">@item.NoLambung</span>
+                                        @if (item.IsElectric)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 9.5px; font-weight: 700;">
+                                                <i class="bi bi-lightning-charge-fill"></i> EV
+                                            </span>
+                                        }
                                         <span class="d-block text-muted" style="font-size: 11px;">@item.Merek (@item.JenisKendaraan)</span>
                                     </div>
                                 </div>
@@ -677,6 +755,23 @@
         const GOL_A_COUNT = @MBS_SAP.Controllers.P2hController.GolA.Length;
         const GOL_B_COUNT = @MBS_SAP.Controllers.P2hController.GolB.Length;
         const GOL_C_COUNT = @MBS_SAP.Controllers.P2hController.GolC.Length;
+        const GOL_EV_COUNT = @MBS_SAP.Controllers.P2hController.GolEV.Length;
+
+        function toggleElectricChecklist(isElectric) {
+            if (isElectric) {
+                $('#accordionItemEV').removeClass('d-none');
+                const el = document.getElementById('collapseEV');
+                if (el && !$(el).hasClass('show')) {
+                    new bootstrap.Collapse(el, { toggle: true });
+                }
+            } else {
+                $('#accordionItemEV').addClass('d-none');
+                for (let i = 0; i < GOL_EV_COUNT; i++) {
+                    $(`#golEV_good_${i}`).prop('checked', true);
+                    toggleDefectPhoto('golEV', i, 'GOOD');
+                }
+            }
+        }
 
         function escapeHtml(str) {
             return String(str ?? '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -836,11 +931,15 @@
         // ========= AUTO FILL ALL =========
         function autoFillAll(status) {
             const suffix = status === 'GOOD' ? 'good' : 'bad';
+            const isElectric = $('#checkIsElectric').is(':checked');
             const categories = [
                 { prefix: 'golA', count: GOL_A_COUNT },
                 { prefix: 'golB', count: GOL_B_COUNT },
                 { prefix: 'golC', count: GOL_C_COUNT }
             ];
+            if (isElectric) {
+                categories.push({ prefix: 'golEV', count: GOL_EV_COUNT });
+            }
 
             categories.forEach(cat => {
                 for (let i = 0; i < cat.count; i++) {
@@ -854,7 +953,9 @@
             });
 
             // Expand all accordion panels to show results
-            ['collapseA', 'collapseB', 'collapseC'].forEach(id => {
+            const collapseIds = ['collapseA', 'collapseB', 'collapseC'];
+            if (isElectric) collapseIds.push('collapseEV');
+            collapseIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && !$(el).hasClass('show')) {
                     new bootstrap.Collapse(el, { toggle: true });
@@ -1104,10 +1205,13 @@
                 }
 
                 // Check critical checklist items: if status is NOT_GOOD, photo must be uploaded
+                const isElectricForm = $('#checkIsElectric').is(':checked');
                 $('.btn-check[value="NOT_GOOD"]:checked').each(function() {
                     const nameAttr = $(this).attr('name'); // e.g. golA_status_3
                     const parts = nameAttr.split('_'); // ['golA', 'status', '3']
                     const cat = parts[0];
+                    if (cat === 'golEV' && !isElectricForm) return; // Skip EV if not electric
+
                     const idx = parseInt(parts[2]);
                     const fileInput = document.getElementById(`photo_input_${cat}_${idx}`);
                     const previewWrapper = document.getElementById(`photo_preview_wrapper_${cat}_${idx}`);
@@ -1117,7 +1221,7 @@
                         isValid = false;
                         $(fileInput).addClass('is-invalid');
                         if (!firstInvalid) firstInvalid = $(fileInput);
-                        const groupLabel = cat === 'golA' ? 'Gol. A' : cat === 'golB' ? 'Gol. B' : 'Gol. C';
+                        const groupLabel = cat === 'golA' ? 'Gol. A' : cat === 'golB' ? 'Gol. B' : cat === 'golEV' ? 'Gol. EV' : 'Gol. C';
                         const errHtml = `<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kerusakan wajib diunggah.</span>`;
                         $(fileInput).after(errHtml);
                         
@@ -1125,9 +1229,10 @@
                         missingFields.push(`Foto Kerusakan (${groupLabel}): ${itemText}`);
 
                         // Expand the respective accordion item
-                        const collapseEl = document.getElementById(`collapse${cat.slice(-1).toUpperCase()}`);
+                        const collapseTarget = cat === 'golEV' ? 'collapseEV' : `collapse${cat.slice(-1).toUpperCase()}`;
+                        const collapseEl = document.getElementById(collapseTarget);
                         if (collapseEl && !$(collapseEl).hasClass('show')) {
-                            $(`button[data-bs-target="#collapse${cat.slice(-1).toUpperCase()}"]`).click();
+                            $(`button[data-bs-target="#${collapseTarget}"]`).click();
                         }
                     }
                 });
@@ -1247,6 +1352,10 @@
             $('#p2hForm').find('.is-invalid').removeClass('is-invalid');
             $('#p2hForm').find('.sap-err-msg').remove();
             
+            // Reset Electric Switch
+            $('#checkIsElectric').prop('checked', false);
+            toggleElectricChecklist(false);
+
             // Hide speedo preview
             $('#speedoPreview').attr('src', '');
             $('#speedoPreviewContainer').addClass('d-none');
@@ -1350,6 +1459,32 @@
                         });
                     }
 
+                    // Populate Golongan EV Checkpoints
+                    if (data.isElectric) {
+                        $('#checkIsElectric').prop('checked', true);
+                        toggleElectricChecklist(true);
+                        if (data.golEV) {
+                            data.golEV.forEach((item, index) => {
+                                const idx = index;
+                                if (item.status === 'NOT_GOOD') {
+                                    $(`#golEV_bad_${idx}`).prop('checked', true);
+                                    toggleDefectPhoto('golEV', idx, 'NOT_GOOD');
+                                    
+                                    if (item.photoUrl) {
+                                        var proxyDefect = item.photoUrl.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(item.photoUrl) : item.photoUrl;
+                                        $(`#photo_preview_link_golEV_${idx}`).attr('href', proxyDefect);
+                                        $(`#photo_preview_wrapper_golEV_${idx}`).removeClass('d-none');
+                                    }
+                                } else {
+                                    $(`#golEV_good_${idx}`).prop('checked', true);
+                                }
+                            });
+                        }
+                    } else {
+                        $('#checkIsElectric').prop('checked', false);
+                        toggleElectricChecklist(false);
+                    }
+
                     // Toggle Cancel button and scroll to top
                     $('#formTitle').html('<i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan P2H');
                     $('#btnCancelEdit').removeClass('d-none');
@@ -1407,12 +1542,15 @@
                 const golA = data.golA || [];
                 const golB = data.golB || [];
                 const golC = data.golC || [];
+                const golEV = data.golEV || [];
 
                 const defectsA = golA.filter(x => x.status === 'NOT_GOOD');
                 const defectsB = golB.filter(x => x.status === 'NOT_GOOD');
                 const defectsC = golC.filter(x => x.status === 'NOT_GOOD');
-                const totalDefects = defectsA.length + defectsB.length + defectsC.length;
+                const defectsEV = golEV.filter(x => x.status === 'NOT_GOOD');
+                const totalDefects = defectsA.length + defectsB.length + defectsC.length + defectsEV.length;
                 const isGood = totalDefects === 0;
+                const totalCount = 37 + (data.isElectric ? golEV.length : 0);
 
                 const proxyUrl = url => (url && url.startsWith('http')) ? ('/ImageProxy/Get?url=' + encodeURIComponent(url)) : (url || '');
 
@@ -1420,6 +1558,7 @@
                 $('#p2hDetailTitle').html(`
                     <span class="text-primary me-1"><i class="bi bi-truck-front-fill"></i></span>
                     <span style="letter-spacing: 0.5px;">${escapeHtml(data.noLambung)}</span>
+                    ${data.isElectric ? '<span class="badge bg-success-subtle text-success border border-success ms-1 py-1 px-2 rounded-pill" style="font-size: 10px; font-weight: 700;"><i class="bi bi-lightning-charge-fill me-0.5"></i>EV</span>' : ''}
                     <span class="badge ${isGood ? 'bg-success' : 'bg-danger'} ms-2 py-1 px-2.5 rounded-pill" style="font-size: 10px; font-weight: 700;">
                         ${isGood ? '<i class="bi bi-check-circle-fill me-1"></i>AMAN' : `<i class="bi bi-exclamation-triangle-fill me-1"></i>${totalDefects} TEMUAN`}
                     </span>
@@ -1536,14 +1675,15 @@
                 html += `
                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                         <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 13px;">
-                            <i class="bi bi-card-checklist me-1 text-primary"></i>Hasil Rincian Checklist (37 Item)
+                            <i class="bi bi-card-checklist me-1 text-primary"></i>Hasil Rincian Checklist (${totalCount} Item)
                         </h6>
                         <div class="btn-group btn-group-sm p2h-detail-filter" role="group">
-                            <button type="button" class="btn btn-outline-secondary active py-1 px-2.5" style="font-size: 11px;" onclick="filterP2hDetailItems('all', this)">Semua (37)</button>
+                            <button type="button" class="btn btn-outline-secondary active py-1 px-2.5" style="font-size: 11px;" onclick="filterP2hDetailItems('all', this)">Semua (${totalCount})</button>
                             ${totalDefects > 0 ? `<button type="button" class="btn btn-outline-danger py-1 px-2.5" style="font-size: 11px; font-weight: 700;" onclick="filterP2hDetailItems('defect', this)">Temuan (${totalDefects})</button>` : ''}
                             <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('A', this)">Gol. A (16)</button>
                             <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('B', this)">Gol. B (10)</button>
                             <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('C', this)">Gol. C (11)</button>
+                            ${data.isElectric && golEV.length > 0 ? `<button type="button" class="btn btn-outline-success py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('EV', this)">Gol. EV (${golEV.length})</button>` : ''}
                         </div>
                     </div>
 
@@ -1601,6 +1741,9 @@
                 html += renderCategoryItems(golA, 'GOL. A (KRITIS)', 'A', 'rgba(239, 68, 68, 0.15)', '#ef4444');
                 html += renderCategoryItems(golB, 'GOL. B (PEMELIHARAAN)', 'B', 'rgba(245, 158, 11, 0.15)', '#f59e0b');
                 html += renderCategoryItems(golC, 'GOL. C (PENDUKUNG)', 'C', 'rgba(56, 189, 248, 0.15)', '#38bdf8');
+                if (data.isElectric && golEV.length > 0) {
+                    html += renderCategoryItems(golEV, 'GOL. EV (MOBIL ELEKTRIK)', 'EV', 'rgba(16, 185, 129, 0.15)', '#10b981');
+                }
 
                 html += `</div>`; // Close p2h-detail-checklist-container
 

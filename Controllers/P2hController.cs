@@ -80,6 +80,16 @@ namespace MBS_SAP.Controllers
             "Kaca/Mirror"
         };
 
+        public static readonly string[] GolEV = new string[]
+        {
+            "Air Pendingin Baterai/Battery Coolant Level",
+            "Selang-selang Air Pendingin/Cooling Hoses & Pipes",
+            "Kebersihan Area Control Module/Inverter",
+            "Kabel & Soket Tegangan Tinggi/High Voltage Wiring (Orange Cable)",
+            "Port & Tutup Pengisian Daya/Charging Port & Socket",
+            "Indikator Status Baterai & Daya di Dashboard/SOC & Power Indicator"
+        };
+
         public class ChecklistItem
         {
             public int Id { get; set; }
@@ -348,6 +358,49 @@ namespace MBS_SAP.Controllers
                 }
                 report.GolC_Json = JsonSerializer.Serialize(listC);
 
+                // 6. Process Checklist for Mobil Elektrik (EV)
+                bool isElectric = Request.Form["isElectric"].ToString().Equals("true", StringComparison.OrdinalIgnoreCase)
+                    || Request.Form["isElectric"].ToString().Equals("on", StringComparison.OrdinalIgnoreCase);
+                report.IsElectric = isElectric;
+
+                if (isElectric)
+                {
+                    var oldGolEV = string.IsNullOrEmpty(report.GolEv_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolEv_Json);
+                    var listEV = new List<ChecklistItem>();
+                    for (int i = 0; i < GolEV.Length; i++)
+                    {
+                        string status = Request.Form["golEV_status_" + i].ToString();
+                        if (string.IsNullOrEmpty(status)) status = "GOOD";
+
+                        var item = new ChecklistItem
+                        {
+                            Id = i + 1,
+                            Name = GolEV[i],
+                            Status = status
+                        };
+
+                        var file = Request.Form.Files["golEV_photo_" + i];
+                        if (file != null && file.Length > 0)
+                        {
+                            item.PhotoUrl = await _imageUploadService.UploadAndCompressImageAsync(file, "p2h", $"golEV_{i}");
+                        }
+                        else if (!isNew && oldGolEV != null)
+                        {
+                            var oldItem = oldGolEV.FirstOrDefault(x => x.Id == i + 1);
+                            if (oldItem != null && item.Status == "NOT_GOOD")
+                            {
+                                item.PhotoUrl = oldItem.PhotoUrl;
+                            }
+                        }
+                        listEV.Add(item);
+                    }
+                    report.GolEv_Json = JsonSerializer.Serialize(listEV);
+                }
+                else
+                {
+                    report.GolEv_Json = null;
+                }
+
                 if (isNew)
                 {
                     _context.P2hReports.Add(report);
@@ -425,9 +478,11 @@ namespace MBS_SAP.Controllers
                 simperKimper = report.SimperKimper,
                 fotoSpeedometer = report.FotoSpeedometer,
                 canEdit = isOwnerOrAdmin,
+                isElectric = report.IsElectric,
                 golA = string.IsNullOrEmpty(report.GolA_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolA_Json),
                 golB = string.IsNullOrEmpty(report.GolB_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolB_Json),
-                golC = string.IsNullOrEmpty(report.GolC_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolC_Json)
+                golC = string.IsNullOrEmpty(report.GolC_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolC_Json),
+                golEV = string.IsNullOrEmpty(report.GolEv_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolEv_Json)
             });
         }
 
