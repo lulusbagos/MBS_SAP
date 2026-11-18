@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.SqlClient;
 
 namespace MBS_SAP.Services
 {
@@ -199,114 +200,185 @@ namespace MBS_SAP.Services
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
 
-            var sql = @"
-                -- 1a. Hazard Report by foto_temuan (prioritize preserving 'Closed' or detailed temuan)
-                WITH cte_hf AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY foto_temuan
-                        ORDER BY 
-                            CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END,
-                            CASE WHEN foto_perbaikan IS NOT NULL AND foto_perbaikan <> '' THEN 0 ELSE 1 END,
-                            CASE WHEN temuan IS NOT NULL AND temuan NOT IN ('Kondisi Tidak Aman', 'Tindakan Tidak Aman', '') THEN 0 ELSE 1 END,
-                            id ASC
-                    ) as rn 
-                    FROM tbl_t_hazard_report 
-                    WHERE is_deleted = 0 AND foto_temuan IS NOT NULL AND foto_temuan <> ''
-                )
-                UPDATE tbl_t_hazard_report SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_hf WHERE rn > 1);
-
-                -- 1b. Hazard Report (prioritize preserving 'Closed' status over 'Open')
-                WITH cte_h AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(temuan AS NVARCHAR(200)), ''))))
-                        ORDER BY CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END, id ASC
-                    ) as rn FROM tbl_t_hazard_report WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_hazard_report SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_h WHERE rn > 1);
-
-                -- 1b. Sync Action Plan for soft-deleted hazard reports
-                UPDATE a
-                SET a.is_deleted = 1,
-                    a.status = 'Closed'
-                FROM tbl_t_action_plan a
-                INNER JOIN tbl_t_hazard_report h ON a.item_sap = 'hazard:' + CAST(h.id AS VARCHAR(50))
-                WHERE h.is_deleted = 1 AND a.is_deleted = 0;
-
-                -- 2. Inspeksi K3
-                WITH cte_i AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(jenis_inspeksi, '')))), LTRIM(RTRIM(UPPER(ISNULL(lokasi, ''))))
-                        ORDER BY id ASC
-                    ) as rn FROM tbl_t_inspection WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_inspection SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_i WHERE rn > 1);
-
-                -- 3. Safety Talk
-                WITH cte_s AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(judul, ''))))
-                        ORDER BY id ASC
-                    ) as rn FROM tbl_t_safety_talk WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_safety_talk SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_s WHERE rn > 1);
-
-                -- 4. Observasi K3
-                WITH cte_o AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), date, LTRIM(RTRIM(UPPER(ISNULL(CAST(kegiatan_yang_diamati AS NVARCHAR(500)), '')))), LTRIM(RTRIM(UPPER(ISNULL(perihal_yang_diamati, ''))))
-                        ORDER BY id ASC
-                    ) as rn FROM tbl_t_observation WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_observation SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_o WHERE rn > 1);
-
-                -- 5. Coaching K3
-                WITH cte_c AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(tema, ''))))
-                        ORDER BY id ASC
-                    ) as rn FROM tbl_t_coaching WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_coaching SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_c WHERE rn > 1);
-
-                -- 6. P5M Checklist
-                WITH cte_p AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(list_pertanyaan AS NVARCHAR(500)), ''))))
-                        ORDER BY id ASC
-                    ) as rn FROM tbl_t_p5m WHERE is_deleted = 0
-                )
-                UPDATE tbl_t_p5m SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_p WHERE rn > 1);
-
-                -- 7. Dedup Action Plan (item_sap)
-                WITH cte_ap AS (
-                    SELECT id, ROW_NUMBER() OVER (
-                        PARTITION BY item_sap
-                        ORDER BY CASE WHEN status = 'Closed' THEN 0 ELSE 1 END, id ASC
-                    ) as rn
-                    FROM tbl_t_action_plan
-                    WHERE is_deleted = 0 AND item_sap IS NOT NULL AND item_sap <> ''
-                )
-                UPDATE tbl_t_action_plan SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_ap WHERE rn > 1);
-            ";
-
-            try
+            var steps = new (string Name, string Sql)[]
             {
-                var rowsAffected = await context.Database.ExecuteSqlRawAsync(sql, cancellationToken);
-                if (rowsAffected > 0)
-                {
-                    _logger.LogWarning("All-modules dedup cleanup soft-deleted {RowsAffected} duplicate rows.", rowsAffected);
-                }
-                else
-                {
-                    _logger.LogInformation("All-modules dedup cleanup: no active duplicates found.");
-                }
-                return rowsAffected;
-            }
-            catch (Exception ex)
+                ("Hazard by foto_temuan", @"
+                    WITH cte_hf AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY foto_temuan
+                            ORDER BY 
+                                CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END,
+                                CASE WHEN foto_perbaikan IS NOT NULL AND foto_perbaikan <> '' THEN 0 ELSE 1 END,
+                                CASE WHEN temuan IS NOT NULL AND temuan NOT IN ('Kondisi Tidak Aman', 'Tindakan Tidak Aman', '') THEN 0 ELSE 1 END,
+                                id ASC
+                        ) as rn 
+                        FROM tbl_t_hazard_report WITH (NOLOCK)
+                        WHERE is_deleted = 0 AND foto_temuan IS NOT NULL AND foto_temuan <> ''
+                    )
+                    UPDATE h WITH (ROWLOCK)
+                    SET h.is_deleted = 1
+                    FROM tbl_t_hazard_report h
+                    INNER JOIN cte_hf ON h.id = cte_hf.id
+                    WHERE cte_hf.rn > 1 AND h.is_deleted = 0;"),
+
+                ("Hazard by nik/datetime/temuan", @"
+                    WITH cte_h AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(temuan AS NVARCHAR(200)), ''))))
+                            ORDER BY CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END, id ASC
+                        ) as rn 
+                        FROM tbl_t_hazard_report WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE h WITH (ROWLOCK)
+                    SET h.is_deleted = 1
+                    FROM tbl_t_hazard_report h
+                    INNER JOIN cte_h ON h.id = cte_h.id
+                    WHERE cte_h.rn > 1 AND h.is_deleted = 0;"),
+
+                ("Sync Action Plan with soft-deleted Hazard", @"
+                    UPDATE a WITH (ROWLOCK)
+                    SET a.is_deleted = 1,
+                        a.status = 'Closed'
+                    FROM tbl_t_action_plan a
+                    INNER JOIN tbl_t_hazard_report h WITH (NOLOCK) ON a.item_sap = 'hazard:' + CAST(h.id AS VARCHAR(50))
+                    WHERE h.is_deleted = 1 AND a.is_deleted = 0;"),
+
+                ("Dedup Inspeksi K3", @"
+                    WITH cte_i AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(jenis_inspeksi, '')))), LTRIM(RTRIM(UPPER(ISNULL(lokasi, ''))))
+                            ORDER BY id ASC
+                        ) as rn 
+                        FROM tbl_t_inspection WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE i WITH (ROWLOCK)
+                    SET i.is_deleted = 1
+                    FROM tbl_t_inspection i
+                    INNER JOIN cte_i ON i.id = cte_i.id
+                    WHERE cte_i.rn > 1 AND i.is_deleted = 0;"),
+
+                ("Dedup Safety Talk", @"
+                    WITH cte_s AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(judul, ''))))
+                            ORDER BY id ASC
+                        ) as rn 
+                        FROM tbl_t_safety_talk WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE s WITH (ROWLOCK)
+                    SET s.is_deleted = 1
+                    FROM tbl_t_safety_talk s
+                    INNER JOIN cte_s ON s.id = cte_s.id
+                    WHERE cte_s.rn > 1 AND s.is_deleted = 0;"),
+
+                ("Dedup Observasi K3", @"
+                    WITH cte_o AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), date, LTRIM(RTRIM(UPPER(ISNULL(CAST(kegiatan_yang_diamati AS NVARCHAR(500)), '')))), LTRIM(RTRIM(UPPER(ISNULL(perihal_yang_diamati, ''))))
+                            ORDER BY id ASC
+                        ) as rn 
+                        FROM tbl_t_observation WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE o WITH (ROWLOCK)
+                    SET o.is_deleted = 1
+                    FROM tbl_t_observation o
+                    INNER JOIN cte_o ON o.id = cte_o.id
+                    WHERE cte_o.rn > 1 AND o.is_deleted = 0;"),
+
+                ("Dedup Coaching K3", @"
+                    WITH cte_c AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(tema, ''))))
+                            ORDER BY id ASC
+                        ) as rn 
+                        FROM tbl_t_coaching WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE c WITH (ROWLOCK)
+                    SET c.is_deleted = 1
+                    FROM tbl_t_coaching c
+                    INNER JOIN cte_c ON c.id = cte_c.id
+                    WHERE cte_c.rn > 1 AND c.is_deleted = 0;"),
+
+                ("Dedup P5M Checklist", @"
+                    WITH cte_p AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(list_pertanyaan AS NVARCHAR(500)), ''))))
+                            ORDER BY id ASC
+                        ) as rn 
+                        FROM tbl_t_p5m WITH (NOLOCK)
+                        WHERE is_deleted = 0
+                    )
+                    UPDATE p WITH (ROWLOCK)
+                    SET p.is_deleted = 1
+                    FROM tbl_t_p5m p
+                    INNER JOIN cte_p ON p.id = cte_p.id
+                    WHERE cte_p.rn > 1 AND p.is_deleted = 0;"),
+
+                ("Dedup Action Plan by item_sap", @"
+                    WITH cte_ap AS (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY item_sap
+                            ORDER BY CASE WHEN status = 'Closed' THEN 0 ELSE 1 END, id ASC
+                        ) as rn
+                        FROM tbl_t_action_plan WITH (NOLOCK)
+                        WHERE is_deleted = 0 AND item_sap IS NOT NULL AND item_sap <> ''
+                    )
+                    UPDATE a WITH (ROWLOCK)
+                    SET a.is_deleted = 1
+                    FROM tbl_t_action_plan a
+                    INNER JOIN cte_ap ON a.id = cte_ap.id
+                    WHERE cte_ap.rn > 1 AND a.is_deleted = 0;")
+            };
+
+            int totalRows = 0;
+            foreach (var step in steps)
             {
-                _logger.LogError(ex, "Error executing all-modules dedup cleanup.");
-                return 0;
+                if (cancellationToken.IsCancellationRequested) break;
+                totalRows += await ExecuteDedupStepWithRetryAsync(context, step.Name, step.Sql, cancellationToken);
             }
+
+            if (totalRows > 0)
+            {
+                _logger.LogWarning("All-modules dedup cleanup soft-deleted {TotalRows} duplicate rows.", totalRows);
+            }
+            else
+            {
+                _logger.LogInformation("All-modules dedup cleanup: no active duplicates found.");
+            }
+
+            return totalRows;
+        }
+
+        private async Task<int> ExecuteDedupStepWithRetryAsync(AppDbContext context, string stepName, string sql, CancellationToken cancellationToken)
+        {
+            const int maxRetries = 3;
+            var commandSql = "SET DEADLOCK_PRIORITY LOW;\n" + sql;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    return await context.Database.ExecuteSqlRawAsync(commandSql, cancellationToken);
+                }
+                catch (SqlException ex) when (ex.Number == 1205 && attempt < maxRetries)
+                {
+                    int delayMs = Random.Shared.Next(400, 1200) * attempt;
+                    _logger.LogWarning("Deadlock detected in dedup cleanup '{StepName}' (attempt {Attempt}/{MaxRetries}). Retrying in {DelayMs}ms...",
+                        stepName, attempt, maxRetries, delayMs);
+                    await Task.Delay(delayMs, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error executing dedup step '{StepName}'.", stepName);
+                    return 0;
+                }
+            }
+            return 0;
         }
     }
 }
