@@ -20,11 +20,81 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly MBS_SAP.Services.SapQualityService _qualityService;
+        private readonly MBS_SAP.Services.IndeximRosterService _indeximRosterService;
 
-        public PerformanceController(AppDbContext context, MBS_SAP.Services.SapQualityService qualityService)
+        public PerformanceController(
+            AppDbContext context, 
+            MBS_SAP.Services.SapQualityService qualityService,
+            MBS_SAP.Services.IndeximRosterService indeximRosterService)
         {
             _context = context;
             _qualityService = qualityService;
+            _indeximRosterService = indeximRosterService;
+        }
+
+        private (int onsiteDays, bool hasRoster, bool isOneSync) ComputeEmployeeOnsiteDays(
+            int idPerusahaan,
+            string nik,
+            DateTime effectiveStart,
+            DateTime monthStart,
+            DateTime monthEnd,
+            int totalDaysInMonth,
+            List<Roster>? relevantRosters,
+            Dictionary<string, MBS_SAP.Services.IndeximRosterMonthSummary>? indeximSummaries)
+        {
+            bool isIndexim = (idPerusahaan == MBS_SAP.Services.IndeximRosterService.IndeximCompanyId);
+            if (isIndexim && indeximSummaries != null && indeximSummaries.TryGetValue(nik, out var oneSummary) && oneSummary.HasOneRoster)
+            {
+                int baseWorkDays = oneSummary.WorkDays;
+                int overlappingTugasDays = 0;
+                if (relevantRosters != null && relevantRosters.Any(r => r.TipeRoster == "TUGAS"))
+                {
+                    for (var cur = effectiveStart.Date; cur <= monthEnd.Date; cur = cur.AddDays(1))
+                    {
+                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (isTugas)
+                        {
+                            bool isWorkDay = (oneSummary.DailyCategories.TryGetValue(cur, out var cat) && cat == "WORK")
+                                || (oneSummary.DailyStatuses.TryGetValue(cur, out var dayStatus) && !string.IsNullOrEmpty(dayStatus) && (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Travel Day" || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM"));
+                            if (isWorkDay)
+                            {
+                                overlappingTugasDays++;
+                            }
+                        }
+                    }
+                }
+                int finalOnsite = Math.Max(0, baseWorkDays - overlappingTugasDays);
+                return (finalOnsite, true, true);
+            }
+
+            int onsite = totalDaysInMonth;
+            bool hasRoster = false;
+
+            if (relevantRosters != null && relevantRosters.Count > 0)
+            {
+                hasRoster = true;
+                int computedOnsite = 0;
+                for (var cur = effectiveStart.Date; cur <= monthEnd.Date; cur = cur.AddDays(1))
+                {
+                    bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                    if (!isTugas)
+                    {
+                        bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (isDinas)
+                        {
+                            computedOnsite++;
+                        }
+                    }
+                }
+                onsite = Math.Min(computedOnsite, totalDaysInMonth);
+            }
+            else if (effectiveStart > monthStart)
+            {
+                hasRoster = true;
+                onsite = Math.Min((monthEnd.Date - effectiveStart.Date).Days + 1, totalDaysInMonth);
+            }
+
+            return (onsite, hasRoster, false);
         }
 
         private static bool IsClosedStatus(string? s)
@@ -680,6 +750,8 @@ namespace MBS_SAP.Controllers
                 .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
+            var indeximRosterSummaries = await _indeximRosterService.GetIndeximRosterSummariesAsync(selectedYear, selectedMonth);
+
             var result = new List<dynamic>();
             foreach (var k in deptKaryawansFiltered)
             {
@@ -711,8 +783,6 @@ namespace MBS_SAP.Controllers
                 }
 
                 int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
-                int onsiteDays = totalDaysInMonth; // default if no roster setting
-                bool hasRoster = false;
 
                 DateTime effectiveEmpStart = (k.TanggalMasuk.HasValue && k.TanggalMasuk.Value > startOfMonth)
                     ? k.TanggalMasuk.Value
@@ -722,29 +792,15 @@ namespace MBS_SAP.Controllers
                     ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
                     : null;
 
-                if (relevantRosters != null && relevantRosters.Count > 0)
-                {
-                    hasRoster = true;
-                    int computedOnsite = 0;
-                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
-                    {
-                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                        if (!isTugas)
-                        {
-                            bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                            if (isDinas)
-                            {
-                                computedOnsite++;
-                            }
-                        }
-                    }
-                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    hasRoster = true;
-                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
-                }
+                var (onsiteDays, hasRoster, isOneSync) = ComputeEmployeeOnsiteDays(
+                    companyId,
+                    nik,
+                    effectiveEmpStart,
+                    startOfMonth,
+                    endOfMonth,
+                    totalDaysInMonth,
+                    relevantRosters,
+                    indeximRosterSummaries);
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
 
@@ -918,6 +974,7 @@ namespace MBS_SAP.Controllers
                     closeRateEffectiveClosed = crAssignedClosed + crCreatedClosedFull + crCreatedClosedSelf,
                     onsiteDays = onsiteDays,
                     hasRoster = hasRoster,
+                    isOneSync = isOneSync,
                     isNewHire = isNewHire,
                     tanggalMasukStr = tanggalMasukStr,
                     targetCompletionTime = targetCompletionTime,
@@ -1148,6 +1205,8 @@ namespace MBS_SAP.Controllers
                 .GroupBy(r => r.Nik.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
+            var indeximRosterSummaries = await _indeximRosterService.GetIndeximRosterSummariesAsync(selectedYear, selectedMonth);
+
             int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
 
             int ScaleTarget(int baseTarget, double rat, int daysOnsite)
@@ -1179,36 +1238,19 @@ namespace MBS_SAP.Controllers
                     ? emp.TanggalMasuk.Value
                     : startOfMonth;
 
-                int onsiteDays = totalDaysInMonth;
-                bool hasRoster = false;
-
                 var relevantRosters = (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
                     ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
                     : null;
 
-                if (relevantRosters != null && relevantRosters.Count > 0)
-                {
-                    hasRoster = true;
-                    int computedOnsite = 0;
-                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
-                    {
-                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                        if (!isTugas)
-                        {
-                            bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                            if (isDinas)
-                            {
-                                computedOnsite++;
-                            }
-                        }
-                    }
-                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    hasRoster = true;
-                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
-                }
+                var (onsiteDays, hasRoster, _) = ComputeEmployeeOnsiteDays(
+                    emp.IdPerusahaan,
+                    nik,
+                    effectiveEmpStart,
+                    startOfMonth,
+                    endOfMonth,
+                    totalDaysInMonth,
+                    relevantRosters,
+                    indeximRosterSummaries);
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
                 int mH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -2303,6 +2345,8 @@ namespace MBS_SAP.Controllers
                 .GroupBy(r => r.Nik.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
+            var indeximRosterSummaries = await _indeximRosterService.GetIndeximRosterSummariesAsync(selectedYear, selectedMonth);
+
             int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
 
             int ScaleTarget(int baseTarget, double rat, int daysOnsite)
@@ -2330,35 +2374,18 @@ namespace MBS_SAP.Controllers
                     : startOfMonth;
                 int possibleDays = Math.Max(1, (endOfMonth - effectiveEmpStart).Days + 1);
 
-                int onsiteDays = totalDaysInMonth;
-                bool hasRoster = false;
+                rostersByNik.TryGetValue(nik, out var relevantRosters);
+                relevantRosters ??= new List<MBS_SAP.Models.Roster>();
 
-                var relevantRosters = (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
-                    ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
-                    : null;
-
-                if (relevantRosters != null && relevantRosters.Count > 0)
-                {
-                    hasRoster = true;
-                    int computedOnsite = 0;
-                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
-                    {
-                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                        if (!isTugas)
-                        {
-                            bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                            if (isDinas)
-                            {
-                                computedOnsite++;
-                            }
-                        }
-                    }
-                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    onsiteDays = possibleDays;
-                }
+                var (onsiteDays, hasRoster, _) = ComputeEmployeeOnsiteDays(
+                    emp.IdPerusahaan,
+                    nik,
+                    effectiveEmpStart,
+                    startOfMonth,
+                    endOfMonth,
+                    totalDaysInMonth,
+                    relevantRosters,
+                    indeximRosterSummaries);
 
                 double ratio = (double)onsiteDays / possibleDays;
                 int finalMtdTarget = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -3915,8 +3942,6 @@ namespace MBS_SAP.Controllers
 
                 // Scale targets by roster to match Home & League calculations
                 int totalDaysInMonth = DateTime.DaysInMonth(startOfMonth.Year, startOfMonth.Month);
-                int computedOnsiteDays = totalDaysInMonth;
-                bool hasRoster = false;
                 int tugasDays = 0;
 
                 var rosterHistory = await _context.Rosters
@@ -3928,33 +3953,27 @@ namespace MBS_SAP.Controllers
                     .Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date))
                     .ToList();
 
-                if (relevantRoster != null && relevantRoster.Any())
-                {
-                    hasRoster = true;
-                    int computedOnsite = 0;
-                    for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
-                    {
-                        bool isTugas = relevantRoster.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                        if (isTugas)
-                        {
-                            tugasDays++;
-                        }
-                        else
-                        {
-                            bool isDinas = relevantRoster.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                            if (isDinas)
-                            {
-                                computedOnsite++;
-                            }
-                        }
-                    }
-                    computedOnsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                }
-                else if (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
-                {
-                    hasRoster = true;
-                    computedOnsiteDays = (endOfMonth.Date - currentKaryawan.TanggalMasuk.Value.Date).Days + 1;
-                }
+                var indeximSummary = currentKaryawan != null && currentKaryawan.IdPerusahaan == MBS_SAP.Services.IndeximRosterService.IndeximCompanyId
+                    ? await _indeximRosterService.GetEmployeeIndeximRosterAsync(userNik, startOfMonth.Year, startOfMonth.Month)
+                    : null;
+
+                var indeximSummariesDict = indeximSummary != null
+                    ? new Dictionary<string, MBS_SAP.Services.IndeximRosterMonthSummary>(StringComparer.OrdinalIgnoreCase) { [userNik] = indeximSummary }
+                    : null;
+
+                DateTime effectiveEmpStart = (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
+                    ? currentKaryawan.TanggalMasuk.Value
+                    : startOfMonth;
+
+                var (computedOnsiteDays, hasRoster, _) = ComputeEmployeeOnsiteDays(
+                    currentKaryawan?.IdPerusahaan ?? 0,
+                    userNik,
+                    effectiveEmpStart,
+                    startOfMonth,
+                    endOfMonth,
+                    totalDaysInMonth,
+                    relevantRoster,
+                    indeximSummariesDict);
 
                 double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
 
@@ -11008,6 +11027,8 @@ namespace MBS_SAP.Controllers
                 .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
+            var indeximRosterSummaries = await _indeximRosterService.GetIndeximRosterSummariesAsync(selectedYear, selectedMonth);
+
             var targetDict = new Dictionary<int, int>();
             int totalDaysInMonthTargetDict = DateTime.DaysInMonth(selectedYear, selectedMonth);
 
@@ -11037,31 +11058,24 @@ namespace MBS_SAP.Controllers
                 }
 
                 var nik = (emp.NoNik ?? string.Empty).Trim();
-                int onsiteDays = totalDaysInMonthTargetDict;
-                bool hasRoster = false;
 
                 var relevantRosters = (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
                     ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonthM.Date && (r.AkhirCuti.Date >= startOfMonthM.Date || r.AkhirDinas.Date >= startOfMonthM.Date)).ToList()
                     : null;
 
-                if (relevantRosters != null && relevantRosters.Count > 0)
-                {
-                    hasRoster = true;
-                    int computedOnsite = 0;
-                    for (var cur = startOfMonthM.Date; cur <= endOfMonthM.Date; cur = cur.AddDays(1))
-                    {
-                        bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                        if (!isTugas)
-                        {
-                            bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
-                            if (isDinas)
-                            {
-                                computedOnsite++;
-                            }
-                        }
-                    }
-                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonthTargetDict);
-                }
+                DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonthM)
+                    ? emp.TanggalMasuk.Value
+                    : startOfMonthM;
+
+                var (onsiteDays, hasRoster, _) = ComputeEmployeeOnsiteDays(
+                    emp.IdPerusahaan,
+                    nik,
+                    effectiveEmpStart,
+                    startOfMonthM,
+                    endOfMonthM,
+                    totalDaysInMonthTargetDict,
+                    relevantRosters,
+                    indeximRosterSummaries);
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthTargetDict : 1.0;
 

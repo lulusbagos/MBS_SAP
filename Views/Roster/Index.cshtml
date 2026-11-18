@@ -593,7 +593,9 @@
                         data: 'status',
                         className: 'text-center',
                         render: function(data, type, row) {
-                            if (data === 'aktif') {
+                            if (data === 'sync_one') {
+                                return `<span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;" title="Tersinkronisasi otomatis dari HR ONE DB HC"><i class="bi bi-cloud-check-fill me-1"></i>${row.statusLabel || 'Sync ONE'}</span>`;
+                            } else if (data === 'aktif') {
                                 return `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-check-circle-fill me-1"></i>Aktif</span>`;
                             } else if (data === 'tugas') {
                                 return `<span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-airplane-fill me-1"></i>Tugas (Bebas SAP)</span>`;
@@ -644,8 +646,8 @@
                         data: null,
                         className: 'text-center',
                         render: function(data, type, row) {
-                            const btnEditLabel = row.rosterId ? 'Edit Roster' : 'Atur Roster';
-                            const btnEditClass = row.rosterId ? 'btn-outline-info' : 'btn-primary text-white';
+                            const btnEditLabel = row.isOneSync ? 'Atur Tugas' : (row.rosterId ? 'Edit Roster' : 'Atur Roster');
+                            const btnEditClass = row.isOneSync ? 'btn-outline-primary' : (row.rosterId ? 'btn-outline-info' : 'btn-primary text-white');
                             return `
                                 <div class="d-flex justify-content-center gap-1.5">
                                     <button type="button" class="btn btn-sm ${btnEditClass} btn-action-roster btn-open-set-modal" 
@@ -653,6 +655,7 @@
                                             data-nama="${escapeHtml(row.nama)}" 
                                             data-perusahaan="${escapeHtml(row.perusahaan)}" 
                                             data-dept="${escapeHtml(row.departemen)}" 
+                                            data-is-one-sync="${row.isOneSync ? 'true' : 'false'}"
                                             data-roster-id="${row.rosterId || ''}" 
                                             data-tipe="${row.tipeRoster || 'REGULER'}" 
                                             data-awal-dinas="${row.awalDinas || ''}" 
@@ -918,32 +921,43 @@
                 $('#formRosterId').val(rosterId);
                 $('#modalAlert').addClass('d-none').text('');
 
-                if (tipe === 'TUGAS') {
+                const isOneSync = $(this).data('is-one-sync') === true || $(this).data('is-one-sync') === 'true';
+                if (isOneSync) {
+                    $('#btnTabReguler').hide();
                     $('#btnTabTugas').trigger('click');
-                    $('#inputAwalTugas').val(awalDinas || formatDate(new Date()));
-                    $('#inputAkhirTugas').val(akhirDinas || formatDate(addDays(new Date(), 30)));
+                    $('#inputAwalTugas').val(tipe === 'TUGAS' ? awalDinas : formatDate(new Date()));
+                    $('#inputAkhirTugas').val(tipe === 'TUGAS' ? akhirDinas : formatDate(addDays(new Date(), 30)));
                     $('#inputKeteranganTugas').val(keterangan);
+                    $('#modalAlert').removeClass('d-none').html('<i class="bi bi-info-circle-fill me-1"></i> Roster reguler karyawan PT Indexim Coalindo dikelola terpusat dari aplikasi ONE DB HC. Anda hanya dapat mengatur <strong>Periode Tugas</strong>.');
                 } else {
-                    $('#btnTabReguler').trigger('click');
-                    
-                    if (awalDinas && akhirDinas && awalCuti && akhirCuti) {
-                        $('#inputAwalDinas').val(awalDinas);
-                        $('#inputAkhirDinas').val(akhirDinas);
-                        $('#inputAwalCuti').val(awalCuti);
-                        $('#inputAkhirCuti').val(akhirCuti);
+                    $('#btnTabReguler').show();
+                    if (tipe === 'TUGAS') {
+                        $('#btnTabTugas').trigger('click');
+                        $('#inputAwalTugas').val(awalDinas || formatDate(new Date()));
+                        $('#inputAkhirTugas').val(akhirDinas || formatDate(addDays(new Date(), 30)));
+                        $('#inputKeteranganTugas').val(keterangan);
                     } else {
-                        // Prefill default cycle
-                        const today = new Date();
-                        const endDinas = addDays(today, defaultOnsite - 1);
-                        const startCuti = addDays(endDinas, 1);
-                        const endCuti = addDays(startCuti, defaultOffsite - 1);
+                        $('#btnTabReguler').trigger('click');
+                        
+                        if (awalDinas && akhirDinas && awalCuti && akhirCuti) {
+                            $('#inputAwalDinas').val(awalDinas);
+                            $('#inputAkhirDinas').val(akhirDinas);
+                            $('#inputAwalCuti').val(awalCuti);
+                            $('#inputAkhirCuti').val(akhirCuti);
+                        } else {
+                            // Prefill default cycle
+                            const today = new Date();
+                            const endDinas = addDays(today, defaultOnsite - 1);
+                            const startCuti = addDays(endDinas, 1);
+                            const endCuti = addDays(startCuti, defaultOffsite - 1);
 
-                        $('#inputAwalDinas').val(formatDate(today));
-                        $('#inputAkhirDinas').val(formatDate(endDinas));
-                        $('#inputAwalCuti').val(formatDate(startCuti));
-                        $('#inputAkhirCuti').val(formatDate(endCuti));
+                            $('#inputAwalDinas').val(formatDate(today));
+                            $('#inputAkhirDinas').val(formatDate(endDinas));
+                            $('#inputAwalCuti').val(formatDate(startCuti));
+                            $('#inputAkhirCuti').val(formatDate(endCuti));
+                        }
+                        updateDurationPreview();
                     }
-                    updateDurationPreview();
                 }
 
                 const modal = new bootstrap.Modal(document.getElementById('modalSetRoster'));

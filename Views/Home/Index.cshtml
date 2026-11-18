@@ -1357,13 +1357,17 @@
                         @{
                             var currentTipe = (ViewData["RosterTipe"] as string) ?? "REGULER";
                             var isTugasActive = currentTipe.Equals("TUGAS", StringComparison.OrdinalIgnoreCase);
+                            bool isIndexim = (ViewData["IsIndexim"] as bool?) ?? false;
+                            bool hasOneRoster = (ViewData["HasOneRoster"] as bool?) ?? false;
+                            int oneWorkDays = (ViewData["OneWorkDays"] as int?) ?? 0;
+                            int oneOffDays = (ViewData["OneOffDays"] as int?) ?? 0;
                         }
                         <div id="rosterFormAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
 
                         <!-- Segmented Switcher for Tipe Roster -->
                         <div class="roster-type-switcher mb-3" style="display: flex; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border-color); gap: 4px;">
                             <button type="button" class="btn btn-sm flex-fill roster-tab-btn @(!isTugasActive ? "active" : "")" id="tabRosterReguler" style="border-radius: 10px; font-weight: 700; font-size: 11.5px; padding: 8px 12px; transition: all 0.2s;">
-                                <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler
+                                <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler @(isIndexim && hasOneRoster ? "(Sync ONE)" : "")
                             </button>
                             <button type="button" class="btn btn-sm flex-fill roster-tab-btn @(isTugasActive ? "active" : "")" id="tabPeriodeTugas" style="border-radius: 10px; font-weight: 700; font-size: 11.5px; padding: 8px 12px; transition: all 0.2s;">
                                 <i class="bi bi-airplane-fill me-1"></i> Periode Tugas (Bebas SAP)
@@ -1384,64 +1388,130 @@
 
                         <!-- SECTION 1: ROSTER REGULER -->
                         <div id="sectionRosterReguler" style="@(isTugasActive ? "display: none;" : "")">
-                            <!-- Target Calculation Info Banner -->
-                            <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.05);">
-                                <span style="font-size: 9px; background: #0ea5e9; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Informasi Target</span>
-                                <h5 style="color: #0369a1; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
-                                    Perhitungan Target dihitung dari jumlah hari Onsite
-                                </h5>
-                            </div>
-                            
-                            <!-- Flexible Roster Notice -->
-                            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
-                                <i class="bi bi-calendar-check-fill" style="color: #059669; font-size: 18px; line-height: 1;"></i>
-                                <div>
-                                    <h6 style="color: #059669; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PENGATURAN ROSTER</h6>
-                                    <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
-                                        Isi tanggal Mulai &amp; Akhir Dinas serta Cuti secara manual sesuai jadwal aktual dinas Anda di site.
+                            @if (isIndexim && hasOneRoster)
+                            {
+                                <!-- Synchronized from ONE DB HC Card -->
+                                <div style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(14, 165, 233, 0.12)); border: 2px solid #0284c7; border-radius: 18px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span style="font-size: 10px; background: #0284c7; color: #ffffff; padding: 3px 10px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <i class="bi bi-cloud-check-fill me-1"></i> Terhubung ONE DB HC
+                                        </span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-auto" style="font-size: 10.5px; font-weight: 700;">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Roster Aktif
+                                        </span>
+                                    </div>
+                                    <h5 style="color: #0369a1; font-weight: 850; font-size: 14px; margin: 0 0 10px 0;">
+                                        Jadwal Roster Periode @DateTime.Now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))
+                                    </h5>
+                                    
+                                    <!-- Summary Numbers -->
+                                    <div class="row g-2 mb-3 text-center">
+                                        <div class="col-6">
+                                            <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: 12px; padding: 10px;">
+                                                <div style="font-size: 10.5px; color: #0284c7; font-weight: 700; text-transform: uppercase;">Hari Onsite (Kerja)</div>
+                                                <div style="font-size: 20px; font-weight: 900; color: #0369a1;">@oneWorkDays <span style="font-size: 12px; font-weight: 600;">Hari</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div style="background: #ffffff; border: 1px solid #fde68a; border-radius: 12px; padding: 10px;">
+                                                <div style="font-size: 10.5px; color: #d97706; font-weight: 700; text-transform: uppercase;">Hari Cuti / Off</div>
+                                                <div style="font-size: 20px; font-weight: 900; color: #b45309;">@oneOffDays <span style="font-size: 12px; font-weight: 600;">Hari</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Information Notice -->
+                                    <div style="background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 12px; padding: 12px; font-size: 11.5px; line-height: 1.5; color: var(--text-main);">
+                                        <div class="d-flex gap-2 align-items-start">
+                                            <i class="bi bi-info-circle-fill text-primary" style="font-size: 16px; margin-top: 1px;"></i>
+                                            <div>
+                                                <strong>Roster Reguler Terkunci:</strong> Jadwal kerja &amp; cuti reguler Anda telah tersinkronisasi otomatis dari database <strong>ONE DB HC</strong>.
+                                                <div class="mt-1" style="color: #475569;">
+                                                    Jika terdapat ketidaksesuaian atau perubahan jadwal, silakan hubungi ke <strong>Admin Departemen masing-masing</strong> untuk melakukan perubahan di aplikasi <strong>ONE DB HC</strong>.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else if (isIndexim && !hasOneRoster)
+                            {
+                                <!-- Warning Unset in ONE -->
+                                <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 18px; padding: 18px; margin-bottom: 20px;">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span style="font-size: 10px; background: #f59e0b; color: #ffffff; padding: 3px 10px; border-radius: 20px; font-weight: 800; text-transform: uppercase;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Perhatian: Roster Belum Terdaftar
+                                        </span>
+                                    </div>
+                                    <h5 style="color: #b45309; font-weight: 850; font-size: 13.5px; margin: 0 0 8px 0;">
+                                        Jadwal Roster Belum Diatur di Aplikasi ONE DB HC
+                                    </h5>
+                                    <p style="font-size: 11.5px; color: #78350f; line-height: 1.5; margin: 0 0 10px 0;">
+                                        Jadwal roster Anda untuk periode bulan ini belum diatur oleh Admin di aplikasi <strong>ONE DB HC</strong>. Harap segera menghubungi <strong>Admin Departemen masing-masing</strong> untuk melakukan pengaturan di aplikasi ONE DB HC agar target K3 Anda dapat disesuaikan secara proporsional.
                                     </p>
                                 </div>
-                            </div>
-
-                            <!-- Dinas Section Card -->
-                            <div class="roster-card">
-                                <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-geo-alt-fill"></i> Periode Dinas (Onsite)
-                                </h6>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <label class="roster-label">Mulai Dinas</label>
-                                        <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" />
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="roster-label">Akhir Dinas</label>
-                                        <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" />
+                            }
+                            else
+                            {
+                                <!-- Target Calculation Info Banner -->
+                                <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.05);">
+                                    <span style="font-size: 9px; background: #0ea5e9; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Informasi Target</span>
+                                    <h5 style="color: #0369a1; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                        Perhitungan Target dihitung dari jumlah hari Onsite
+                                    </h5>
+                                </div>
+                                
+                                <!-- Flexible Roster Notice -->
+                                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
+                                    <i class="bi bi-calendar-check-fill" style="color: #059669; font-size: 18px; line-height: 1;"></i>
+                                    <div>
+                                        <h6 style="color: #059669; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PENGATURAN ROSTER</h6>
+                                        <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
+                                            Isi tanggal Mulai &amp; Akhir Dinas serta Cuti secara manual sesuai jadwal aktual dinas Anda di site.
+                                        </p>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Cuti Section Card -->
-                            <div class="roster-card">
-                                <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-orange); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-airplane-fill"></i> Periode Roster (Cuti)
-                                </h6>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <label class="roster-label">Mulai Cuti</label>
-                                        <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" />
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="roster-label">Akhir Cuti</label>
-                                        <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" />
+                                <!-- Dinas Section Card -->
+                                <div class="roster-card">
+                                    <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                        <i class="bi bi-geo-alt-fill"></i> Periode Dinas (Onsite)
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="roster-label">Mulai Dinas</label>
+                                            <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" />
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="roster-label">Akhir Dinas</label>
+                                            <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Info Box Notice -->
-                            <div class="roster-info-box" style="margin-bottom: 24px;">
-                                <i class="bi bi-info-circle-fill"></i>
-                                <p>Target K3 bulanan Anda wajib dipenuhi secara proporsional sesuai jumlah hari dinas aktif (onsite). Saat cuti, target program ditiadakan.</p>
-                            </div>
+                                <!-- Cuti Section Card -->
+                                <div class="roster-card">
+                                    <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-orange); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                        <i class="bi bi-airplane-fill"></i> Periode Roster (Cuti)
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="roster-label">Mulai Cuti</label>
+                                            <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" />
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="roster-label">Akhir Cuti</label>
+                                            <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Info Box Notice -->
+                                <div class="roster-info-box" style="margin-bottom: 24px;">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                    <p>Target K3 bulanan Anda wajib dipenuhi secara proporsional sesuai jumlah hari dinas aktif (onsite). Saat cuti, target program ditiadakan.</p>
+                                </div>
+                            }
                         </div>
 
                         <!-- SECTION 2: PERIODE TUGAS (BEBAS SAP) -->
@@ -1892,6 +1962,21 @@
                 $('#rosterSettingsModal').data('initialEditId', initialEditId);
                 $('#rosterSettingsModal').data('initialEditTipe', initialEditTipe);
 
+                @{
+                    bool isIndeximScript = (ViewData["IsIndexim"] as bool?) ?? false;
+                    bool hasOneRosterScript = (ViewData["HasOneRoster"] as bool?) ?? false;
+                }
+                const isIndeximOneRoster = @(isIndeximScript && hasOneRosterScript ? "true" : "false");
+                function updateSaveButtonVisibility() {
+                    const currentTipe = $('#tipeRosterSelected').val() || 'REGULER';
+                    if (isIndeximOneRoster && currentTipe !== 'TUGAS') {
+                        $('#btnSaveRoster').hide();
+                    } else {
+                        $('#btnSaveRoster').show();
+                    }
+                }
+                updateSaveButtonVisibility();
+
                 // Tab switching between Roster Reguler and Periode Tugas
                 $('#tabRosterReguler').on('click', function() {
                     $(this).addClass('active');
@@ -1899,6 +1984,7 @@
                     $('#sectionRosterReguler').show();
                     $('#sectionPeriodeTugas').hide();
                     $('#tipeRosterSelected').val('REGULER');
+                    updateSaveButtonVisibility();
                     
                     if ($('#rosterSettingsModal').data('initialEditTipe') === 'REGULER') {
                         $('#rosterEditId').val($('#rosterSettingsModal').data('initialEditId') || '');
@@ -1914,6 +2000,7 @@
                     $('#sectionPeriodeTugas').show();
                     $('#sectionRosterReguler').hide();
                     $('#tipeRosterSelected').val('TUGAS');
+                    updateSaveButtonVisibility();
 
                     if ($('#rosterSettingsModal').data('initialEditTipe') === 'TUGAS') {
                         $('#rosterEditId').val($('#rosterSettingsModal').data('initialEditId') || '');

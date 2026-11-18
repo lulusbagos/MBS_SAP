@@ -18,12 +18,18 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
         private readonly MBS_SAP.Services.CompanyHierarchyService _companyHierarchyService;
+        private readonly MBS_SAP.Services.IndeximRosterService _indeximRosterService;
 
-        public HomeController(AppDbContext context, IMemoryCache cache, MBS_SAP.Services.CompanyHierarchyService companyHierarchyService)
+        public HomeController(
+            AppDbContext context, 
+            IMemoryCache cache, 
+            MBS_SAP.Services.CompanyHierarchyService companyHierarchyService,
+            MBS_SAP.Services.IndeximRosterService indeximRosterService)
         {
             _context = context;
             _cache = cache;
             _companyHierarchyService = companyHierarchyService;
+            _indeximRosterService = indeximRosterService;
         }
 
         public async Task<IActionResult> Index()
@@ -62,8 +68,32 @@ namespace MBS_SAP.Controllers
                     .OrderByDescending(r => r.AkhirCuti)
                     .FirstOrDefaultAsync();
 
-                // Trigger popup if roster is unset/empty OR if today is after the active cycle (expired)
-                stats.ShowRosterPopup = (latestRoster == null) || (DateTime.Today > latestRoster.AkhirCuti);
+                var currentKaryawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif);
+                bool isIndexim = currentKaryawan != null && _indeximRosterService.IsIndexim(currentKaryawan.IdPerusahaan);
+                stats.IsIndexim = isIndexim;
+
+                MBS_SAP.Services.IndeximRosterMonthSummary? oneSummary = null;
+                if (isIndexim && !string.IsNullOrEmpty(userNik))
+                {
+                    oneSummary = await _indeximRosterService.GetEmployeeIndeximRosterAsync(userNik, DateTime.Today.Year, DateTime.Today.Month);
+                    if (oneSummary != null && oneSummary.HasOneRoster)
+                    {
+                        stats.HasOneRoster = true;
+                        stats.OneWorkDays = oneSummary.WorkDays;
+                        stats.OneOffDays = oneSummary.OffDays;
+                        stats.ShowRosterPopup = false;
+                    }
+                    else
+                    {
+                        stats.HasOneRoster = false;
+                        stats.ShowRosterPopup = true; // Munculkan pop-up peringatan belum diatur di ONE
+                    }
+                }
+                else
+                {
+                    // Mitra kerja: Trigger popup if roster is unset/empty OR if today is after the active cycle (expired)
+                    stats.ShowRosterPopup = (latestRoster == null) || (DateTime.Today > latestRoster.AkhirCuti);
+                }
 
                 stats.RosterHistory = await _context.Rosters
                     .Where(r => r.Nik == userNik)
@@ -125,7 +155,6 @@ namespace MBS_SAP.Controllers
                 int targetCoaching = 0;
                 int targetP5m = 1;
 
-                var currentKaryawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif);
                 if (currentKaryawan != null)
                 {
                     var targetMapping = await _context.KaryawanJabatanMappings.FirstOrDefaultAsync(m => m.KaryawanId == currentKaryawan.IdKaryawan);
@@ -154,7 +183,29 @@ namespace MBS_SAP.Controllers
                     .Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date))
                     .ToList();
 
-                if (relevantRoster != null && relevantRoster.Any())
+                if (stats.IsIndexim && stats.HasOneRoster)
+                {
+                    hasRoster = true;
+                    int baseWorkDays = stats.OneWorkDays;
+                    int overlappingTugasDays = 0;
+                    if (relevantRoster != null && relevantRoster.Any(r => r.TipeRoster == "TUGAS"))
+                    {
+                        for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
+                        {
+                            bool isTugas = relevantRoster.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isTugas && oneSummary != null && oneSummary.DailyStatuses.TryGetValue(cur, out var dayStatus) && !string.IsNullOrEmpty(dayStatus))
+                            {
+                                bool isWorkDay = (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Travel Day" || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM");
+                                if (isWorkDay)
+                                {
+                                    overlappingTugasDays++;
+                                }
+                            }
+                        }
+                    }
+                    computedOnsiteDays = Math.Max(0, baseWorkDays - overlappingTugasDays);
+                }
+                else if (relevantRoster != null && relevantRoster.Any())
                 {
                     hasRoster = true;
                     int computedOnsite = 0;
@@ -697,6 +748,10 @@ namespace MBS_SAP.Controllers
             }
 
             ViewData["ShowRosterPopup"] = stats.ShowRosterPopup;
+            ViewData["IsIndexim"] = stats.IsIndexim;
+            ViewData["HasOneRoster"] = stats.HasOneRoster;
+            ViewData["OneWorkDays"] = stats.OneWorkDays;
+            ViewData["OneOffDays"] = stats.OneOffDays;
             ViewData["RosterHistory"] = stats.RosterHistory;
             ViewData["RosterId"] = stats.RosterId;
             ViewData["MitraHariOnsite"] = stats.MitraHariOnsite;
@@ -782,6 +837,10 @@ namespace MBS_SAP.Controllers
 
         public class DashboardStatsCache
         {
+            public bool IsIndexim { get; set; }
+            public bool HasOneRoster { get; set; }
+            public int OneWorkDays { get; set; }
+            public int OneOffDays { get; set; }
             public bool ShowRosterPopup { get; set; }
             public List<Roster> RosterHistory { get; set; } = new();
             public int? RosterId { get; set; }

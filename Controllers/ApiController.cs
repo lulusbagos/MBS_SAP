@@ -1111,6 +1111,17 @@ namespace MBS_SAP.Controllers
                     return Ok(new { success = true, message = "Periode Tugas berhasil disimpan. Anda dibebaskan dari target SAP selama periode ini." });
                 }
 
+                var empKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (empKaryawan != null && empKaryawan.IdPerusahaan == MBS_SAP.Services.IndeximRosterService.IndeximCompanyId)
+                {
+                    var indeximService = HttpContext.RequestServices.GetRequiredService<MBS_SAP.Services.IndeximRosterService>();
+                    var oneCheck = await indeximService.GetEmployeeIndeximRosterAsync(userNik, DateTime.Today.Year, DateTime.Today.Month);
+                    if (oneCheck != null && oneCheck.HasOneRoster)
+                    {
+                        return BadRequest(new { success = false, message = "Roster reguler untuk karyawan PT Indexim Coalindo dikelola secara terpusat melalui aplikasi ONE DB HC. Silakan hubungi Admin Departemen untuk perubahan jadwal, atau gunakan tab 'Periode Tugas'." });
+                    }
+                }
+
                 if (req == null || 
                     !DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
                     !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||

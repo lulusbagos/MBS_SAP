@@ -33,6 +33,8 @@ builder.Services.AddScoped<PostgresReplicationService>();
 builder.Services.AddHostedService<PostgresReplicationScheduler>();
 builder.Services.AddScoped<MBS_SAP.Services.SapQualityService>();
 builder.Services.AddHostedService<MBS_SAP.Services.SapQualityAuditScheduler>();
+builder.Services.AddScoped<MBS_SAP.Services.IndeximRosterService>();
+builder.Services.AddHostedService<MBS_SAP.Services.IndeximRosterSyncScheduler>();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 

@@ -21,15 +21,18 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly CompanyHierarchyService _companyHierarchyService;
         private readonly IMemoryCache _cache;
+        private readonly MBS_SAP.Services.IndeximRosterService _indeximRosterService;
 
         public RosterController(
             AppDbContext context, 
             CompanyHierarchyService companyHierarchyService,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            MBS_SAP.Services.IndeximRosterService indeximRosterService)
         {
             _context = context;
             _companyHierarchyService = companyHierarchyService;
             _cache = cache;
+            _indeximRosterService = indeximRosterService;
         }
 
         private bool HasAccess()
@@ -247,17 +250,37 @@ namespace MBS_SAP.Controllers
                 .ToDictionary(g => g.Key, g => g.First());
 
             var today = DateTime.Today;
+            var indeximRosterSummaries = await _indeximRosterService.GetIndeximRosterSummariesAsync(today.Year, today.Month);
 
             var mappedList = allFilteredUsers.Select(u => {
                 var hasRoster = latestRostersMap.TryGetValue(u.Nik, out var r);
                 var hasMitra = mitraRosters.TryGetValue(u.Nik, out var m);
+                var isIndeximUser = (u.IdPerusahaan == MBS_SAP.Services.IndeximRosterService.IndeximCompanyId);
+                MBS_SAP.Services.IndeximRosterMonthSummary? oneSum = null;
+                var hasOneData = isIndeximUser && indeximRosterSummaries.TryGetValue(u.Nik, out oneSum) && oneSum != null && oneSum.HasOneRoster;
 
                 string status = "belum_set";
                 string statusLabel = "Belum Diatur";
                 string statusClass = "badge-warning";
                 string tipeRoster = hasRoster ? (r!.TipeRoster ?? "REGULER") : "REGULER";
 
-                if (hasRoster)
+                if (hasOneData)
+                {
+                    if (hasRoster && string.Equals(r!.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase) && r.AkhirCuti >= today)
+                    {
+                        status = "tugas";
+                        statusLabel = $"Periode Tugas (Sync ONE {oneSum!.WorkDays} Onsite)";
+                        statusClass = "badge-info";
+                        tipeRoster = "TUGAS";
+                    }
+                    else
+                    {
+                        status = "sync_one";
+                        statusLabel = $"Sync ONE ({oneSum!.WorkDays} Hari Onsite)";
+                        statusClass = "badge-success";
+                    }
+                }
+                else if (hasRoster)
                 {
                     if (string.Equals(r!.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase))
                     {
@@ -305,6 +328,9 @@ namespace MBS_SAP.Controllers
                     statusLabel = statusLabel,
                     statusClass = statusClass,
                     tipeRoster = tipeRoster,
+                    isOneSync = hasOneData,
+                    oneWorkDays = hasOneData ? oneSum!.WorkDays : 0,
+                    oneOffDays = hasOneData ? oneSum!.OffDays : 0,
                     rosterId = hasRoster ? (int?)r!.Id : null,
                     awalDinas = hasRoster ? r!.AwalDinas.ToString("yyyy-MM-dd") : "",
                     akhirDinas = hasRoster ? r!.AkhirDinas.ToString("yyyy-MM-dd") : "",
@@ -531,6 +557,16 @@ namespace MBS_SAP.Controllers
                 }
 
                 // REGULER ROSTER
+                var empKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == req.Nik && k.StatusAktif);
+                if (empKaryawan != null && empKaryawan.IdPerusahaan == MBS_SAP.Services.IndeximRosterService.IndeximCompanyId)
+                {
+                    var oneCheck = await _indeximRosterService.GetEmployeeIndeximRosterAsync(req.Nik, DateTime.Today.Year, DateTime.Today.Month);
+                    if (oneCheck != null && oneCheck.HasOneRoster)
+                    {
+                        return BadRequest(new { success = false, message = $"Karyawan PT Indexim Coalindo (NIK {req.Nik}) jadwal regulernya terhubung langsung dengan aplikasi ONE DB HC. Silakan lakukan perubahan di ONE DB HC atau gunakan opsi 'Periode Tugas'." });
+                    }
+                }
+
                 if (!DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
                     !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||
                     !DateTime.TryParse(req.AwalCuti, out DateTime awalCuti) ||
