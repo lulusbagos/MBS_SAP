@@ -823,25 +823,18 @@ namespace MBS_SAP.Controllers
                 int mtdActHClosed = hazardsClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
                 // ==============================================================
-                // CLOSE RATE DUAL ACCOUNTABILITY (50% Pembuat / 50% Yang Dituju)
+                // CLOSE RATE DUAL ACCOUNTABILITY (50% Pelapor / 50% PIC Eksekutor)
                 // ==============================================================
+                // Pelapor: Karyawan telah memenuhi kewajiban pelaporan temuan K3 (100%).
+                // PIC: Kewajiban tindak lanjut perbaikan temuan hingga tuntas/Closed.
+                // Jika temuan masih Open / belum tuntas ditindaklanjuti oleh PIC,
+                // kendala penutupan berada di sisi PIC (0%), sedangkan Pelapor bernilai 100%.
 
                 // 1. SISI PEMBUAT / PELAPOR
                 var empCreatedAp = rawActionPlansList.Where(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), nik, StringComparison.OrdinalIgnoreCase)).ToList();
                 int crCreatedTotal = empCreatedAp.Count;
-                int crCreatedClosedFull = 0;
-                int crCreatedClosedSelf = 0;
-                int crCreatedOpen = 0;
-                double crCreatorScore = 100.0;
-
-                if (crCreatedTotal > 0)
-                {
-                    int closedCount = empCreatedAp.Count(a => IsClosedStatus(a.Status));
-                    crCreatedClosedFull = closedCount;
-                    crCreatedClosedSelf = 0;
-                    crCreatedOpen = crCreatedTotal - closedCount;
-                    crCreatorScore = Math.Min(100.0, Math.Max(0.0, Math.Round(((double)closedCount / crCreatedTotal) * 100.0, 1)));
-                }
+                int crCreatedClosed = empCreatedAp.Count(a => IsClosedStatus(a.Status));
+                int crCreatedOpen = crCreatedTotal - crCreatedClosed;
 
                 // 2. SISI YANG DITUJU (PIC / PJA)
                 var empAssignedAp = rawActionPlansList.Where(a =>
@@ -851,18 +844,25 @@ namespace MBS_SAP.Controllers
 
                 int crAssignedTotal = empAssignedAp.Count;
                 int crAssignedClosed = empAssignedAp.Count(a => IsClosedStatus(a.Status));
-                double crPicScore = crAssignedTotal > 0 ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)crAssignedClosed / crAssignedTotal * 100.0, 1))) : 100.0;
 
-                // 3. KOMBINASI DUAL ACCOUNTABILITY (50:50)
-                double empCloseRate;
-                if (crCreatedTotal > 0 || crAssignedTotal > 0)
-                {
-                    empCloseRate = Math.Round((crCreatorScore * 0.50) + (crPicScore * 0.50), 1);
-                }
-                else
-                {
-                    empCloseRate = 100.0;
-                }
+                int crTotalRelevantAp = crCreatedTotal + crAssignedTotal;
+                int crTotalClosedAp = crCreatedClosed + crAssignedClosed;
+
+                // Sisi Pelapor: Bernilai 100% karena kewajiban pelaporan temuan K3 telah tuntas
+                double crCreatorScore = 100.0;
+
+                // Sisi PIC Eksekutor: Menghitung persentase temuan yang sudah tuntas (Closed) di lapangan
+                double crPicScore = crTotalRelevantAp > 0
+                    ? Math.Min(100.0, Math.Max(0.0, Math.Round(((double)crTotalClosedAp / crTotalRelevantAp) * 100.0, 1)))
+                    : 100.0;
+
+                // 3. KOMBINASI DUAL ACCOUNTABILITY (50% Pelapor + 50% PIC Eksekutor)
+                double empCloseRate = crTotalRelevantAp > 0
+                    ? Math.Round((crCreatorScore * 0.50) + (crPicScore * 0.50), 1)
+                    : 100.0;
+
+                int crCreatedClosedFull = crCreatedClosed;
+                int crCreatedClosedSelf = 0;
 
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
