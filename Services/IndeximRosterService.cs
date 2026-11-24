@@ -104,13 +104,14 @@ namespace MBS_SAP.Services
                         r.working_date,
                         r.status,
                         CASE 
+                            WHEN r.status = 'Travel Day' OR r.status LIKE '%Travel%' THEN 'OFF'
                             WHEN k.kategori = 'WORK' THEN 'WORK'
                             WHEN k.kategori = 'OFF' THEN 'OFF'
                             WHEN r.status IN ('07:00-19:00', '19:00-07:00', '06:00-18:00', '06:30-18:30', 
                                               '18:00-06:00', '18:30-06:30', '15:00-23:00', '04:00-12:00', 
                                               '05:00-13:00', '07:00-17:00', 'IC_0700-1900', 'IC_1900-0700', 
                                               'IC_0600-1800', 'IC_0630-1830', 'IC_1830-0630', 'IC_LONG_SHIFT', 
-                                              'IC_LONG_SHIFT_2', 'TGS', 'Tugas', 'Travel Day', 'SIANG', 'MALAM', 'SH_65') THEN 'WORK'
+                                              'IC_LONG_SHIFT_2', 'TGS', 'Tugas', 'SIANG', 'MALAM', 'SH_65') THEN 'WORK'
                             ELSE 'OFF'
                         END AS classified_type
                     FROM DB_ONE.dbo.tbl_m_roster_detail r WITH (NOLOCK)

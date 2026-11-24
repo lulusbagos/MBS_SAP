@@ -195,7 +195,7 @@ namespace MBS_SAP.Controllers
                             bool isTugas = relevantRoster.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                             if (isTugas && oneSummary != null && oneSummary.DailyStatuses.TryGetValue(cur, out var dayStatus) && !string.IsNullOrEmpty(dayStatus))
                             {
-                                bool isWorkDay = (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Travel Day" || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM");
+                                bool isWorkDay = (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM");
                                 if (isWorkDay)
                                 {
                                     overlappingTugasDays++;

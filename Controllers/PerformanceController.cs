@@ -55,7 +55,7 @@ namespace MBS_SAP.Controllers
                         if (isTugas)
                         {
                             bool isWorkDay = (oneSummary.DailyCategories.TryGetValue(cur, out var cat) && cat == "WORK")
-                                || (oneSummary.DailyStatuses.TryGetValue(cur, out var dayStatus) && !string.IsNullOrEmpty(dayStatus) && (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Travel Day" || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM"));
+                                || (oneSummary.DailyStatuses.TryGetValue(cur, out var dayStatus) && !string.IsNullOrEmpty(dayStatus) && (dayStatus.StartsWith("0") || dayStatus.StartsWith("1") || dayStatus.Contains("IC_") || dayStatus == "Tugas" || dayStatus == "TGS" || dayStatus == "SIANG" || dayStatus == "MALAM"));
                             if (isWorkDay)
                             {
                                 overlappingTugasDays++;
