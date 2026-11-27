@@ -291,9 +291,12 @@
                                 <i class="bi bi-calendar-check-fill me-2 text-primary"></i>@monthName
                             </h6>
                             <div style="display: flex; flex-direction: column; gap: 12px;">
-                                @foreach (var group in monthGroup.GroupBy(p => new { p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Lokasi, p.Topik, p.FotoKegiatan, p.Catatan }))
+                                @foreach (var group in monthGroup.GroupBy(p => new { p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Lokasi, p.Topik, p.FotoKegiatan, p.Catatan, p.IsPekerjaLapangan, p.PjaNama, p.AtasanNama }))
                                 {
-                                    var hasUnfit = group.Any(q => q.Jawaban == "No");
+                                    var hasUnfit = group.Any(q => 
+                                        ((q.Jawaban == "No" || q.Jawaban == "Tidak") && (q.ListPertanyaan != null && (q.ListPertanyaan.Contains("sehat") || q.ListPertanyaan.Contains("beban pikiran") || q.ListPertanyaan.Contains("cukup tidur") || q.ListPertanyaan.Contains("APD"))))
+                                        || (q.ListPertanyaan != null && q.ListPertanyaan.Contains("24 jam") && (q.Jawaban == "< 4 Jam" || q.Jawaban == "4 Jam" || q.Jawaban == "5 Jam"))
+                                    );
                                     var groupPrimaryId = group.Select(x => x.Id).OrderBy(id => id).FirstOrDefault();
                                     <div class="card-sap @(hasUnfit ? "border-red-accent" : "border-green-accent") mb-0">
                                         
@@ -301,6 +304,20 @@
                                             <div>
                                                 <span style="font-weight: 700; font-size: 14px; color: var(--text-main);">Topik: @group.Key.Topik</span>
                                                 <span class="d-block text-muted" style="font-size: 11px;"><i class="bi bi-geo-alt-fill me-1"></i>@(group.Key.Lokasi ?? "General")</span>
+                                                @if (group.Key.IsPekerjaLapangan == true)
+                                                {
+                                                    <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                                        <span class="badge" style="background-color: rgba(13, 148, 136, 0.15); color: #0d9488; font-size: 9px; font-weight: 600;">Pekerja Lapangan</span>
+                                                        @if (!string.IsNullOrEmpty(group.Key.PjaNama))
+                                                        {
+                                                            <span class="badge" style="background-color: rgba(99, 102, 241, 0.12); color: #6366f1; font-size: 9px;">PJA: @group.Key.PjaNama</span>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(group.Key.AtasanNama) && group.Key.AtasanNama != group.Key.PjaNama)
+                                                        {
+                                                            <span class="badge" style="background-color: rgba(59, 130, 246, 0.12); color: #2563eb; font-size: 9px;">Atasan: @group.Key.AtasanNama</span>
+                                                        }
+                                                    </div>
+                                                }
                                             </div>
                                             <span class="status-badge @(hasUnfit ? "pending" : "approved")" style="font-size: 9px; @(hasUnfit ? "" : "background-color: rgba(168, 85, 247, 0.15); color: #a855f7;")">
                                                 @(hasUnfit ? "Kru Unfit" : "Semua Fit")
@@ -311,9 +328,21 @@
                                         <div class="my-2" style="font-size: 11px;">
                                             @foreach (var item in group)
                                             {
+                                                var qText = item.ListPertanyaan ?? "";
+                                                var ans = item.Jawaban ?? "";
+                                                var isDeficit = (qText.Contains("24 jam") && (ans == "< 4 Jam" || ans == "4 Jam" || ans == "5 Jam")) ||
+                                                                (ans == "No" || (ans == "Tidak" && (qText.Contains("sehat") || qText.Contains("beban pikiran") || qText.Contains("cukup tidur") || qText.Contains("APD"))));
+                                                var isDisturbed = qText.Contains("terbangun") && ans == "Ya";
+                                                var isTimeOrDuration = qText.Contains("Jam") || qText.Contains("durasi") || ans.Contains(":") || ans.Contains("Jam");
+                                                string ansColor = "var(--text-main)";
+                                                if (isDeficit) ansColor = "var(--color-red)";
+                                                else if (isDisturbed) ansColor = "#f59e0b";
+                                                else if (ans == "Yes" || (ans == "Tidak" && qText.Contains("terbangun"))) ansColor = "var(--color-green)";
+                                                else if (isTimeOrDuration) ansColor = "#0d9488";
+
                                                 <div class="d-flex justify-content-between py-1" style="border-bottom: 1px dashed var(--border-color);">
-                                                    <span class="text-muted" style="max-width: 80%;">@item.ListPertanyaan</span>
-                                                    <span style="font-weight: 700; color: @(item.Jawaban == "Yes" ? "var(--color-green)" : "var(--color-red)");">@item.Jawaban</span>
+                                                    <span class="text-muted" style="max-width: 75%;">@item.ListPertanyaan</span>
+                                                    <span style="font-weight: 700; color: @ansColor;">@item.Jawaban</span>
                                                 </div>
                                             }
                                         </div>

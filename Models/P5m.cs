@@ -55,6 +55,35 @@ namespace MBS_SAP.Models
 
         public int? PerusahaanId { get; set; }
 
+        [Column("is_pekerja_lapangan")]
+        public bool? IsPekerjaLapangan { get; set; }
+
+        [Column("fatigue_json")]
+        public string? FatigueJson { get; set; }
+
+        [Column("pja_nik")]
+        [MaxLength(50)]
+        public string? PjaNik { get; set; }
+
+        [Column("pja_nama")]
+        [MaxLength(150)]
+        public string? PjaNama { get; set; }
+
+        [Column("pja_id")]
+        public int? PjaId { get; set; }
+
+        [Column("pja_departemen")]
+        [MaxLength(100)]
+        public string? PjaDepartemen { get; set; }
+
+        [Column("atasan_nik")]
+        [MaxLength(50)]
+        public string? AtasanNik { get; set; }
+
+        [Column("atasan_nama")]
+        [MaxLength(150)]
+        public string? AtasanNama { get; set; }
+
         [Column("is_deleted")]
         public bool IsDeleted { get; set; } = false;
 
