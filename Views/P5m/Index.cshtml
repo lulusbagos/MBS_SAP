@@ -324,9 +324,9 @@
                                             </span>
                                         </div>
 
-                                        <!-- List questions and answers -->
+                                        <!-- List questions and answers (Deduplicated) -->
                                         <div class="my-2" style="font-size: 11px;">
-                                            @foreach (var item in group)
+                                            @foreach (var item in group.GroupBy(x => (x.ListPertanyaan ?? "").Trim(), StringComparer.OrdinalIgnoreCase).Select(g => g.OrderByDescending(x => x.Id).First()))
                                             {
                                                 var qText = item.ListPertanyaan ?? "";
                                                 var ans = item.Jawaban ?? "";
